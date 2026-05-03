@@ -179,8 +179,28 @@ function setupNavigation() {
       var banner = document.getElementById('services-back-to-wo');
       if (banner) banner.style.display = 'none';
       navigateTo(page);
+      // Auto-close sidebar on mobile
+      if (window.innerWidth <= 768) {
+        closeSidebar();
+      }
     });
   });
+}
+
+function toggleSidebar() {
+  var sidebar = document.getElementById('sidebar');
+  var overlay = document.getElementById('sidebar-overlay');
+  sidebar.classList.toggle('open');
+  overlay.classList.toggle('open');
+  document.body.classList.toggle('sidebar-open');
+}
+
+function closeSidebar() {
+  var sidebar = document.getElementById('sidebar');
+  var overlay = document.getElementById('sidebar-overlay');
+  sidebar.classList.remove('open');
+  overlay.classList.remove('open');
+  document.body.classList.remove('sidebar-open');
 }
 
 function navigateTo(page) {

@@ -70,6 +70,7 @@
         </div>
       </div>
     </aside>
+    <div class="sidebar-overlay" id="sidebar-overlay" onclick="toggleSidebar()"></div>
 
     <!-- MAIN CONTENT -->
     <main class="main-content">
@@ -77,6 +78,9 @@
       <!-- TOP BAR -->
       <div class="top-bar">
         <div class="top-bar-left">
+          <button class="btn-hamburger" id="btn-hamburger" onclick="toggleSidebar()">
+            <i data-lucide="menu" style="width:22px;height:22px"></i>
+          </button>
           <div>
             <h2 id="topbar-title">Dashboard</h2>
             <div class="subtitle" id="topbar-subtitle">Welcome back, Rodolfo</div>
