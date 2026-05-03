@@ -1,0 +1,10 @@
+{
+  "name": "WOIMS — R.C Art Construction",
+  "short_name": "WOIMS",
+  "description": "Work Order & Inspection Management System",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0f1117",
+  "theme_color": "#f59e0b",
+  "icons": []
+}

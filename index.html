@@ -1,0 +1,920 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>WOIMS — R.C Art Construction LLC</title>
+  <meta name="description" content="Work Order & Inspection Management System for R.C Art Construction LLC — Oregon CCB #247277">
+  <link rel="stylesheet" href="css/styles.css">
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#f5f6fa">
+  <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body>
+  <div class="app-container">
+
+    <!-- SIDEBAR -->
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-logo">
+        <div class="logo-icon" id="sidebar-logo-icon">
+          <img id="sidebar-logo-img" style="display:none;width:100%;height:100%;object-fit:contain;border-radius:inherit" />
+          <span id="sidebar-logo-text">RC</span>
+        </div>
+        <div class="logo-text">
+          <h1 id="sidebar-company-name">R.C Art Construction</h1>
+          <span>Work Order System</span>
+        </div>
+      </div>
+
+      <nav class="sidebar-nav">
+        <div class="nav-section-title">Main</div>
+        <div class="nav-item active" data-page="dashboard">
+          <i data-lucide="layout-dashboard" class="icon"></i> Dashboard
+        </div>
+        <div class="nav-item" data-page="workorders">
+          <i data-lucide="clipboard-list" class="icon"></i> Work Orders
+          <span class="nav-badge">4</span>
+        </div>
+        <div class="nav-item" data-page="services">
+          <i data-lucide="wrench" class="icon"></i> Service Library
+        </div>
+
+        <div class="nav-section-title">Management</div>
+        <div class="nav-item" data-page="clients">
+          <i data-lucide="users" class="icon"></i> Clients
+          <span class="nav-badge" style="background:var(--info)">5</span>
+        </div>
+        <div class="nav-item" data-page="subs" style="opacity:0.5;pointer-events:none">
+          <i data-lucide="hard-hat" class="icon"></i> Subcontractors
+          <span style="font-size:9px;color:var(--text-muted);margin-left:auto">Soon</span>
+        </div>
+        <div class="nav-item" data-page="docs">
+          <i data-lucide="file-text" class="icon"></i> Documents
+        </div>
+
+        <div class="nav-section-title">Oregon Compliance</div>
+        <div class="nav-item" data-page="compliance" style="opacity:0.5;pointer-events:none">
+          <i data-lucide="shield-check" class="icon"></i> CCB Compliance
+          <span style="font-size:9px;color:var(--text-muted);margin-left:auto">Soon</span>
+        </div>
+
+        <div class="nav-section-title">System</div>
+        <div class="nav-item" data-page="settings">
+          <i data-lucide="settings" class="icon"></i> Settings
+        </div>
+      </nav>
+
+      <div class="sidebar-footer">
+        <div class="ccb-badge">
+          <i data-lucide="check-circle-2" style="width:14px;height:14px"></i> Oregon CCB #247277 — Active
+        </div>
+      </div>
+    </aside>
+
+    <!-- MAIN CONTENT -->
+    <main class="main-content">
+
+      <!-- TOP BAR -->
+      <div class="top-bar">
+        <div class="top-bar-left">
+          <div>
+            <h2 id="topbar-title">Dashboard</h2>
+            <div class="subtitle" id="topbar-subtitle">Welcome back, Rodolfo</div>
+          </div>
+        </div>
+        <div class="top-bar-right">
+          <div class="search-box">
+            <i data-lucide="search" class="icon" style="width:16px;height:16px"></i>
+            <input type="text" placeholder="Search work orders, services, clients...">
+          </div>
+          <button class="btn btn-primary" onclick="openNewWOModal()">+ New Work Order</button>
+        </div>
+      </div>
+
+      <!-- ============ DASHBOARD PAGE ============ -->
+      <div class="page active" id="page-dashboard">
+
+        <div class="quick-actions">
+          <div class="quick-action" onclick="openNewWOModal()"><i data-lucide="file-plus" class="icon" style="width:18px;height:18px"></i> New Work Order</div>
+          <div class="quick-action" onclick="navigateTo('services')"><i data-lucide="wrench" class="icon" style="width:18px;height:18px"></i> Service Library</div>
+          <div class="quick-action" onclick="openNewServiceModal()"><i data-lucide="plus-circle" class="icon" style="width:18px;height:18px"></i> Add Service</div>
+          <div class="quick-action" onclick="openNewClientModal()"><i data-lucide="user-plus" class="icon" style="width:18px;height:18px"></i> New Client</div>
+          <div class="quick-action" style="opacity:0.5"><i data-lucide="camera" class="icon" style="width:18px;height:18px"></i> Field Mode</div>
+        </div>
+
+        <div class="stats-grid">
+          <div class="stat-card accent">
+            <div class="stat-icon"><i data-lucide="clipboard-list" style="width:24px;height:24px"></i></div>
+            <div class="stat-value" id="stat-open">0</div>
+            <div class="stat-label">Open Work Orders</div>
+            <div class="stat-change up">↑ 2 this week</div>
+          </div>
+          <div class="stat-card danger">
+            <div class="stat-icon"><i data-lucide="alert-triangle" style="width:24px;height:24px"></i></div>
+            <div class="stat-value" id="stat-overdue">0</div>
+            <div class="stat-label">Overdue Orders</div>
+            <div class="stat-change down">↑ 1 since last week</div>
+          </div>
+          <div class="stat-card success">
+            <div class="stat-icon"><i data-lucide="check-circle" style="width:24px;height:24px"></i></div>
+            <div class="stat-value" id="stat-completed">0</div>
+            <div class="stat-label">Completed This Month</div>
+            <div class="stat-change up">↑ On track</div>
+          </div>
+          <div class="stat-card info">
+            <div class="stat-icon"><i data-lucide="dollar-sign" style="width:24px;height:24px"></i></div>
+            <div class="stat-value" id="stat-pipeline">$0</div>
+            <div class="stat-label">Revenue Pipeline</div>
+            <div class="stat-change up">↑ 12% vs last month</div>
+          </div>
+          <div class="stat-card purple">
+            <div class="stat-icon"><i data-lucide="hammer" style="width:24px;height:24px"></i></div>
+            <div class="stat-value" id="stat-pending">0</div>
+            <div class="stat-label">Items Pending</div>
+          </div>
+          <div class="stat-card accent">
+            <div class="stat-icon"><i data-lucide="mail" style="width:24px;height:24px"></i></div>
+            <div class="stat-value" id="stat-docs">0</div>
+            <div class="stat-label">Docs Sent (Not Opened)</div>
+          </div>
+        </div>
+
+        <div class="dashboard-grid">
+          <div class="card">
+            <div class="card-header">
+              <h3>Recent Work Orders</h3>
+              <button class="btn btn-sm btn-secondary" onclick="navigateTo('workorders')">View All</button>
+            </div>
+            <div class="card-body" style="padding:0">
+              <table class="wo-table">
+                <thead>
+                  <tr>
+                    <th>WO #</th>
+                    <th>Title</th>
+                    <th>Client</th>
+                    <th>Status</th>
+                    <th>Priority</th>
+                    <th>Total</th>
+                  </tr>
+                </thead>
+                <tbody id="recent-wo-body"></tbody>
+              </table>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-header">
+              <h3>Activity Feed</h3>
+              <button class="btn btn-sm btn-ghost"><i data-lucide="bell" style="width:16px;height:16px"></i></button>
+            </div>
+            <div class="card-body" id="activity-feed"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ============ SERVICE LIBRARY PAGE ============ -->
+      <div class="page" id="page-services">
+        <div id="services-back-to-wo" class="back-to-wo-banner" style="display:none">
+          <button class="btn btn-ghost" onclick="returnToWODetail()">← Back to Work Order Detail</button>
+          <span id="services-back-wo-id" style="font-size:12px;color:var(--accent);font-weight:600"></span>
+        </div>
+        <div class="library-header">
+          <div>
+            <span id="service-count" style="font-size:13px;color:var(--text-secondary)">20 services</span>
+          </div>
+          <div style="display:flex;gap:8px">
+            <button class="btn btn-primary" onclick="openNewServiceModal()">+ Add Service</button>
+          </div>
+        </div>
+
+        <div id="filter-tabs" class="filter-tabs" style="margin-bottom:20px"></div>
+        <div id="service-grid" class="service-grid"></div>
+      </div>
+
+      <!-- ============ WORK ORDERS PAGE ============ -->
+      <div class="page" id="page-workorders">
+        <div class="library-header">
+          <div class="filter-tabs">
+            <div class="filter-tab active">All</div>
+            <div class="filter-tab">Draft</div>
+            <div class="filter-tab">Open</div>
+            <div class="filter-tab">In Progress</div>
+            <div class="filter-tab">Pending Review</div>
+            <div class="filter-tab">Completed</div>
+          </div>
+          <button class="btn btn-primary" onclick="openNewWOModal()">+ New Work Order</button>
+        </div>
+
+        <div class="card">
+          <div class="card-body" style="padding:0">
+            <table class="wo-table">
+              <thead>
+                <tr>
+                  <th>WO #</th>
+                  <th>Project</th>
+                  <th>Client</th>
+                  <th>Status</th>
+                  <th>Priority</th>
+                  <th>Progress</th>
+                  <th>Total</th>
+                </tr>
+              </thead>
+              <tbody id="wo-table-body"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- ============ WORK ORDER DETAIL PAGE ============ -->
+      <div class="page" id="page-wodetail">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:10px">
+          <button class="btn btn-ghost" onclick="navigateTo('workorders')"><i data-lucide="arrow-left" style="width:16px;height:16px;margin-right:6px"></i> Back to Work Orders</button>
+          <div style="display:flex;gap:8px">
+            <button class="btn btn-sm btn-secondary" onclick="generatePDF()"><i data-lucide="file-text" style="width:14px;height:14px;margin-right:6px"></i> Generate PDF</button>
+            <button class="btn btn-sm btn-secondary" onclick="sendEmail()"><i data-lucide="mail" style="width:14px;height:14px;margin-right:6px"></i> Send Email</button>
+            <button class="btn btn-sm btn-primary" onclick="addLineItem()"><i data-lucide="plus" style="width:14px;height:14px;margin-right:6px"></i> Add Item</button>
+          </div>
+        </div>
+
+        <div class="wo-detail-header">
+          <div class="wo-detail-info">
+            <div style="display:flex;align-items:center;gap:12px;margin-bottom:4px">
+              <h2 id="wo-detail-id">WO-2025-0041</h2>
+              <span id="wo-detail-status"></span>
+            </div>
+            <h2 id="wo-detail-title" style="font-size:18px;font-weight:600;color:var(--text-secondary)">Kitchen Renovation</h2>
+            <div class="wo-meta-row">
+              <div class="wo-meta-item"><i data-lucide="user" style="width:14px;height:14px;margin-right:4px;vertical-align:text-bottom"></i> <strong id="wo-detail-client">—</strong></div>
+              <div class="wo-meta-item"><i data-lucide="map-pin" style="width:14px;height:14px;margin-right:4px;vertical-align:text-bottom"></i> <span id="wo-detail-property">—</span></div>
+              <div class="wo-meta-item"><i data-lucide="tag" style="width:14px;height:14px;margin-right:4px;vertical-align:text-bottom"></i> <span id="wo-detail-type">—</span></div>
+              <div class="wo-meta-item" id="wo-detail-priority">—</div>
+              <div class="wo-meta-item"><i data-lucide="calendar" style="width:14px;height:14px;margin-right:4px;vertical-align:text-bottom"></i> Created: <span id="wo-detail-created">—</span></div>
+              <div class="wo-meta-item"><i data-lucide="target" style="width:14px;height:14px;margin-right:4px;vertical-align:text-bottom"></i> Target: <span id="wo-detail-target">—</span></div>
+            </div>
+          </div>
+          <div style="text-align:right">
+            <div style="font-size:12px;color:var(--text-muted);margin-bottom:4px">Total Estimate</div>
+            <div id="wo-detail-total" style="font-size:28px;font-weight:800;color:var(--accent)">$0</div>
+            <div id="wo-detail-progress-bar" style="margin-top:8px"></div>
+          </div>
+        </div>
+
+        <div class="wo-tabs" id="wo-detail-tabs">
+          <div class="wo-tab active" data-tab="items" onclick="switchWOTab('items')"><i data-lucide="list" style="width:14px;height:14px;margin-right:6px"></i> Line Items <span id="wo-tab-items-count" style="font-size:11px;opacity:0.6"></span></div>
+          <div class="wo-tab" data-tab="photos" onclick="switchWOTab('photos')"><i data-lucide="camera" style="width:14px;height:14px;margin-right:6px"></i> Photos <span id="wo-tab-photos-count" style="font-size:11px;opacity:0.6"></span></div>
+          <div class="wo-tab" data-tab="comms" style="opacity:0.5"><i data-lucide="message-square" style="width:14px;height:14px;margin-right:6px"></i> Communications</div>
+          <div class="wo-tab" data-tab="changes" style="opacity:0.5"><i data-lucide="edit-3" style="width:14px;height:14px;margin-right:6px"></i> Change Orders</div>
+          <div class="wo-tab" data-tab="log" onclick="switchWOTab('log')"><i data-lucide="activity" style="width:14px;height:14px;margin-right:6px"></i> Activity Log</div>
+        </div>
+
+        <!-- TAB: LINE ITEMS -->
+        <div id="wo-tab-content-items" class="wo-tab-content active">
+          <div id="wo-line-items" class="line-items-list"></div>
+        </div>
+
+        <!-- TAB: PHOTOS -->
+        <div id="wo-tab-content-photos" class="wo-tab-content" style="display:none">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+            <div style="font-size:13px;color:var(--text-secondary)" id="photo-count">0 photos</div>
+            <button class="btn btn-sm btn-primary" onclick="uploadPhoto()"><i data-lucide="camera" style="width:14px;height:14px;margin-right:6px"></i> Upload Photo</button>
+          </div>
+          <div id="wo-photos-grid" class="photo-grid"></div>
+        </div>
+
+        <!-- TAB: ACTIVITY LOG -->
+        <div id="wo-tab-content-log" class="wo-tab-content" style="display:none">
+          <div class="card">
+            <div class="card-body" id="wo-activity-log"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ============ DOCUMENTS PAGE ============ -->
+      <div class="page" id="page-docs">
+        <div class="library-header">
+          <div class="filter-tabs">
+            <div class="filter-tab active">All Documents</div>
+            <div class="filter-tab">Completion Reports</div>
+            <div class="filter-tab">Informative Reports</div>
+            <div class="filter-tab">Invoices</div>
+          </div>
+          <button class="btn btn-primary" onclick="openNewDocModal()">+ Create Document</button>
+        </div>
+
+        <div class="card">
+          <div class="card-body" style="padding:0">
+            <table class="wo-table">
+              <thead>
+                <tr>
+                  <th>Doc #</th>
+                  <th>Type</th>
+                  <th>Related WO</th>
+                  <th>Client</th>
+                  <th>Generated Date</th>
+                  <th>Status</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="docs-table-body">
+                <!-- Mocked Data -->
+                <tr>
+                  <td><strong>DOC-2025-081</strong></td>
+                  <td>Completion Report</td>
+                  <td>WO-2025-0041</td>
+                  <td>Sarah Johnson</td>
+                  <td>May 01, 2025</td>
+                  <td><span class="status-tag status-progress" style="background:var(--success-bg);color:var(--success)">Sent</span></td>
+                  <td><button class="btn btn-sm btn-secondary"><i data-lucide="download" style="width:14px;height:14px"></i></button></td>
+                </tr>
+                <tr>
+                  <td><strong>DOC-2025-082</strong></td>
+                  <td>Informative Report</td>
+                  <td>WO-2025-0044</td>
+                  <td>Dave Thompson</td>
+                  <td>Apr 28, 2025</td>
+                  <td><span class="status-tag status-progress" style="background:var(--success-bg);color:var(--success)">Viewed</span></td>
+                  <td><button class="btn btn-sm btn-secondary"><i data-lucide="download" style="width:14px;height:14px"></i></button></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- ============ CLIENTS PAGE ============ -->
+      <div class="page" id="page-clients">
+        <div class="library-header">
+          <div class="filter-tabs">
+            <div class="filter-tab active" onclick="filterClients('All')">All</div>
+            <div class="filter-tab" onclick="filterClients('Residential')">Residential</div>
+            <div class="filter-tab" onclick="filterClients('Commercial')">Commercial</div>
+            <div class="filter-tab" onclick="filterClients('Real Estate / Investor')">Real Estate</div>
+            <div class="filter-tab" onclick="filterClients('Company / Corporation')">Company</div>
+          </div>
+          <button class="btn btn-primary" onclick="openNewClientModal()">+ New Client</button>
+        </div>
+
+        <div class="card">
+          <div class="card-body" style="padding:0">
+            <table class="wo-table">
+              <thead>
+                <tr>
+                  <th>Client</th>
+                  <th>Type</th>
+                  <th>Contact</th>
+                  <th>Properties</th>
+                  <th>Total Orders</th>
+                  <th>Total Value</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="clients-table-body"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- ============ SETTINGS PAGE ============ -->
+      <div class="page" id="page-settings">
+        <div class="settings-container">
+          <div class="card" style="max-width:740px">
+            <div class="card-header">
+              <h3>Company Information</h3>
+              <span style="font-size:12px;color:var(--text-muted)">This information appears on all documents & PDFs</span>
+            </div>
+            <div class="card-body">
+              <!-- Document Logo Upload -->
+              <div class="form-group" style="margin-bottom:24px">
+                <label style="font-size:14px;font-weight:700">📄 Document Logo <span style="font-weight:400;color:var(--text-muted);font-size:11px">— Used on PDFs, estimates, invoices, reports</span></label>
+                <input type="file" id="doc-logo-input" accept="image/*" style="display:none" onchange="handleLogoUpload(event,'doc')">
+                <div class="logo-upload-area" id="doc-logo-area" onclick="document.getElementById('doc-logo-input').click()">
+                  <div id="doc-logo-preview-container" style="display:none">
+                    <img id="doc-logo-preview" style="max-width:260px;max-height:100px;border-radius:8px;border:1px solid var(--border)" />
+                  </div>
+                  <div id="doc-logo-placeholder">
+                    <i data-lucide="file-image" style="width:32px;height:32px;color:var(--text-muted);margin-bottom:6px"></i>
+                    <p style="font-size:13px;color:var(--text-secondary);margin:0">Click to upload your document logo</p>
+                    <p style="font-size:11px;color:var(--text-muted);margin:4px 0 0">PNG, JPG, SVG, WebP — Max 5MB — Recommended: 500×180px</p>
+                  </div>
+                </div>
+                <div style="margin-top:6px;display:flex;gap:8px">
+                  <button class="btn btn-sm btn-secondary" onclick="document.getElementById('doc-logo-input').click()"><i data-lucide="upload" style="width:14px;height:14px;margin-right:4px"></i> Upload</button>
+                  <button class="btn btn-sm btn-ghost" onclick="removeLogo('doc')" id="btn-remove-doc-logo" style="display:none;color:var(--danger)"><i data-lucide="trash-2" style="width:14px;height:14px;margin-right:4px"></i> Remove</button>
+                </div>
+              </div>
+
+              <!-- App/Sidebar Logo Upload -->
+              <div class="form-group" style="margin-bottom:28px">
+                <label style="font-size:14px;font-weight:700">🖥️ App / Sidebar Logo <span style="font-weight:400;color:var(--text-muted);font-size:11px">— Shown in sidebar, optional (falls back to document logo)</span></label>
+                <input type="file" id="app-logo-input" accept="image/*" style="display:none" onchange="handleLogoUpload(event,'app')">
+                <div class="logo-upload-area" id="app-logo-area" onclick="document.getElementById('app-logo-input').click()" style="min-height:80px">
+                  <div id="app-logo-preview-container" style="display:none">
+                    <img id="app-logo-preview" style="max-width:160px;max-height:60px;border-radius:8px;border:1px solid var(--border)" />
+                  </div>
+                  <div id="app-logo-placeholder">
+                    <i data-lucide="monitor" style="width:28px;height:28px;color:var(--text-muted);margin-bottom:6px"></i>
+                    <p style="font-size:12px;color:var(--text-secondary);margin:0">Optional: upload a separate sidebar logo</p>
+                    <p style="font-size:10px;color:var(--text-muted);margin:3px 0 0">If empty, the document logo will be used</p>
+                  </div>
+                </div>
+                <div style="margin-top:6px;display:flex;gap:8px">
+                  <button class="btn btn-sm btn-secondary" onclick="document.getElementById('app-logo-input').click()"><i data-lucide="upload" style="width:14px;height:14px;margin-right:4px"></i> Upload</button>
+                  <button class="btn btn-sm btn-ghost" onclick="removeLogo('app')" id="btn-remove-app-logo" style="display:none;color:var(--danger)"><i data-lucide="trash-2" style="width:14px;height:14px;margin-right:4px"></i> Remove</button>
+                </div>
+              </div>
+
+              <div class="form-row">
+                <div class="form-group">
+                  <label>Company Name *</label>
+                  <input type="text" class="form-input" id="settings-company-name" placeholder="R.C Art Construction LLC">
+                </div>
+                <div class="form-group">
+                  <label>Owner / Contact Name</label>
+                  <input type="text" class="form-input" id="settings-owner" placeholder="Rodolfo Fernandez Romero">
+                </div>
+              </div>
+              <div class="form-row">
+                <div class="form-group">
+                  <label>Phone *</label>
+                  <input type="tel" class="form-input" id="settings-phone" placeholder="(503) 555-0147">
+                </div>
+                <div class="form-group">
+                  <label>Email *</label>
+                  <input type="email" class="form-input" id="settings-email" placeholder="info@rcartconstruction.com">
+                </div>
+              </div>
+              <div class="form-row">
+                <div class="form-group">
+                  <label>City</label>
+                  <input type="text" class="form-input" id="settings-city" placeholder="Portland">
+                </div>
+                <div class="form-group">
+                  <label>State</label>
+                  <input type="text" class="form-input" id="settings-state" placeholder="Oregon">
+                </div>
+              </div>
+              <div class="form-row">
+                <div class="form-group">
+                  <label>CCB License #</label>
+                  <input type="text" class="form-input" id="settings-ccb" placeholder="247277">
+                </div>
+                <div class="form-group">
+                  <label>Founded</label>
+                  <input type="text" class="form-input" id="settings-founded" placeholder="August 2023">
+                </div>
+              </div>
+              <div class="form-group" style="position:relative">
+                <label>Address (appears on documents)</label>
+                <input type="text" class="form-input autocomplete-address" id="settings-address" placeholder="1234 NE Sandy Blvd, Portland, OR 97230" autocomplete="off">
+              </div>
+            </div>
+            <div style="padding:16px 24px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;gap:10px">
+              <button class="btn btn-primary" onclick="saveSettings()"><i data-lucide="save" style="width:14px;height:14px;margin-right:6px"></i> Save Settings</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </main>
+  </div>
+
+  <!-- ============ MODAL: NEW WORK ORDER ============ -->
+  <div class="modal-overlay" id="modal-new-wo">
+    <div class="modal">
+      <div class="modal-header">
+        <h3><i data-lucide="clipboard-list" style="width:20px;height:20px;margin-right:8px;vertical-align:text-bottom"></i> New Work Order</h3>
+        <button class="modal-close" onclick="closeModal('modal-new-wo')">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group" style="position:relative">
+          <label>Work Order Title *</label>
+          <input type="text" class="form-input" id="new-wo-title" placeholder="e.g., Kitchen & Bathroom Renovation" autocomplete="off" oninput="onWOTitleInput(this.value)" onfocus="onWOTitleInput(this.value)">
+          <div class="autocomplete-dropdown" id="wo-title-suggestions" style="display:none"></div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Client *</label>
+            <select class="form-select" id="new-wo-client">
+              <option value="">Select client...</option>
+              <option>Sarah Johnson</option>
+              <option>Pacific NW Properties LLC</option>
+              <option>Mike Chen</option>
+              <option>Maria Rodriguez</option>
+              <option>Dave Thompson</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Work Order Type</label>
+            <select class="form-select" id="new-wo-type">
+              <option value="A">Type A — Field Inspection</option>
+              <option value="B">Type B — External Report</option>
+              <option value="C">Type C — Direct Assignment</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-group" style="position:relative">
+          <label>Property Address</label>
+          <input type="text" class="form-input autocomplete-address" id="new-wo-property" placeholder="e.g., 1234 NE Sandy Blvd, Portland, OR" autocomplete="off">
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Priority</label>
+            <select class="form-select" id="new-wo-priority">
+              <option value="medium">Medium</option>
+              <option value="low">Low</option>
+              <option value="high">High</option>
+              <option value="emergency">Emergency</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Target Completion Date</label>
+            <input type="date" class="form-input" id="new-wo-target">
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Internal Notes</label>
+          <textarea class="form-textarea" placeholder="Notes visible only to your team..."></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeModal('modal-new-wo')">Cancel</button>
+        <button class="btn btn-primary" onclick="saveNewWO()">Create Work Order</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ MODAL: NEW SERVICE ============ -->
+  <div class="modal-overlay" id="modal-new-service">
+    <div class="modal">
+      <div class="modal-header">
+        <h3><i data-lucide="wrench" style="width:20px;height:20px;margin-right:8px;vertical-align:text-bottom"></i> Add New Service</h3>
+        <button class="modal-close" onclick="closeModal('modal-new-service')">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-row">
+          <div class="form-group">
+            <label>Service Name (English) *</label>
+            <input type="text" class="form-input" id="new-svc-name" placeholder="e.g., Replace GFCI Outlet">
+          </div>
+          <div class="form-group">
+            <label>Nombre (Español)</label>
+            <input type="text" class="form-input" id="new-svc-name-es" placeholder="e.g., Reemplazar Tomacorriente GFCI">
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Category *</label>
+            <select class="form-select" id="new-svc-category">
+              <option>Electrical</option><option>Plumbing</option><option>Roofing</option>
+              <option>HVAC</option><option>Flooring</option><option>Painting</option>
+              <option>Drywall / Framing</option><option>Windows & Doors</option>
+              <option>Cleaning</option><option>General Repairs</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Subcategory</label>
+            <input type="text" class="form-input" id="new-svc-sub" placeholder="e.g., Outlets & Switches">
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Price *</label>
+            <input type="number" class="form-input" id="new-svc-price" placeholder="0.00" step="0.01">
+          </div>
+          <div class="form-group">
+            <label>Unit</label>
+            <select class="form-select" id="new-svc-unit">
+              <option>each</option><option>hour</option><option>sq ft</option>
+              <option>linear ft</option><option>per room</option><option>per load</option><option>per square</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Negotiable</label>
+            <select class="form-select" id="new-svc-negotiable">
+              <option value="yes">✅ Yes</option>
+              <option value="no">❌ No</option>
+              <option value="ask">🔶 Ask</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Labor Hours (Est.)</label>
+            <input type="number" class="form-input" id="new-svc-labor" placeholder="1" step="0.5">
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Description</label>
+          <textarea class="form-textarea" id="new-svc-desc" placeholder="Describe the scope of work..."></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeModal('modal-new-service')">Cancel</button>
+        <button class="btn btn-primary" onclick="saveNewService()">Add Service</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ MODAL: NEW CLIENT ============ -->
+  <div class="modal-overlay" id="modal-new-client">
+    <div class="modal">
+      <div class="modal-header">
+        <h3 id="client-modal-title"><i data-lucide="user-plus" style="width:20px;height:20px;margin-right:8px;vertical-align:text-bottom"></i> New Client</h3>
+        <button class="modal-close" onclick="closeModal('modal-new-client')">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-row">
+          <div class="form-group">
+            <label>Full Name / Company *</label>
+            <input type="text" class="form-input" id="new-client-name" placeholder="e.g., John Smith or ABC Properties LLC">
+          </div>
+          <div class="form-group">
+            <label>Client Type *</label>
+            <select class="form-select" id="new-client-type">
+              <option>Residential</option>
+              <option>Commercial</option>
+              <option>Real Estate / Investor</option>
+              <option>Company / Corporation</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Email *</label>
+            <input type="email" class="form-input" id="new-client-email" placeholder="email@example.com">
+          </div>
+          <div class="form-group">
+            <label>Phone</label>
+            <input type="tel" class="form-input" id="new-client-phone" placeholder="(503) 555-0000">
+          </div>
+        </div>
+        <div class="form-group" style="position:relative">
+          <label>Property Address</label>
+          <input type="text" class="form-input autocomplete-address" id="new-client-address" placeholder="e.g., 1234 NE Sandy Blvd, Portland, OR" autocomplete="off">
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Referral Source</label>
+            <select class="form-select" id="new-client-referral">
+              <option>Google</option>
+              <option>Realtor Referral</option>
+              <option>Word of Mouth</option>
+              <option>Yard Sign</option>
+              <option>Social Media</option>
+              <option>Repeat Client</option>
+              <option>Other</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Preferred Language</label>
+            <select class="form-select" id="new-client-lang">
+              <option>English</option>
+              <option>Spanish</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Payment Terms</label>
+            <select class="form-select" id="new-client-payment">
+              <option>Net 30</option>
+              <option>Net 15</option>
+              <option>Net 45</option>
+              <option>Net 60</option>
+              <option>COD</option>
+              <option>Due on Receipt</option>
+              <option>50% Upfront</option>
+              <option>50% Upfront / 50% on Completion</option>
+              <option>30/30/40 Progress Billing</option>
+              <option>Due on Completion</option>
+              <option>Payment Plan</option>
+              <option>Deposit Required</option>
+              <option>Custom</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Tags</label>
+            <input type="text" class="form-input" id="new-client-tags" placeholder="e.g., VIP, Realtor Partner">
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Notes</label>
+          <textarea class="form-textarea" id="new-client-notes" placeholder="Relationship notes, preferences, etc."></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeModal('modal-new-client')">Cancel</button>
+        <button class="btn btn-primary" id="client-modal-save-btn" onclick="saveNewClient()">Add Client</button>
+      </div>
+    </div>
+  </div>
+  <!-- ============ MODAL: PDF TEMPLATE SELECTOR ============ -->
+  <div class="modal-overlay" id="modal-pdf">
+    <div class="modal">
+      <div class="modal-header">
+        <h3><i data-lucide="file-text" style="width:20px;height:20px;margin-right:8px;vertical-align:text-bottom"></i> Generate PDF Report</h3>
+        <button class="modal-close" onclick="closeModal('modal-pdf')">✕</button>
+      </div>
+      <div class="modal-body">
+        <div style="margin-bottom:16px">
+          <p style="font-size:13px;color:var(--text-secondary);margin-bottom:12px">Select a report template for <strong id="pdf-wo-id" style="color:var(--accent)">WO-2025-0041</strong></p>
+        </div>
+
+        <div id="pdf-template-list" style="display:flex;flex-direction:column;gap:10px">
+          <div class="pdf-template-option" onclick="buildPDF('completion')">
+            <div class="pdf-template-icon"><i data-lucide="clipboard-check" style="width:24px;height:24px"></i></div>
+            <div class="pdf-template-info">
+              <h4>Work Order Completion Report</h4>
+              <p>Full line items, status, pricing, progress summary — for client review & approval</p>
+            </div>
+            <span class="badge badge-completed">Ready</span>
+          </div>
+          <div class="pdf-template-option" onclick="buildPDF('inspection')">
+            <div class="pdf-template-icon"><i data-lucide="search" style="width:24px;height:24px"></i></div>
+            <div class="pdf-template-info">
+              <h4>Inspection Report</h4>
+              <p>Property condition findings with photo references, issue list, and recommendations</p>
+            </div>
+            <span class="badge badge-completed">Ready</span>
+          </div>
+          <div class="pdf-template-option" onclick="buildPDF('progress')">
+            <div class="pdf-template-icon"><i data-lucide="bar-chart-2" style="width:24px;height:24px"></i></div>
+            <div class="pdf-template-info">
+              <h4>Progress Report</h4>
+              <p>Current completion status, milestones achieved, remaining work, and timeline</p>
+            </div>
+            <span class="badge badge-completed">Ready</span>
+          </div>
+          <div class="pdf-template-option" onclick="buildPDF('invoice')">
+            <div class="pdf-template-icon"><i data-lucide="dollar-sign" style="width:24px;height:24px"></i></div>
+            <div class="pdf-template-info">
+              <h4>Invoice / Estimate</h4>
+              <p>Professional billing document with itemized costs, totals, and payment terms</p>
+            </div>
+            <span class="badge badge-completed">Ready</span>
+          </div>
+          <div class="pdf-template-option" style="opacity:0.5">
+            <div class="pdf-template-icon"><i data-lucide="edit-3" style="width:24px;height:24px"></i></div>
+            <div class="pdf-template-info">
+              <h4>Negotiation Summary</h4>
+              <p>Client-facing document showing original vs negotiated pricing</p>
+            </div>
+            <span class="badge badge-draft">Soon</span>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeModal('modal-pdf')">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ MODAL: EMAIL COMPOSER ============ -->
+  <div class="modal-overlay" id="modal-email">
+    <div class="modal" style="max-width:680px">
+      <div class="modal-header">
+        <h3><i data-lucide="mail" style="width:20px;height:20px;margin-right:8px;vertical-align:text-bottom"></i> Send Email</h3>
+        <button class="modal-close" onclick="closeModal('modal-email')">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-row">
+          <div class="form-group">
+            <label>To *</label>
+            <input type="email" class="form-input" id="email-to" placeholder="client@email.com">
+          </div>
+          <div class="form-group">
+            <label>CC</label>
+            <input type="email" class="form-input" id="email-cc" placeholder="optional cc">
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Subject *</label>
+          <input type="text" class="form-input" id="email-subject" placeholder="Work Order Update">
+        </div>
+        <div class="form-group">
+          <label>Attach Report</label>
+          <select class="form-select" id="email-attach">
+            <option value="completion">Work Order Completion Report</option>
+            <option value="inspection">Inspection Report</option>
+            <option value="progress">Progress Report</option>
+            <option value="invoice">Invoice / Estimate</option>
+            <option value="none">No attachment</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Message</label>
+          <textarea class="form-textarea" id="email-body" style="min-height:140px" placeholder="Write your message..."></textarea>
+        </div>
+        <div style="background:var(--bg-input);border:1px solid var(--border);border-radius:var(--radius-sm);padding:12px;margin-top:8px">
+          <div style="font-size:11px;color:var(--text-muted);margin-bottom:6px">EMAIL PREVIEW</div>
+          <div id="email-preview" style="font-size:12px;color:var(--text-secondary);line-height:1.6"></div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeModal('modal-email')">Cancel</button>
+        <button class="btn btn-secondary" onclick="previewEmailPDF()"><i data-lucide="eye" style="width:14px;height:14px;margin-right:6px"></i> Preview PDF</button>
+        <button class="btn btn-primary" onclick="sendEmailNow()"><i data-lucide="send" style="width:14px;height:14px;margin-right:6px"></i> Send Email</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ MODAL: NEW DOCUMENT ============ -->
+  <div class="modal-overlay" id="modal-new-doc">
+    <div class="modal" style="max-width:1100px">
+      <div class="modal-header">
+        <h3><i data-lucide="file-plus" style="width:20px;height:20px;margin-right:8px;vertical-align:text-bottom"></i> Create Document</h3>
+        <button class="modal-close" onclick="closeModal('modal-new-doc')">✕</button>
+      </div>
+      <div class="modal-body" style="display:flex;gap:24px;min-height:480px">
+        <!-- Left: Form Controls -->
+        <div style="flex:0 0 360px;display:flex;flex-direction:column;gap:16px">
+          <div class="form-group">
+            <label>Select Work Order *</label>
+            <select class="form-select" id="new-doc-wo" onchange="updateDocPreview()"></select>
+          </div>
+          <div class="form-group">
+            <label>Document Template *</label>
+            <select class="form-select" id="new-doc-template" onchange="updateDocPreview()">
+              <option value="completion">Completion Report</option>
+              <option value="inspection">Inspection Report</option>
+              <option value="progress">Progress Report</option>
+              <option value="invoice">Invoice / Estimate</option>
+              <option value="informative">Informative Report (Realtor)</option>
+            </select>
+          </div>
+          <!-- Style Selector -->
+          <div class="form-group">
+            <label>Document Style</label>
+            <div class="doc-style-selector">
+              <div class="doc-style-card active" data-style="classic" onclick="selectDocStyle('classic')">
+                <div class="style-preview-mini"><div class="sp-bar" style="background:#f59e0b;height:3px;border-radius:2px;margin-bottom:4px"></div><div class="sp-line" style="width:60%;height:2px;background:#d1d5db;border-radius:1px;margin-bottom:3px"></div><div class="sp-line" style="width:100%;height:2px;background:#e5e7eb;border-radius:1px;margin-bottom:2px"></div><div class="sp-line" style="width:100%;height:2px;background:#e5e7eb;border-radius:1px;margin-bottom:2px"></div><div class="sp-line" style="width:80%;height:2px;background:#e5e7eb;border-radius:1px"></div></div>
+                <span>Classic</span>
+              </div>
+              <div class="doc-style-card" data-style="modern" onclick="selectDocStyle('modern')">
+                <div class="style-preview-mini"><div class="sp-bar" style="height:4px;border-radius:0;background:linear-gradient(90deg,#f59e0b,#ef4444,#8b5cf6);margin-bottom:4px"></div><div class="sp-line" style="width:60%;height:2px;background:#111827;border-radius:1px;margin-bottom:3px"></div><div class="sp-line" style="width:100%;height:6px;background:#111827;border-radius:1px;margin-bottom:2px"></div><div class="sp-line" style="width:100%;height:2px;background:#e5e7eb;border-radius:1px;margin-bottom:2px"></div><div class="sp-line" style="width:80%;height:2px;background:#e5e7eb;border-radius:1px"></div></div>
+                <span>Modern Bold</span>
+              </div>
+              <div class="doc-style-card" data-style="executive" onclick="selectDocStyle('executive')">
+                <div class="style-preview-mini"><div class="sp-bar" style="height:1px;background:#e5e7eb;margin-bottom:6px"></div><div class="sp-line" style="width:50%;height:2px;background:#d1d5db;border-radius:1px;margin-bottom:3px"></div><div class="sp-line" style="width:100%;height:2px;background:#f3f4f6;border-radius:1px;margin-bottom:2px"></div><div class="sp-line" style="width:100%;height:2px;background:#f3f4f6;border-radius:1px;margin-bottom:2px"></div><div class="sp-line" style="width:70%;height:2px;background:#f3f4f6;border-radius:1px"></div></div>
+                <span>Executive</span>
+              </div>
+            </div>
+          </div>
+          <div style="background:var(--bg-input);padding:14px;border-radius:var(--radius-md);border:1px solid var(--border);display:flex;align-items:center;gap:12px">
+            <input type="checkbox" id="new-doc-hide-prices" style="width:18px;height:18px;cursor:pointer" onchange="updateDocPreview()">
+            <div>
+              <label for="new-doc-hide-prices" style="margin:0;cursor:pointer;font-weight:600;display:block;font-size:13px">Hide Pricing &amp; Totals</label>
+              <span style="font-size:11px;color:var(--text-muted)">For informative reports (realtors, third parties)</span>
+            </div>
+          </div>
+        </div>
+        <!-- Right: Live Preview -->
+        <div style="flex:1;display:flex;flex-direction:column;min-width:0">
+          <label style="margin-bottom:8px;font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px;font-weight:600">Live Preview</label>
+          <div id="doc-preview-container" style="flex:1;border:1px solid var(--border);border-radius:var(--radius-md);overflow:hidden;background:#fff;position:relative">
+            <iframe id="doc-preview-iframe" style="width:200%;height:200%;border:none;transform:scale(0.5);transform-origin:top left" title="Document Preview"></iframe>
+            <div id="doc-preview-placeholder" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;flex-direction:column;color:var(--text-muted);gap:8px;background:#fafafa">
+              <i data-lucide="eye" style="width:32px;height:32px;opacity:0.3"></i>
+              <p style="font-size:13px;margin:0">Select a Work Order to preview</p>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeModal('modal-new-doc')">Cancel</button>
+        <button class="btn btn-primary" onclick="createDocument()"><i data-lucide="download" style="width:16px;height:16px;margin-right:6px;vertical-align:text-bottom"></i> Generate PDF</button>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- Logo Cropper Modal -->
+  <div class="modal-overlay" id="modal-logo-cropper" style="display:none">
+    <div class="modal" style="width:480px;max-width:95vw">
+      <div class="modal-header">
+        <h2 id="cropper-title">Crop Logo</h2>
+        <button class="modal-close" onclick="closeCropper()">&times;</button>
+      </div>
+      <div class="modal-body" style="padding:24px;text-align:center">
+        <p style="font-size:12px;color:var(--text-muted);margin:0 0 16px">Drag to reposition · Scroll or slider to zoom</p>
+        <div id="cropper-viewport" style="position:relative;width:280px;height:280px;margin:0 auto;overflow:hidden;border-radius:50%;background:#111;cursor:grab;border:3px solid var(--primary);box-shadow:0 0 0 4px var(--bg-card), 0 4px 24px rgba(0,0,0,0.18)">
+          <canvas id="cropper-canvas" width="280" height="280" style="display:block"></canvas>
+        </div>
+        <div style="display:flex;align-items:center;gap:12px;margin-top:20px;justify-content:center">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color:var(--text-muted);flex-shrink:0"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="8" y1="11" x2="14" y2="11"/></svg>
+          <input type="range" id="cropper-zoom" min="100" max="400" value="100" style="flex:1;max-width:220px;cursor:pointer;accent-color:var(--primary)">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color:var(--text-muted);flex-shrink:0"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="11" y1="8" x2="11" y2="14"/><line x1="8" y1="11" x2="14" y2="11"/></svg>
+        </div>
+      </div>
+      <div class="modal-footer" style="justify-content:space-between">
+        <button class="btn btn-secondary" onclick="closeCropper()">Cancel</button>
+        <button class="btn btn-primary" onclick="saveCroppedLogo()"><i data-lucide="check" style="width:16px;height:16px;margin-right:6px;vertical-align:text-bottom"></i> Save Logo</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="js/supabase.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
