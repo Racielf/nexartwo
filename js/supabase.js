@@ -278,6 +278,216 @@ const DB = {
     }
   },
 
+  // ---------- LINE ITEMS (Phase 2) ----------
+  lineItems: {
+    async getByWO(workOrderId) {
+      var sb = getSupabase();
+      if (!sb) return null;
+      var { data, error } = await sb.from('wo_line_items').select('*')
+        .eq('work_order_id', workOrderId)
+        .order('sort_order', { ascending: true });
+      if (error) { console.error('DB lineItems.getByWO:', error); return null; }
+      return data.map(function(r) {
+        return {
+          id: r.id, workOrderId: r.work_order_id, serviceId: r.service_id,
+          name: r.name, nameEs: r.name_es || '', desc: r.description || '',
+          category: r.category, sub: r.sub,
+          price: parseFloat(r.price) || 0, qty: parseFloat(r.qty) || 1,
+          unit: r.unit, negotiable: r.negotiable || 'yes',
+          laborHrs: parseFloat(r.labor_hrs) || 1,
+          status: r.status || 'pending',
+          completedAt: r.completed_at, completedBy: r.completed_by || '',
+          notes: r.notes || '', sortOrder: r.sort_order || 0
+        };
+      });
+    },
+
+    async create(item) {
+      var sb = getSupabase();
+      if (!sb) return null;
+      var { data, error } = await sb.from('wo_line_items').insert({
+        work_order_id: item.workOrderId,
+        service_id: item.serviceId || null,
+        name: item.name, name_es: item.nameEs || '',
+        description: item.desc || '',
+        category: item.category || '', sub: item.sub || '',
+        price: item.price || 0, qty: item.qty || 1,
+        unit: item.unit || 'each', negotiable: item.negotiable || 'yes',
+        labor_hrs: item.laborHrs || 1,
+        status: item.status || 'pending',
+        notes: item.notes || '',
+        sort_order: item.sortOrder || 0
+      }).select().single();
+      if (error) { console.error('DB lineItems.create:', error); return null; }
+      return data;
+    },
+
+    async update(id, changes) {
+      var sb = getSupabase();
+      if (!sb) return false;
+      var row = {};
+      if ('status' in changes) row.status = changes.status;
+      if ('completedAt' in changes) row.completed_at = changes.completedAt;
+      if ('completedBy' in changes) row.completed_by = changes.completedBy;
+      if ('price' in changes) row.price = changes.price;
+      if ('qty' in changes) row.qty = changes.qty;
+      if ('notes' in changes) row.notes = changes.notes;
+      if ('name' in changes) row.name = changes.name;
+      if ('desc' in changes) row.description = changes.desc;
+      if ('sortOrder' in changes) row.sort_order = changes.sortOrder;
+      var { error } = await sb.from('wo_line_items').update(row).eq('id', id);
+      if (error) { console.error('DB lineItems.update:', error); return false; }
+      return true;
+    },
+
+    async delete(id) {
+      var sb = getSupabase();
+      if (!sb) return false;
+      var { error } = await sb.from('wo_line_items').delete().eq('id', id);
+      if (error) { console.error('DB lineItems.delete:', error); return false; }
+      return true;
+    }
+  },
+
+  // ---------- DOCUMENTS (Phase 2) ----------
+  documents: {
+    async getAll() {
+      var sb = getSupabase();
+      if (!sb) return null;
+      var { data, error } = await sb.from('documents').select('*').order('created_at', { ascending: false });
+      if (error) { console.error('DB documents.getAll:', error); return null; }
+      return data;
+    },
+
+    async create(doc) {
+      var sb = getSupabase();
+      if (!sb) return null;
+      var { data, error } = await sb.from('documents').insert({
+        doc_number: doc.doc_number, type: doc.type,
+        work_order_id: doc.work_order_id, client_name: doc.client_name || '',
+        status: doc.status || 'draft', style: doc.style || 'classic',
+        hide_prices: doc.hide_prices || false, notes: doc.notes || ''
+      }).select().single();
+      if (error) { console.error('DB documents.create:', error); return null; }
+      return data;
+    },
+
+    async update(id, changes) {
+      var sb = getSupabase();
+      if (!sb) return false;
+      var { error } = await sb.from('documents').update(changes).eq('id', id);
+      if (error) { console.error('DB documents.update:', error); return false; }
+      return true;
+    }
+  },
+
+  // ---------- COMMUNICATIONS (Phase 2) ----------
+  communications: {
+    async getByWO(workOrderId) {
+      var sb = getSupabase();
+      if (!sb) return null;
+      var { data, error } = await sb.from('wo_communications').select('*')
+        .eq('work_order_id', workOrderId)
+        .order('created_at', { ascending: false });
+      if (error) { console.error('DB communications.getByWO:', error); return null; }
+      return data;
+    },
+
+    async create(comm) {
+      var sb = getSupabase();
+      if (!sb) return null;
+      var { data, error } = await sb.from('wo_communications').insert({
+        work_order_id: comm.work_order_id,
+        type: comm.type || 'note',
+        subject: comm.subject || '',
+        body: comm.body || '',
+        sender: comm.sender || '',
+        recipient: comm.recipient || ''
+      }).select().single();
+      if (error) { console.error('DB communications.create:', error); return null; }
+      return data;
+    }
+  },
+
+  // ---------- CHANGE ORDERS (Phase 2) ----------
+  changeOrders: {
+    async getByWO(workOrderId) {
+      var sb = getSupabase();
+      if (!sb) return null;
+      var { data, error } = await sb.from('change_orders').select('*')
+        .eq('work_order_id', workOrderId)
+        .order('created_at', { ascending: false });
+      if (error) { console.error('DB changeOrders.getByWO:', error); return null; }
+      return data;
+    },
+
+    async create(co) {
+      var sb = getSupabase();
+      if (!sb) return null;
+      var { data, error } = await sb.from('change_orders').insert({
+        co_number: co.co_number,
+        work_order_id: co.work_order_id,
+        description: co.description || '',
+        items: co.items || [],
+        amount: co.amount || 0,
+        status: co.status || 'proposed',
+        requested_by: co.requested_by || ''
+      }).select().single();
+      if (error) { console.error('DB changeOrders.create:', error); return null; }
+      return data;
+    },
+
+    async update(id, changes) {
+      var sb = getSupabase();
+      if (!sb) return false;
+      var { error } = await sb.from('change_orders').update(changes).eq('id', id);
+      if (error) { console.error('DB changeOrders.update:', error); return false; }
+      return true;
+    }
+  },
+
+  // ---------- PHOTOS (Phase 2) ----------
+  photos: {
+    async getByWO(workOrderId) {
+      var sb = getSupabase();
+      if (!sb) return null;
+      var { data, error } = await sb.from('wo_photos').select('*')
+        .eq('work_order_id', workOrderId)
+        .order('created_at', { ascending: false });
+      if (error) { console.error('DB photos.getByWO:', error); return null; }
+      return data;
+    },
+
+    async create(photo) {
+      var sb = getSupabase();
+      if (!sb) return null;
+      var { data, error } = await sb.from('wo_photos').insert({
+        work_order_id: photo.work_order_id,
+        type: photo.type || 'before',
+        label: photo.label || '',
+        area: photo.area || '',
+        photo_url: photo.photo_url || '',
+        gps_lat: photo.gps_lat || null,
+        gps_lng: photo.gps_lng || null,
+        taken_by: photo.taken_by || ''
+      }).select().single();
+      if (error) { console.error('DB photos.create:', error); return null; }
+      return data;
+    },
+
+    async uploadFile(file, workOrderId) {
+      var sb = getSupabase();
+      if (!sb) return null;
+      var filename = workOrderId + '/' + Date.now() + '_' + file.name;
+      var { data, error } = await sb.storage.from('photos').upload(filename, file, {
+        cacheControl: '3600', upsert: false
+      });
+      if (error) { console.error('DB photos.uploadFile:', error); return null; }
+      var { data: urlData } = sb.storage.from('photos').getPublicUrl(filename);
+      return urlData.publicUrl;
+    }
+  },
+
   // ---------- SEED DEFAULTS ----------
   async seedIfEmpty() {
     var sb = getSupabase();
@@ -306,3 +516,4 @@ const DB = {
     }
   }
 };
+
