@@ -1890,6 +1890,8 @@ body {
   font-family: 'Inter', sans-serif;
   font-size: 14px;
   line-height: 1.5;
+  position: relative;
+  overflow: hidden;
 }
 
 /* ---- CLASSIC TEMPLATE ---- */
@@ -1914,82 +1916,99 @@ body {
 .doc-template-classic .doc-sig-line { border-bottom: 1.5px solid #1e4d8c; }
 .doc-template-classic .doc-logo-initials { background: #1e4d8c; color: #fff; }
 
-/* ---- MODERN TEMPLATE ---- */
+/* ---- MODERN TEMPLATE — Premium Light (Indigo) ---- */
 .doc-template-modern #wo-document-inner {
-  background: linear-gradient(160deg, #0c0e16 0%, #141824 50%, #0f1320 100%);
-  color: #e8e8ec;
+  background: #fff;
+  color: #1e1e2e;
+  position: relative;
+}
+.doc-template-modern #wo-document-inner::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 5px;
+  background: linear-gradient(90deg, #4f46e5 0%, #7c3aed 40%, #a78bfa 100%);
 }
 .doc-template-modern .doc-header {
   display: flex; justify-content: space-between; align-items: flex-start;
-  margin-bottom: 32px; padding-bottom: 28px;
-  border-bottom: 1px solid rgba(217,119,6,0.25);
+  margin-bottom: 32px; padding-bottom: 28px; padding-top: 8px;
+  border-bottom: 1px solid #e5e7eb;
 }
-.doc-template-modern .doc-company-name { font-size: 20px; font-weight: 800; color: #fff; letter-spacing: -0.3px; }
-.doc-template-modern .doc-company-detail { font-size: 12px; color: rgba(255,255,255,0.5); margin-top: 3px; }
+.doc-template-modern .doc-company-name { font-size: 20px; font-weight: 800; color: #1e1e2e; letter-spacing: -0.4px; }
+.doc-template-modern .doc-company-detail { font-size: 12px; color: #6b7280; margin-top: 3px; }
 .doc-template-modern .doc-meta-row {
-  display: flex; gap: 28px; margin-bottom: 32px; padding: 20px 24px;
-  background: rgba(255,255,255,0.04); border-radius: 12px;
-  border: 1px solid rgba(255,255,255,0.06);
+  display: flex; gap: 24px; margin-bottom: 32px; padding: 20px 24px;
+  background: #f8f7ff; border-radius: 12px;
+  border: 1px solid #e8e5f7;
 }
-.doc-template-modern .doc-meta-label { font-size: 10px; font-weight: 700; text-transform: uppercase; color: var(--accent); letter-spacing: 0.8px; margin-bottom: 5px; }
-.doc-template-modern .doc-meta-value { font-size: 14px; font-weight: 600; color: #fff; }
-.doc-template-modern .doc-meta-sub { font-size: 12px; color: rgba(255,255,255,0.45); }
+.doc-template-modern .doc-meta-label { font-size: 10px; font-weight: 700; text-transform: uppercase; color: #4f46e5; letter-spacing: 0.8px; margin-bottom: 5px; }
+.doc-template-modern .doc-meta-value { font-size: 14px; font-weight: 600; color: #1e1e2e; }
+.doc-template-modern .doc-meta-sub { font-size: 12px; color: #6b7280; }
 .doc-template-modern .doc-table { width: 100%; border-collapse: collapse; margin-bottom: 0; }
-.doc-template-modern .doc-table thead tr { border-bottom: 1px solid rgba(217,119,6,0.3); }
-.doc-template-modern .doc-table th { padding: 12px 8px; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.8px; color: var(--accent); text-align: left; }
-.doc-template-modern .doc-table td { padding: 14px 8px; border-bottom: 1px solid rgba(255,255,255,0.05); vertical-align: top; color: #e0e0e5; }
-.doc-template-modern .doc-table tbody tr:hover td { background: rgba(217,119,6,0.04); }
-.doc-template-modern .doc-add-line { color: var(--accent); border-top: 1px dashed rgba(217,119,6,0.2); }
-.doc-template-modern .doc-totals { border-top: 1px solid rgba(217,119,6,0.25); }
-.doc-template-modern .doc-grand-total { color: var(--accent); text-shadow: 0 0 20px rgba(217,119,6,0.3); }
-.doc-template-modern .doc-sig-line { border-bottom: 1px solid rgba(255,255,255,0.15); }
-.doc-template-modern .doc-sig-label { color: rgba(255,255,255,0.35); }
-.doc-template-modern .doc-logo-initials { background: var(--accent); color: #fff; box-shadow: 0 4px 20px rgba(217,119,6,0.25); }
-.doc-template-modern .doc-inline-input { background: rgba(255,255,255,0.06) !important; color: #fff !important; border-color: rgba(255,255,255,0.12) !important; }
-.doc-template-modern .doc-line-name-input,
-.doc-template-modern .doc-line-desc-input,
-.doc-template-modern .doc-rate-input,
-.doc-template-modern .doc-qty-input { color: #e8e8ec !important; }
-.doc-template-modern .doc-line-name-input:hover,
-.doc-template-modern .doc-rate-input:hover { background: rgba(255,255,255,0.05) !important; }
-.doc-template-modern .doc-line-name-input:focus,
-.doc-template-modern .doc-rate-input:focus { background: rgba(217,119,6,0.1) !important; border-color: rgba(217,119,6,0.4) !important; }
-.doc-template-modern .doc-line-desc-input { opacity: 0.45; }
-.doc-template-modern .doc-line-desc-input:focus { opacity: 0.9; }
+.doc-template-modern .doc-table thead tr { border-bottom: 2px solid #4f46e5; }
+.doc-template-modern .doc-table th { padding: 12px 8px; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.8px; color: #4f46e5; text-align: left; }
+.doc-template-modern .doc-table td { padding: 14px 8px; border-bottom: 1px solid #f0eff5; vertical-align: top; }
+.doc-template-modern .doc-table tbody tr:hover td { background: #faf9ff; }
+.doc-template-modern .doc-add-line { color: #4f46e5; border-top: 1px dashed #d4d0f0; }
+.doc-template-modern .doc-totals { border-top: 2px solid #4f46e5; }
+.doc-template-modern .doc-grand-total { color: #4f46e5; font-weight: 800; }
+.doc-template-modern .doc-sig-line { border-bottom: 1.5px solid #c7c4d9; }
+.doc-template-modern .doc-sig-label { color: #6b7280; }
+.doc-template-modern .doc-logo-initials { background: linear-gradient(135deg, #4f46e5, #7c3aed); color: #fff; box-shadow: 0 4px 16px rgba(79,70,229,0.2); }
+.doc-template-modern .doc-inline-input { background: #f8f7ff !important; border-color: #d4d0f0 !important; }
+.doc-template-modern .doc-line-name-input:hover { background: #f8f7ff !important; }
+.doc-template-modern .doc-line-name-input:focus { border-color: #4f46e5 !important; background: rgba(79,70,229,0.05) !important; }
+.doc-template-modern .doc-line-desc-input { opacity: 0.55; }
+.doc-template-modern .doc-line-desc-input:focus { opacity: 1; }
+.doc-template-modern .drag-handle-doc { color: #a5a0d0; }
+.doc-template-modern .drag-handle-doc:hover { color: #4f46e5; }
 
-/* ---- FIELD REPORT TEMPLATE ---- */
+/* ---- FIELD REPORT — Construction Pro (Gold/Copper) ---- */
 .doc-template-field #wo-document-inner {
-  background: #f7f8f6;
-  color: #1a1a1a;
+  background: #faf9f7;
+  color: #2c2418;
   font-family: 'Inter', sans-serif;
+  position: relative;
+}
+.doc-template-field #wo-document-inner::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; bottom: 0;
+  width: 5px;
+  background: linear-gradient(180deg, #b8860b 0%, #8b6914 50%, #6b4f12 100%);
+  border-radius: 4px 0 0 4px;
 }
 .doc-template-field .doc-header {
   display: flex; justify-content: space-between; align-items: flex-start;
-  margin-bottom: 24px; padding-bottom: 20px;
-  border-bottom: 3px solid #2d5016;
+  margin-bottom: 28px; padding-bottom: 24px;
+  border-bottom: 2px solid #d4a856;
 }
-.doc-template-field .doc-company-name { font-size: 18px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.8px; color: #2d5016; }
-.doc-template-field .doc-company-detail { font-size: 12px; color: #555; margin-top: 3px; }
+.doc-template-field .doc-company-name { font-size: 19px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.6px; color: #6b4f12; }
+.doc-template-field .doc-company-detail { font-size: 12px; color: #7a6e5d; margin-top: 3px; }
 .doc-template-field .doc-meta-row {
   display: grid; grid-template-columns: repeat(4,1fr); gap: 16px;
-  margin-bottom: 28px; padding: 16px 20px;
-  background: #eef1eb; border-radius: 8px;
-  border-left: 4px solid #2d5016;
+  margin-bottom: 28px; padding: 18px 22px;
+  background: linear-gradient(135deg, #f5f0e6 0%, #faf6ee 100%); border-radius: 10px;
+  border: 1px solid #e8dfc8;
+  border-left: 4px solid #b8860b;
 }
-.doc-template-field .doc-meta-label { font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.8px; color: #2d5016; margin-bottom: 4px; }
-.doc-template-field .doc-meta-value { font-size: 13px; font-weight: 700; color: #1a1a1a; }
-.doc-template-field .doc-meta-sub { font-size: 12px; color: #555; }
+.doc-template-field .doc-meta-label { font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.8px; color: #b8860b; margin-bottom: 4px; }
+.doc-template-field .doc-meta-value { font-size: 13px; font-weight: 700; color: #2c2418; }
+.doc-template-field .doc-meta-sub { font-size: 12px; color: #7a6e5d; }
 .doc-template-field .doc-table { width: 100%; border-collapse: collapse; }
-.doc-template-field .doc-table thead tr { border-bottom: 2px solid #2d5016; background: #eef1eb; }
-.doc-template-field .doc-table th { padding: 10px 8px; font-size: 11px; font-weight: 800; text-transform: uppercase; color: #2d5016; letter-spacing: 0.5px; }
-.doc-template-field .doc-table td { padding: 12px 8px; border-bottom: 1px solid #dde2d8; vertical-align: top; font-size: 13px; }
-.doc-template-field .doc-table tbody tr:nth-child(even) td { background: rgba(45,80,22,0.03); }
-.doc-template-field .doc-add-line { color: #2d5016; border-top: 1px dashed #b5c4a8; }
-.doc-template-field .doc-totals { border-top: 3px solid #2d5016; }
-.doc-template-field .doc-grand-total { font-size: 17px; color: #2d5016; font-weight: 800; }
-.doc-template-field .doc-sig-line { border-bottom: 1.5px solid #2d5016; }
-.doc-template-field .doc-sig-label { color: #555; }
-.doc-template-field .doc-logo-initials { background: #2d5016; color: #fff; }
+.doc-template-field .doc-table thead tr { border-bottom: 2px solid #b8860b; background: linear-gradient(135deg, #f5f0e6, #faf6ee); }
+.doc-template-field .doc-table th { padding: 11px 8px; font-size: 11px; font-weight: 800; text-transform: uppercase; color: #8b6914; letter-spacing: 0.5px; }
+.doc-template-field .doc-table td { padding: 13px 8px; border-bottom: 1px solid #ece5d5; vertical-align: top; font-size: 13px; }
+.doc-template-field .doc-table tbody tr:nth-child(even) td { background: rgba(184,134,11,0.03); }
+.doc-template-field .doc-table tbody tr:hover td { background: rgba(184,134,11,0.06); }
+.doc-template-field .doc-add-line { color: #8b6914; border-top: 1px dashed #d4c89e; }
+.doc-template-field .doc-totals { border-top: 3px solid #b8860b; }
+.doc-template-field .doc-grand-total { font-size: 17px; color: #6b4f12; font-weight: 800; }
+.doc-template-field .doc-sig-line { border-bottom: 1.5px solid #b8860b; }
+.doc-template-field .doc-sig-label { color: #7a6e5d; }
+.doc-template-field .doc-logo-initials { background: linear-gradient(135deg, #b8860b, #8b6914); color: #fff; box-shadow: 0 4px 16px rgba(184,134,11,0.2); }
+.doc-template-field .drag-handle-doc { color: #c4ad7d; }
+.doc-template-field .drag-handle-doc:hover { color: #8b6914; }
 
 /* ---- SHARED DOC ELEMENTS ---- */
 .doc-logo-initials {
