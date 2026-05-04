@@ -1882,7 +1882,7 @@ body {
   border-radius: var(--radius-lg);
   overflow: hidden;
   box-shadow: 0 2px 24px rgba(0,0,0,0.10);
-  max-width: 820px;
+  max-width: 960px;
   margin: 0 auto;
 }
 #wo-document-inner {
@@ -1977,9 +1977,9 @@ body {
 }
 .doc-logo-img { width: 80px; height: 80px; object-fit: contain; border-radius: 8px; }
 
-.doc-th-desc { width: 50%; }
-.doc-th-rate, .doc-th-qty, .doc-th-total { width: 13%; text-align: right; }
-.doc-th-action { width: 5%; }
+.doc-th-desc { width: 55%; }
+.doc-th-rate, .doc-th-qty, .doc-th-total { width: 12%; text-align: right; }
+.doc-th-action { width: 4%; }
 .doc-table td.doc-td-rate, .doc-table td.doc-td-qty, .doc-table td.doc-td-total { text-align: right; }
 
 .doc-line-name { font-weight: 600; margin-bottom: 3px; }
@@ -2002,18 +2002,19 @@ body {
 .doc-line-desc-text { font-size: 12px; opacity: 0.65; white-space: pre-wrap; }
 .doc-line-desc-input {
   width: 100%;
-  font-size: 12px;
+  font-size: 12.5px;
   color: inherit;
   background: transparent;
   border: none;
   border-bottom: 1px dashed transparent;
   outline: none;
-  opacity: 0.65;
+  opacity: 0.6;
   padding: 2px 4px;
   font-family: inherit;
-  margin-top: 0;
+  margin-top: 2px;
   resize: vertical;
-  min-height: 20px;
+  min-height: 36px;
+  line-height: 1.4;
 }
 .doc-line-desc-input:hover { border-bottom-color: currentColor; opacity: 0.8; }
 .doc-line-desc-input:focus { border-bottom-color: var(--accent); opacity: 1; }

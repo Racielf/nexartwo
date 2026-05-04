@@ -941,9 +941,9 @@ function renderDocLines() {
             oninput="_docLines[${idx}].name=this.value;docAutoSave()"
             placeholder="Service name">
           <textarea class="doc-line-desc-input"
-            placeholder="Add a description (optional)"
-            oninput="_docLines[${idx}].desc=this.value;docAutoSave()"
-            rows="1">${escHtml(line.desc)}</textarea>
+            placeholder="Add a description..."
+            oninput="_docLines[${idx}].desc=this.value;docAutoSave();this.style.height='auto';this.style.height=this.scrollHeight+'px'"
+            rows="2">${escHtml(line.desc)}</textarea>
         </td>
         <td class="doc-td-rate">
           <input type="number" class="doc-rate-input"
