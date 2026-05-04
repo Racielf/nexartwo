@@ -1295,7 +1295,36 @@ function closeModal(modalId) {
   document.getElementById(modalId).classList.remove('active');
 }
 
-function openNewWOModal() { openModal('modal-new-wo'); }
+function openNewWOModal() {
+  // Populate client dropdown from CLIENTS array
+  var sel = document.getElementById('new-wo-client');
+  var currentVal = sel.value;
+  sel.innerHTML = '<option value="">Select client...</option>';
+  CLIENTS.forEach(function(c) {
+    var opt = document.createElement('option');
+    opt.value = c.name;
+    opt.textContent = c.name + (c.company ? ' — ' + c.company : '');
+    sel.appendChild(opt);
+  });
+  // Add quick "New Client" option
+  var newOpt = document.createElement('option');
+  newOpt.value = '__new__';
+  newOpt.textContent = '＋ Add New Client...';
+  newOpt.style.fontWeight = '700';
+  sel.appendChild(newOpt);
+  if (currentVal) sel.value = currentVal;
+
+  // Listen for "new client" selection
+  sel.onchange = function() {
+    if (sel.value === '__new__') {
+      sel.value = '';
+      closeModal('modal-new-wo');
+      openNewClientModal();
+    }
+  };
+
+  openModal('modal-new-wo');
+}
 function openNewServiceModal() { openModal('modal-new-service'); }
 
 
