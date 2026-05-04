@@ -395,8 +395,62 @@ function openWorkOrderDetail(woId) {
   document.getElementById('wo-detail-created').textContent = formatDate(wo.created);
   document.getElementById('wo-detail-target').textContent = formatDate(wo.target);
 
-  // Progress bar
-  const progress = wo.items > 0 ? Math.round((wo.completed / wo.items) * 100) : 0;
+  // Show loading state
+  document.getElementById('wo-line-items').innerHTML = '<div style="text-align:center;padding:32px;color:var(--text-muted)"><i data-lucide="loader" style="width:24px;height:24px;animation:spin 1s linear infinite"></i><p>Loading line items...</p></div>';
+  try { lucide.createIcons(); } catch(e) {}
+
+  // Load line items from Supabase, fallback to mock
+  loadLineItems(wo).then(function() {
+    updateWOProgress();
+    renderLineItems();
+    renderWOPhotos();
+    renderWOActivityLog();
+
+    // Tab counts
+    const photos = WO_PHOTOS[wo.id] || [];
+    document.getElementById('wo-tab-items-count').textContent = `(${currentLineItems.length})`;
+    document.getElementById('wo-tab-photos-count').textContent = `(${photos.length})`;
+    document.getElementById('photo-count').textContent = `${photos.length} photos`;
+    lucide.createIcons();
+  });
+
+  // Reset to items tab
+  switchWOTab('items');
+  navigateTo('wodetail');
+  lucide.createIcons();
+}
+
+async function loadLineItems(wo) {
+  // Try Supabase first
+  if (typeof DB !== 'undefined' && isSupabaseReady()) {
+    try {
+      var dbItems = await DB.lineItems.getByWO(wo.id);
+      if (dbItems && dbItems.length > 0) {
+        currentLineItems = dbItems;
+        // Sync WO counts
+        wo.items = currentLineItems.length;
+        wo.completed = currentLineItems.filter(i => i.status === 'completed').length;
+        wo.total = currentLineItems.reduce((s, i) => s + (i.price * (i.qty || 1)), 0);
+        return;
+      }
+    } catch(e) { console.warn('Failed to load line items from DB:', e); }
+  }
+  // Fallback: generate from SERVICES mock
+  currentLineItems = SERVICES.slice(0, wo.items).map((s, i) => ({
+    ...s,
+    lineId: i,
+    status: i < wo.completed ? 'completed' : (i === wo.completed ? 'progress' : 'pending'),
+    qty: 1
+  }));
+}
+
+function updateWOProgress() {
+  if (!currentWO) return;
+  var completed = currentLineItems.filter(i => i.status === 'completed').length;
+  var total = currentLineItems.length;
+  currentWO.completed = completed;
+  currentWO.items = total;
+  var progress = total > 0 ? Math.round((completed / total) * 100) : 0;
   document.getElementById('wo-detail-progress-bar').innerHTML = `
     <div class="wo-progress">
       <div class="wo-progress-bar">
@@ -404,30 +458,7 @@ function openWorkOrderDetail(woId) {
       </div>
       <span class="wo-progress-text" style="color:${progress===100?'var(--success)':'var(--accent)'}">${progress}%</span>
     </div>
-    <div style="font-size:11px;color:var(--text-muted);margin-top:4px">${wo.completed}/${wo.items} items complete</div>`;
-
-  // Generate line items
-  currentLineItems = SERVICES.slice(0, wo.items).map((s, i) => ({
-    ...s,
-    lineId: i,
-    status: i < wo.completed ? 'completed' : (i === wo.completed ? 'progress' : 'pending'),
-    qty: 1
-  }));
-
-  renderLineItems();
-  renderWOPhotos();
-  renderWOActivityLog();
-
-  // Tab counts
-  const photos = WO_PHOTOS[wo.id] || [];
-  document.getElementById('wo-tab-items-count').textContent = `(${wo.items})`;
-  document.getElementById('wo-tab-photos-count').textContent = `(${photos.length})`;
-  document.getElementById('photo-count').textContent = `${photos.length} photos`;
-
-  // Reset to items tab
-  switchWOTab('items');
-  navigateTo('wodetail');
-  lucide.createIcons();
+    <div style="font-size:11px;color:var(--text-muted);margin-top:4px">${completed}/${total} items complete</div>`;
 }
 
 function renderLineItems() {
@@ -461,24 +492,36 @@ function renderLineItems() {
 function markItemComplete(index) {
   if (!currentLineItems[index] || currentLineItems[index].status === 'completed') return;
   currentLineItems[index].status = 'completed';
+  currentLineItems[index].completedAt = new Date().toISOString();
+  currentLineItems[index].completedBy = COMPANY.owner || 'Field Agent';
+
+  // Persist to Supabase
+  var item = currentLineItems[index];
+  if (typeof DB !== 'undefined' && isSupabaseReady() && item.id && typeof item.id === 'number') {
+    DB.lineItems.update(item.id, {
+      status: 'completed',
+      completedAt: item.completedAt,
+      completedBy: item.completedBy
+    }).then(function() {
+      console.log('✓ Line item marked complete in DB:', item.name);
+    }).catch(function(e) { console.warn('Failed to sync line item completion:', e); });
+  }
 
   // Update WO data
-  if (currentWO) {
-    currentWO.completed = currentLineItems.filter(i => i.status === 'completed').length;
-    const progress = Math.round((currentWO.completed / currentWO.items) * 100);
-    document.getElementById('wo-detail-progress-bar').innerHTML = `
-      <div class="wo-progress">
-        <div class="wo-progress-bar">
-          <div class="wo-progress-fill" style="width:${progress}%;background:${progress===100?'var(--success)':'var(--accent)'}"></div>
-        </div>
-        <span class="wo-progress-text" style="color:${progress===100?'var(--success)':'var(--accent)'}">${progress}%</span>
-      </div>
-      <div style="font-size:11px;color:var(--text-muted);margin-top:4px">${currentWO.completed}/${currentWO.items} items complete</div>`;
+  updateWOProgress();
+
+  // Sync WO totals to Supabase
+  if (typeof DB !== 'undefined' && isSupabaseReady() && currentWO) {
+    DB.workOrders.update(currentWO.id, {
+      completed: currentWO.completed,
+      items: currentWO.items
+    }).catch(function(e) { console.warn('Failed to sync WO progress:', e); });
   }
 
   renderLineItems();
   renderDashboard();
   renderWorkOrders();
+  showToast('✓ Item completed: ' + item.name);
 }
 
 function renderWOPhotos() {
@@ -967,13 +1010,63 @@ function addLineItem() {
   if (banner && currentWO) {
     banner.style.display = 'flex';
     woLabel.textContent = currentWO.id + ' - ' + currentWO.title;
+    // Mark that we're in "add to WO" mode
+    window._addingToWO = true;
   }
   navigateTo('services');
+}
+
+// Called when user clicks a service while in "add to WO" mode
+function addServiceToCurrentWO(serviceId) {
+  if (!currentWO) return;
+  var svc = SERVICES.find(function(s) { return s.id === serviceId; });
+  if (!svc) return;
+
+  var newItem = {
+    workOrderId: currentWO.id,
+    serviceId: svc.id,
+    name: svc.name,
+    nameEs: svc.nameEs || '',
+    desc: svc.desc || '',
+    category: svc.category || '',
+    sub: svc.sub || '',
+    price: svc.price || 0,
+    qty: 1,
+    unit: svc.unit || 'each',
+    negotiable: svc.negotiable || 'yes',
+    laborHrs: svc.laborHrs || 1,
+    status: 'pending',
+    sortOrder: currentLineItems.length
+  };
+
+  // Add to local array immediately
+  currentLineItems.push(newItem);
+  currentWO.items = currentLineItems.length;
+  currentWO.total = currentLineItems.reduce(function(s, i) { return s + (i.price * (i.qty || 1)); }, 0);
+
+  // Persist to Supabase
+  if (typeof DB !== 'undefined' && isSupabaseReady()) {
+    DB.lineItems.create(newItem).then(function(created) {
+      if (created) {
+        // Update local item with DB id
+        newItem.id = created.id;
+        console.log('✓ Line item added to DB:', svc.name);
+      }
+      // Also update WO totals
+      DB.workOrders.update(currentWO.id, {
+        items: currentWO.items,
+        total: currentWO.total
+      }).catch(function(e) { console.warn('WO sync failed:', e); });
+    }).catch(function(e) { console.warn('Failed to persist line item:', e); });
+  }
+
+  showToast('✓ Added: ' + svc.name + ' to ' + currentWO.id);
 }
 
 function returnToWODetail() {
   var banner = document.getElementById('services-back-to-wo');
   if (banner) banner.style.display = 'none';
+  window._addingToWO = false;
   if (currentWO) {
     openWorkOrderDetail(currentWO.id);
   } else {
@@ -1104,11 +1197,17 @@ function updateDocPreview() {
   var wo = WORK_ORDERS.find(w => w.id === woId);
   if (!wo) return;
   
-  var items = SERVICES.slice(0, wo.items).map((s, i) => ({
-    ...s, lineId: i,
-    status: i < wo.completed ? 'completed' : (i === wo.completed ? 'progress' : 'draft'),
-    qty: 1
-  }));
+  // Use real line items if available for this WO, else generate mock
+  var items;
+  if (currentWO && currentWO.id === woId && currentLineItems.length > 0) {
+    items = currentLineItems;
+  } else {
+    items = SERVICES.slice(0, wo.items).map((s, i) => ({
+      ...s, lineId: i,
+      status: i < wo.completed ? 'completed' : (i === wo.completed ? 'progress' : 'draft'),
+      qty: 1
+    }));
+  }
   var total = items.reduce((s, i) => s + (i.price * (i.qty||1)), 0);
   var progress = Math.round((wo.completed / wo.items) * 100);
   var completedItems = items.filter(i => i.status === 'completed');
@@ -1171,12 +1270,15 @@ function createDocument() {
   }
   
   currentWO = WORK_ORDERS.find(w => w.id === woId);
-  currentLineItems = SERVICES.slice(0, currentWO.items).map((s, i) => ({
-    ...s,
-    lineId: i,
-    status: i < currentWO.completed ? 'completed' : (i === currentWO.completed ? 'progress' : 'draft'),
-    qty: 1
-  }));
+  // Use real line items if loaded, else generate mock
+  if (!currentLineItems.length || currentWO.id !== woId) {
+    currentLineItems = SERVICES.slice(0, currentWO.items).map((s, i) => ({
+      ...s,
+      lineId: i,
+      status: i < currentWO.completed ? 'completed' : (i === currentWO.completed ? 'progress' : 'draft'),
+      qty: 1
+    }));
+  }
   
   buildPDF(template, hidePrices, currentDocStyle);
   closeModal('modal-new-doc');
@@ -1271,6 +1373,13 @@ function formatDate(d) {
 function showServiceDetail(id) {
   const s = SERVICES.find(sv => sv.id === id);
   if (!s) return;
+  
+  // If we're in "add to WO" mode, add it directly
+  if (window._addingToWO && currentWO) {
+    addServiceToCurrentWO(id);
+    return;
+  }
+  
   alert(`${s.name}\n${s.nameEs}\n\nCategory: ${s.category} > ${s.sub}\nPrice: $${s.price}/${s.unit}\nLabor: ${s.laborHrs}h\nNegotiable: ${s.negotiable}\n\n${s.desc}`);
 }
 
