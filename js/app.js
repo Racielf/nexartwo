@@ -17,7 +17,7 @@ let COMPANY = {
 const SERVICE_CATEGORIES = [
   "All", "Electrical", "Plumbing", "Roofing", "HVAC", "Flooring",
   "Painting", "Drywall / Framing", "Windows & Doors", "Foundation",
-  "Landscaping", "Cleaning", "General Repairs", "Appliances"
+  "Landscaping", "Cleaning", "General Repairs", "Appliances", "Crosswalks"
 ];
 
 const _DEFAULT_SERVICES = [
