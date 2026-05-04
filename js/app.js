@@ -703,7 +703,7 @@ function renderLineItems() {
             <option value="progress"  ${item.status === 'progress'  ? 'selected' : ''}>🔧 In Progress</option>
             <option value="completed" ${item.status === 'completed' ? 'selected' : ''}>✅ Completed</option>
           </select>
-          <div class="line-item-price">$${((item.price || 0) * (item.qty || 1)).toLocaleString()}</div>
+
           <button class="doc-remove-btn" onclick="deleteLineItem(${i})" title="Delete line item"
             style="opacity:0.4;font-size:15px;padding:4px 6px;${_liEditMode ? 'display:none' : ''}">✕</button>
         </div>`;
