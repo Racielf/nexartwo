@@ -525,6 +525,8 @@ function deleteService(svcId) {
 
 // ============ WORK ORDER DETAIL ============
 let currentLineItems = [];
+var _liEditMode = false;       // false = read-only, true = editing
+var _liEditSnapshot = [];      // snapshot of {name, desc} before editing (for Cancel)
 
 const WO_PHOTOS = {
   'WO-2025-0041': [
@@ -645,53 +647,133 @@ function renderLineItems() {
   document.getElementById('wo-detail-total').textContent = '$' + total.toLocaleString();
 
   const list = document.getElementById('wo-line-items');
-  list.innerHTML = currentLineItems.map((item, i) => {
-    const isCompleted = item.status === 'completed';
-    const isProgress = item.status === 'progress';
-    return `
-    <div class="line-item" style="${isCompleted ? 'opacity:0.7;' : ''}"
-      draggable="true"
-      data-li-idx="${i}"
-      ondragstart="liDragStart(event,${i})"
-      ondragover="liDragOver(event)"
-      ondrop="liDrop(event,${i})"
-      ondragend="liDragEnd(event)">
-      <div class="drag-handle" title="Drag to reorder">⠿</div>
-      <div class="line-item-number" style="${isCompleted ? 'background:var(--success-bg);color:var(--success)' : isProgress ? 'background:var(--accent-bg);color:var(--accent)' : ''}">${isCompleted ? '<i data-lucide="check" style="width:16px;height:16px"></i>' : i + 1}</div>
-      <div class="line-item-info">
-        <input class="li-name-input" value="${escHtml(item.name)}"
-          style="font-weight:600;font-size:13px;color:var(--text-primary);border:none;background:transparent;width:100%;padding:0;${isCompleted ? 'text-decoration:line-through;opacity:0.7' : ''}"
-          oninput="syncFromLineItem(${i},'name',this.value)"
-          placeholder="Item name">
-        <textarea class="li-desc-input" rows="1"
-          style="font-size:12px;color:var(--text-secondary);border:none;background:transparent;width:100%;padding:0;resize:none;overflow:hidden;"
-          oninput="syncFromLineItem(${i},'desc',this.value);this.style.height='auto';this.style.height=this.scrollHeight+'px'"
-          placeholder="Description">${escHtml(item.desc || '')}</textarea>
-        <div style="display:flex;gap:8px;align-items:center;margin-top:2px">
-          <span style="font-size:11px;color:var(--text-muted)">$</span>
-          <input type="number" class="li-price-input" value="${item.price||0}" min="0" step="0.01"
-            style="font-size:11px;width:70px;border:none;background:transparent;color:var(--text-muted);padding:0"
-            oninput="syncFromLineItem(${i},'price',parseFloat(this.value)||0)">
-          <span style="font-size:11px;color:var(--text-muted)">× qty</span>
-          <input type="number" class="li-qty-input" value="${item.qty||1}" min="1"
-            style="font-size:11px;width:35px;border:none;background:transparent;color:var(--text-muted);padding:0"
-            oninput="syncFromLineItem(${i},'qty',Math.max(1,parseInt(this.value)||1))">
-        </div>
-      </div>
-      <select class="line-item-status-select" onchange="changeLineItemStatus(${i}, this.value)" title="Change status">
-        <option value="pending" ${item.status === 'pending' ? 'selected' : ''}>⏳ Pending</option>
-        <option value="progress" ${item.status === 'progress' ? 'selected' : ''}>🔧 In Progress</option>
-        <option value="completed" ${item.status === 'completed' ? 'selected' : ''}>✅ Completed</option>
-      </select>
-      <div class="line-item-price">$${((item.price || 0) * (item.qty || 1)).toLocaleString()}</div>
-      <button class="doc-remove-btn" onclick="deleteLineItem(${i})" title="Delete line item" style="opacity:0.4;font-size:15px;padding:4px 6px">✕</button>
-    </div>`;
-  }).join('');
 
-  if (currentLineItems.length === 0) {
-    list.innerHTML = '<div style="text-align:center;padding:40px;color:var(--text-muted)"><i data-lucide="inbox" style="width:32px;height:32px;margin-bottom:8px"></i><p>No line items yet. Click "Add Item" to add services.</p></div>';
-  }
+  // ---- Toolbar ----
+  var toolbar = _liEditMode
+    ? `<div style="display:flex;gap:8px;align-items:center;padding:0 0 12px 0">
+        <button class="btn btn-sm btn-primary" onclick="liSave()" style="gap:6px">
+          <i data-lucide="check" style="width:13px;height:13px"></i> Save Changes
+        </button>
+        <button class="btn btn-sm btn-secondary" onclick="liCancel()">Cancel</button>
+        <span style="font-size:11px;color:var(--text-muted);margin-left:4px">Editing name &amp; description</span>
+      </div>`
+    : `<div style="display:flex;gap:8px;align-items:center;padding:0 0 12px 0">
+        <button class="btn btn-sm btn-secondary" onclick="liEdit()" style="gap:6px">
+          <i data-lucide="edit-2" style="width:13px;height:13px"></i> Edit
+        </button>
+      </div>`;
+
+  // ---- Items ----
+  var items = currentLineItems.length === 0
+    ? `<div style="text-align:center;padding:40px;color:var(--text-muted)"><i data-lucide="inbox" style="width:32px;height:32px;margin-bottom:8px"></i><p>No line items yet. Click "Add Item" to add services.</p></div>`
+    : currentLineItems.map((item, i) => {
+        const isCompleted = item.status === 'completed';
+        const isProgress  = item.status === 'progress';
+
+        // Name + desc: editable inputs (no oninput) OR static text
+        const nameField = _liEditMode
+          ? `<input id="li-name-${i}" class="li-name-input"
+               value="${escHtml(item.name)}"
+               style="font-weight:600;font-size:13px;color:var(--text-primary);border:1px solid var(--border);border-radius:4px;background:var(--bg-input);width:100%;padding:4px 6px;"
+               placeholder="Item name">`
+          : `<div style="font-weight:600;font-size:13px;color:var(--text-primary);${isCompleted ? 'text-decoration:line-through;opacity:0.7' : ''}">${escHtml(item.name)}</div>`;
+
+        const descField = _liEditMode
+          ? `<textarea id="li-desc-${i}" class="li-desc-input" rows="2"
+               style="font-size:12px;color:var(--text-secondary);border:1px solid var(--border);border-radius:4px;background:var(--bg-input);width:100%;padding:4px 6px;resize:vertical;margin-top:4px"
+               placeholder="Description">${escHtml(item.desc || '')}</textarea>`
+          : `<div style="font-size:12px;color:var(--text-secondary);margin-top:2px">${escHtml(item.desc || '')}</div>`;
+
+        return `
+        <div class="line-item" style="${isCompleted ? 'opacity:0.7;' : ''}"
+          draggable="${_liEditMode ? 'false' : 'true'}"
+          data-li-idx="${i}"
+          ondragstart="${_liEditMode ? '' : `liDragStart(event,${i})`}"
+          ondragover="${_liEditMode ? '' : 'liDragOver(event)'}"
+          ondrop="${_liEditMode ? '' : `liDrop(event,${i})`}"
+          ondragend="${_liEditMode ? '' : 'liDragEnd(event)'}">
+          <div class="drag-handle" style="${_liEditMode ? 'opacity:0.2;cursor:default' : ''}" title="${_liEditMode ? '' : 'Drag to reorder'}">⠿</div>
+          <div class="line-item-number" style="${isCompleted ? 'background:var(--success-bg);color:var(--success)' : isProgress ? 'background:var(--accent-bg);color:var(--accent)' : ''}">${isCompleted ? '<i data-lucide="check" style="width:16px;height:16px"></i>' : i + 1}</div>
+          <div class="line-item-info">
+            ${nameField}
+            ${descField}
+          </div>
+          <select class="line-item-status-select" onchange="changeLineItemStatus(${i}, this.value)" title="Change status" ${_liEditMode ? 'disabled' : ''}>
+            <option value="pending"   ${item.status === 'pending'   ? 'selected' : ''}>⏳ Pending</option>
+            <option value="progress"  ${item.status === 'progress'  ? 'selected' : ''}>🔧 In Progress</option>
+            <option value="completed" ${item.status === 'completed' ? 'selected' : ''}>✅ Completed</option>
+          </select>
+          <div class="line-item-price">$${((item.price || 0) * (item.qty || 1)).toLocaleString()}</div>
+          <button class="doc-remove-btn" onclick="deleteLineItem(${i})" title="Delete line item"
+            style="opacity:0.4;font-size:15px;padding:4px 6px;${_liEditMode ? 'display:none' : ''}">✕</button>
+        </div>`;
+      }).join('');
+
+  list.innerHTML = toolbar + items;
   lucide.createIcons();
+}
+
+// ---- Edit / Save / Cancel ----
+function liEdit() {
+  // Snapshot current name+desc before editing
+  _liEditSnapshot = currentLineItems.map(function(item) {
+    return { id: item.id, name: item.name, desc: item.desc || '' };
+  });
+  _liEditMode = true;
+  renderLineItems();
+}
+
+function liCancel() {
+  // Restore original values from snapshot
+  _liEditSnapshot.forEach(function(snap) {
+    var li = currentLineItems.find(function(i) { return i.id == snap.id; });
+    if (li) { li.name = snap.name; li.desc = snap.desc; }
+  });
+  _liEditMode = false;
+  _liEditSnapshot = [];
+  renderLineItems();
+}
+
+function liSave() {
+  // Read input values from DOM and apply to currentLineItems
+  currentLineItems.forEach(function(item, i) {
+    var nameEl = document.getElementById('li-name-' + i);
+    var descEl = document.getElementById('li-desc-' + i);
+    if (nameEl) item.name = nameEl.value.trim() || item.name;
+    if (descEl) item.desc = descEl.value.trim();
+  });
+
+  // Sync name+desc to _docLines by liId
+  if (_docLines && _docLines.length > 0) {
+    currentLineItems.forEach(function(item) {
+      var dl = _docLines.find(function(d) { return d.liId == item.id; });
+      if (dl) { dl.name = item.name; dl.desc = item.desc; }
+    });
+    // Re-render doc tab only if visible
+    var docTbody = document.getElementById('doc-line-tbody');
+    if (docTbody && docTbody.offsetParent !== null) {
+      renderDocLines();
+    }
+    docAutoSave();
+  }
+
+  // Persist to localStorage
+  saveWorkOrders();
+
+  // Persist changed items to Supabase
+  if (typeof DB !== 'undefined' && isSupabaseReady()) {
+    currentLineItems.forEach(function(item) {
+      if (typeof item.id === 'number') {
+        DB.lineItems.update(item.id, { name: item.name, desc: item.desc })
+          .catch(function(e) { console.warn('liSave Supabase fail:', e); });
+      }
+    });
+  }
+
+  _liEditMode = false;
+  _liEditSnapshot = [];
+  renderLineItems();
+  showToast('✅ Line Items saved');
 }
 
 // ============ DRAG & DROP — LINE ITEMS ============
