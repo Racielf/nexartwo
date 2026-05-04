@@ -215,6 +215,14 @@ const DB = {
       var { error } = await sb.from('work_orders').update(row).eq('id', id);
       if (error) { console.error('DB workOrders.update:', error); return false; }
       return true;
+    },
+
+    async delete(id) {
+      var sb = getSupabase();
+      if (!sb) return false;
+      var { error } = await sb.from('work_orders').delete().eq('id', id);
+      if (error) { console.error('DB workOrders.delete:', error); return false; }
+      return true;
     }
   },
 

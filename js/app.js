@@ -488,13 +488,19 @@ function deleteWorkOrder(woId) {
   closeAllWOMenus();
   var wo = WORK_ORDERS.find(function(w) { return w.id === woId; });
   if (!wo) return;
-  showConfirmModal('Delete Work Order', 'Delete ' + woId + ' - "' + wo.title + '"? This cannot be undone.', function() {
-    WORK_ORDERS = WORK_ORDERS.filter(function(w) { return w.id !== woId; });
-    saveWorkOrders();
-    try { localStorage.removeItem('nexartwo_doc_' + woId); } catch(e) {}
+  showConfirmModal('Delete Work Order', '"' + wo.title + '" will be permanently deleted.', async function() {
+    // Step 1: delete from Supabase first (if connected)
     if (typeof DB !== 'undefined' && isSupabaseReady()) {
-      DB.workOrders.delete(woId).catch(function(e) { console.warn('WO delete sync failed:', e); });
+      var ok = await DB.workOrders.delete(woId);
+      if (!ok) {
+        showToast('Delete failed - database error. Try again.');
+        return;
+      }
     }
+    // Step 2: only reached if Supabase succeeded or not connected
+    WORK_ORDERS = WORK_ORDERS.filter(function(w) { return w.id !== woId; });
+    try { localStorage.removeItem('nexartwo_doc_' + woId); } catch(e) {}
+    saveWorkOrders();
     renderWorkOrders();
     renderDashboard();
     showToast('Work Order ' + woId + ' deleted');
