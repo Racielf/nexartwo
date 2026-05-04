@@ -1338,12 +1338,36 @@ function openNewServiceModal() { openModal('modal-new-service'); }
 
 
 function saveNewWO() {
-  const title = document.getElementById('new-wo-title').value;
-  const client = document.getElementById('new-wo-client').value;
-  if (!title || !client) { alert('Please fill required fields'); return; }
+  const titleEl = document.getElementById('new-wo-title');
+  const clientEl = document.getElementById('new-wo-client');
+  const title = titleEl.value.trim();
+  const client = clientEl.value;
+
+  // Inline validation — highlight missing fields
+  var valid = true;
+  if (!title) {
+    titleEl.style.borderColor = 'var(--danger)';
+    titleEl.style.boxShadow = '0 0 0 3px rgba(220,38,38,0.12)';
+    titleEl.focus();
+    showToast('⚠️ Work Order Title is required');
+    valid = false;
+  } else {
+    titleEl.style.borderColor = '';
+    titleEl.style.boxShadow = '';
+  }
+  if (!client) {
+    clientEl.style.borderColor = 'var(--danger)';
+    clientEl.style.boxShadow = '0 0 0 3px rgba(220,38,38,0.12)';
+    if (valid) { clientEl.focus(); showToast('⚠️ Please select a Client'); }
+    valid = false;
+  } else {
+    clientEl.style.borderColor = '';
+    clientEl.style.boxShadow = '';
+  }
+  if (!valid) return;
 
   const newWO = {
-    id: `WO-2025-${String(WORK_ORDERS.length + 41).padStart(4, '0')}`,
+    id: `WO-${new Date().getFullYear()}-${String(WORK_ORDERS.length + 41).padStart(4, '0')}`,
     title, client,
     clientId: CLIENTS.find(c => c.name === client)?.id || 1,
     property: document.getElementById('new-wo-property').value || 'TBD',
@@ -1356,16 +1380,17 @@ function saveNewWO() {
   };
   WORK_ORDERS.unshift(newWO);
   saveWorkOrders();
-  // Sync to Supabase
   if (typeof DB !== 'undefined' && isSupabaseReady()) {
     DB.workOrders.create(newWO).catch(function(e) { console.warn('Cloud sync WO failed:', e); });
   }
   renderWorkOrders();
   renderDashboard();
   closeModal('modal-new-wo');
-  navigateTo('workorders');
   // Reset form
-  document.getElementById('new-wo-title').value = '';
+  titleEl.value = '';
+  clientEl.value = '';
+  showToast('✅ Work Order ' + newWO.id + ' created');
+  navigateTo('workorders');
 }
 
 function saveNewService() {
@@ -1456,19 +1481,29 @@ function renderClients() {
       <td style="text-align:center;font-weight:600">${c.properties}</td>
       <td style="text-align:center">${c.totalOrders}</td>
       <td class="fw-700">$${c.totalValue.toLocaleString()}</td>
-      <td>
-        <div style="display:flex;gap:6px;align-items:center">
-          <button class="btn btn-sm btn-primary" onclick="createWOForClient(${c.id})" title="Create Work Order" style="gap:5px;padding:6px 10px">
-            <i data-lucide="file-plus" style="width:13px;height:13px"></i> New WO
-          </button>
-          <button class="btn btn-sm btn-secondary" onclick="viewClientOrders(${c.id})"><i data-lucide="clipboard-list" style="width:14px;height:14px;margin-right:4px"></i>Orders</button>
-          <button class="btn btn-sm btn-ghost" onclick="editClient(${c.id})"><i data-lucide="edit-2" style="width:14px;height:14px"></i></button>
-          <button class="btn btn-sm btn-ghost" onclick="deleteClient(${c.id})" title="Delete" style="color:var(--danger)"><i data-lucide="trash-2" style="width:14px;height:14px"></i></button>
+      <td style="position:relative">
+        <button class="btn btn-sm btn-ghost" onclick="toggleClientMenu(event,${c.id})" title="More actions"
+          style="padding:6px 8px;border-radius:8px">
+          <i data-lucide="more-horizontal" style="width:16px;height:16px"></i>
+        </button>
+        <div class="client-action-menu" id="cam-${c.id}" style="display:none">
+          <div class="cam-item" onclick="createWOForClient(${c.id});closeAllClientMenus()">
+            <i data-lucide="file-plus" style="width:15px;height:15px"></i> New Work Order
+          </div>
+          <div class="cam-item" onclick="viewClientOrders(${c.id});closeAllClientMenus()">
+            <i data-lucide="clipboard-list" style="width:15px;height:15px"></i> View Orders
+          </div>
+          <div class="cam-item" onclick="editClient(${c.id});closeAllClientMenus()">
+            <i data-lucide="edit-2" style="width:15px;height:15px"></i> Edit Client
+          </div>
+          <div class="cam-divider"></div>
+          <div class="cam-item cam-danger" onclick="deleteClient(${c.id});closeAllClientMenus()">
+            <i data-lucide="trash-2" style="width:15px;height:15px"></i> Delete
+          </div>
         </div>
       </td>
     </tr>`;
   }).join('');
-  // Reset select-all
   var sa = document.getElementById('clients-select-all');
   if (sa) sa.checked = false;
   clientsUpdateBulkBar();
@@ -1563,6 +1598,26 @@ function clientsBulkCreateWO() {
   clientsClearSelection();
 }
 
+// ====== CLIENT ACTION DROPDOWN MENU ======
+function toggleClientMenu(event, clientId) {
+  event.stopPropagation();
+  var menu = document.getElementById('cam-' + clientId);
+  var isVisible = menu.style.display !== 'none';
+  closeAllClientMenus();
+  if (!isVisible) {
+    menu.style.display = 'block';
+    lucide.createIcons();
+  }
+}
+
+function closeAllClientMenus() {
+  document.querySelectorAll('.client-action-menu').forEach(function(m) {
+    m.style.display = 'none';
+  });
+}
+
+// Close menus when clicking outside
+document.addEventListener('click', function() { closeAllClientMenus(); });
 
 function filterClients(type) {
   currentClientFilter = type;
