@@ -622,7 +622,14 @@ function renderLineItems() {
     const isCompleted = item.status === 'completed';
     const isProgress = item.status === 'progress';
     return `
-    <div class="line-item" style="${isCompleted ? 'opacity:0.7;' : ''}">
+    <div class="line-item" style="${isCompleted ? 'opacity:0.7;' : ''}"
+      draggable="true"
+      data-li-idx="${i}"
+      ondragstart="liDragStart(event,${i})"
+      ondragover="liDragOver(event)"
+      ondrop="liDrop(event,${i})"
+      ondragend="liDragEnd(event)">
+      <div class="drag-handle" title="Drag to reorder">⠿</div>
       <div class="line-item-number" style="${isCompleted ? 'background:var(--success-bg);color:var(--success)' : isProgress ? 'background:var(--accent-bg);color:var(--accent)' : ''}">${isCompleted ? '<i data-lucide="check" style="width:16px;height:16px"></i>' : i + 1}</div>
       <div class="line-item-info">
         <h4 style="${isCompleted ? 'text-decoration:line-through;opacity:0.7' : ''}">${item.name}</h4>
@@ -642,6 +649,68 @@ function renderLineItems() {
     list.innerHTML = '<div style="text-align:center;padding:40px;color:var(--text-muted)"><i data-lucide="inbox" style="width:32px;height:32px;margin-bottom:8px"></i><p>No line items yet. Click "Add Item" to add services.</p></div>';
   }
   lucide.createIcons();
+}
+
+// ============ DRAG & DROP — LINE ITEMS ============
+var _liDragIdx = null;
+function liDragStart(e, idx) {
+  _liDragIdx = idx;
+  e.dataTransfer.effectAllowed = 'move';
+  e.currentTarget.style.opacity = '0.4';
+}
+function liDragOver(e) {
+  e.preventDefault();
+  e.dataTransfer.dropEffect = 'move';
+  var row = e.currentTarget;
+  row.style.borderTop = '2px solid var(--accent)';
+}
+function liDrop(e, targetIdx) {
+  e.preventDefault();
+  e.currentTarget.style.borderTop = '';
+  if (_liDragIdx === null || _liDragIdx === targetIdx) return;
+  var moved = currentLineItems.splice(_liDragIdx, 1)[0];
+  currentLineItems.splice(targetIdx, 0, moved);
+  _liDragIdx = null;
+  renderLineItems();
+  saveWorkOrders();
+  _markGlobalUnsaved();
+}
+function liDragEnd(e) {
+  e.currentTarget.style.opacity = '';
+  e.currentTarget.style.borderTop = '';
+  _liDragIdx = null;
+  // Clean all borders
+  document.querySelectorAll('.line-item').forEach(function(el) { el.style.borderTop = ''; });
+}
+
+// ============ DRAG & DROP — DOCUMENT LINES ============
+var _docDragIdx = null;
+function docDragStart(e, idx) {
+  _docDragIdx = idx;
+  e.dataTransfer.effectAllowed = 'move';
+  e.currentTarget.style.opacity = '0.4';
+}
+function docDragOver(e) {
+  e.preventDefault();
+  e.dataTransfer.dropEffect = 'move';
+  e.currentTarget.style.borderTop = '2px solid var(--accent)';
+}
+function docDrop(e, targetIdx) {
+  e.preventDefault();
+  e.currentTarget.style.borderTop = '';
+  if (_docDragIdx === null || _docDragIdx === targetIdx) return;
+  var moved = _docLines.splice(_docDragIdx, 1)[0];
+  _docLines.splice(targetIdx, 0, moved);
+  _docDragIdx = null;
+  renderDocLines();
+  updateDocTotals();
+  docAutoSave();
+}
+function docDragEnd(e) {
+  e.currentTarget.style.opacity = '';
+  e.currentTarget.style.borderTop = '';
+  _docDragIdx = null;
+  document.querySelectorAll('#doc-line-tbody tr').forEach(function(el) { el.style.borderTop = ''; });
 }
 
 function changeLineItemStatus(index, newStatus) {
@@ -934,8 +1003,15 @@ function renderDocLines() {
   tbody.innerHTML = _docLines.map(function(line, idx) {
     var lineTotal = (parseFloat(line.rate) || 0) * (parseInt(line.qty) || 1);
     return `
-      <tr id="docrow-${line.id}">
+      <tr id="docrow-${line.id}" draggable="true"
+          ondragstart="docDragStart(event,${idx})"
+          ondragover="docDragOver(event)"
+          ondrop="docDrop(event,${idx})"
+          ondragend="docDragEnd(event)">
         <td class="doc-td-desc">
+          <div style="display:flex;align-items:flex-start;gap:6px">
+            <span class="drag-handle-doc" title="Drag to reorder">⠿</span>
+            <div style="flex:1">
           <input class="doc-line-name-input"
             value="${escHtml(line.name)}"
             oninput="_docLines[${idx}].name=this.value;docAutoSave()"
@@ -944,6 +1020,8 @@ function renderDocLines() {
             placeholder="Add a description..."
             oninput="_docLines[${idx}].desc=this.value;docAutoSave();this.style.height='auto';this.style.height=this.scrollHeight+'px'"
             rows="2">${escHtml(line.desc)}</textarea>
+            </div>
+          </div>
         </td>
         <td class="doc-td-rate">
           <input type="number" class="doc-rate-input"

@@ -2095,6 +2095,38 @@ body {
 }
 .doc-add-line:hover { opacity: 1; }
 
+/* ---- DRAG HANDLES ---- */
+.drag-handle {
+  cursor: grab;
+  font-size: 16px;
+  color: var(--text-muted);
+  opacity: 0.3;
+  transition: opacity 0.15s, color 0.15s;
+  user-select: none;
+  padding: 2px 4px;
+  flex-shrink: 0;
+  line-height: 1;
+}
+.drag-handle:hover { opacity: 0.8; color: var(--accent); }
+.drag-handle:active { cursor: grabbing; opacity: 1; }
+
+.drag-handle-doc {
+  cursor: grab;
+  font-size: 14px;
+  color: var(--text-muted);
+  opacity: 0.2;
+  transition: opacity 0.15s, color 0.15s;
+  user-select: none;
+  padding: 4px 2px 0 0;
+  flex-shrink: 0;
+  line-height: 1;
+}
+.drag-handle-doc:hover { opacity: 0.7; color: var(--accent); }
+.drag-handle-doc:active { cursor: grabbing; opacity: 1; }
+
+.line-item[draggable="true"] { transition: opacity 0.2s, border-top 0.15s; }
+#doc-line-tbody tr[draggable="true"] { transition: opacity 0.2s, border-top 0.15s; }
+
 .doc-totals {
   margin-left: auto;
   width: 280px;
