@@ -654,23 +654,38 @@ function renderDocLines() {
     return `
       <tr id="docrow-${line.id}">
         <td class="doc-td-desc">
-          <div class="doc-line-name">${escHtml(line.name)}</div>
-          <input class="doc-line-desc-input"
+          <input class="doc-line-name-input"
+            value="${escHtml(line.name)}"
+            oninput="_docLines[${idx}].name=this.value"
+            placeholder="Service name">
+          <textarea class="doc-line-desc-input"
             placeholder="Add a description (optional)"
-            value="${escHtml(line.desc)}"
             oninput="_docLines[${idx}].desc=this.value"
-            title="Edit description">
+            rows="1">${escHtml(line.desc)}</textarea>
         </td>
-        <td class="doc-td-rate">$${parseFloat(line.rate).toFixed(2)}</td>
+        <td class="doc-td-rate">
+          <input type="number" class="doc-rate-input"
+            value="${parseFloat(line.rate).toFixed(2)}" min="0" step="0.01"
+            oninput="_docLines[${idx}].rate=parseFloat(this.value)||0;updateDocTotals();docUpdateLineTotal(${idx})">
+        </td>
         <td class="doc-td-qty">
           <input type="number" class="doc-qty-input"
             value="${line.qty}" min="1"
-            oninput="_docLines[${idx}].qty=Math.max(1,parseInt(this.value)||1);updateDocTotals();renderDocLines()">
+            oninput="_docLines[${idx}].qty=Math.max(1,parseInt(this.value)||1);updateDocTotals();docUpdateLineTotal(${idx})">
         </td>
-        <td class="doc-td-total">$${lineTotal.toFixed(2)}</td>
+        <td class="doc-td-total" id="doc-lt-${idx}">$${lineTotal.toFixed(2)}</td>
         <td><button class="doc-remove-btn" onclick="docRemoveLine(${idx})" title="Remove">&#x2715;</button></td>
       </tr>`;
   }).join('');
+}
+
+// Update only the line total cell without re-rendering everything (avoids cursor jump)
+function docUpdateLineTotal(idx) {
+  var line = _docLines[idx];
+  if (!line) return;
+  var total = (parseFloat(line.rate) || 0) * (parseInt(line.qty) || 1);
+  var cell = document.getElementById('doc-lt-' + idx);
+  if (cell) cell.textContent = '$' + total.toFixed(2);
 }
 
 function escHtml(str) {
