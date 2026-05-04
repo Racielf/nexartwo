@@ -1718,13 +1718,116 @@ function showServiceDetail(id) {
   const s = SERVICES.find(sv => sv.id === id);
   if (!s) return;
   
-  // If we're in "add to WO" mode, add it directly
+  // If we're in "add to WO" mode from WO detail, add directly
   if (window._addingToWO && currentWO) {
     addServiceToCurrentWO(id);
     return;
   }
   
-  alert(`${s.name}\n${s.nameEs}\n\nCategory: ${s.category} > ${s.sub}\nPrice: $${s.price}/${s.unit}\nLabor: ${s.laborHrs}h\nNegotiable: ${s.negotiable}\n\n${s.desc}`);
+  // Show service detail + "Add to Work Order" modal
+  _pendingServiceId = id;
+  
+  // Populate modal
+  document.getElementById('svc-detail-name').textContent = s.name;
+  document.getElementById('svc-detail-name-es').textContent = s.nameEs || '';
+  document.getElementById('svc-detail-cat').textContent = s.category + ' > ' + (s.sub || '');
+  document.getElementById('svc-detail-price').textContent = '$' + s.price.toLocaleString() + ' / ' + (s.unit || 'each');
+  document.getElementById('svc-detail-labor').textContent = s.laborHrs + 'h labor';
+  document.getElementById('svc-detail-desc').textContent = s.desc || '';
+  document.getElementById('svc-detail-neg').textContent =
+    s.negotiable === 'yes' ? '✓ Negotiable' : s.negotiable === 'no' ? '✗ Fixed Price' : '? Ask';
+  
+  // Populate WO dropdown
+  var sel = document.getElementById('svc-assign-wo');
+  sel.innerHTML = '<option value="">— Select Work Order —</option>';
+  WORK_ORDERS.forEach(function(wo) {
+    sel.innerHTML += '<option value="' + wo.id + '">' + wo.id + ' — ' + escHtml(wo.title) + ' (' + escHtml(wo.client) + ')</option>';
+  });
+  // Pre-select current WO if there is one
+  if (currentWO) sel.value = currentWO.id;
+  
+  openModal('modal-svc-detail');
+  lucide.createIcons();
+}
+
+var _pendingServiceId = null;
+
+function assignServiceToWO() {
+  var woId = document.getElementById('svc-assign-wo').value;
+  if (!woId) {
+    showToast('⚠️ Please select a Work Order');
+    document.getElementById('svc-assign-wo').style.borderColor = 'var(--danger)';
+    return;
+  }
+  document.getElementById('svc-assign-wo').style.borderColor = '';
+  
+  var svc = SERVICES.find(function(s) { return s.id === _pendingServiceId; });
+  var wo = WORK_ORDERS.find(function(w) { return w.id === woId; });
+  if (!svc || !wo) return;
+  
+  // Temporarily set currentWO context
+  var prevWO = currentWO;
+  currentWO = wo;
+  
+  // Load this WO's line items if not already loaded
+  var needsLoad = !currentLineItems || (prevWO && prevWO.id !== wo.id);
+  
+  if (needsLoad) {
+    // Simple local add — create the item
+    var newItem = {
+      workOrderId: wo.id,
+      serviceId: svc.id,
+      name: svc.name,
+      nameEs: svc.nameEs || '',
+      desc: svc.desc || '',
+      category: svc.category || '',
+      sub: svc.sub || '',
+      price: svc.price || 0,
+      qty: 1,
+      unit: svc.unit || 'each',
+      negotiable: svc.negotiable || 'yes',
+      laborHrs: svc.laborHrs || 1,
+      status: 'pending',
+      sortOrder: 0
+    };
+    
+    // Update WO counts
+    wo.items = (wo.items || 0) + 1;
+    wo.total = (wo.total || 0) + (svc.price || 0);
+    saveWorkOrders();
+    
+    // Persist to Supabase
+    if (typeof DB !== 'undefined' && isSupabaseReady()) {
+      DB.lineItems.create(newItem).catch(function(e) { console.warn('Failed to persist:', e); });
+      DB.workOrders.update(wo.id, { items: wo.items, total: wo.total }).catch(function(e) { console.warn('WO sync failed:', e); });
+    }
+    
+    // Also add to document lines if a doc exists for this WO
+    try {
+      var docKey = 'nexartwo_doc_' + wo.id;
+      var docRaw = localStorage.getItem(docKey);
+      if (docRaw) {
+        var docState = JSON.parse(docRaw);
+        docState.lines.push({
+          id: 'dl-' + Date.now(),
+          name: svc.name,
+          desc: svc.desc || '',
+          rate: svc.price || 0,
+          qty: 1
+        });
+        localStorage.setItem(docKey, JSON.stringify(docState));
+      }
+    } catch(e) {}
+    
+    currentWO = prevWO; // restore context
+  } else {
+    addServiceToCurrentWO(_pendingServiceId);
+  }
+  
+  closeModal('modal-svc-detail');
+  showToast('✅ ' + svc.name + ' added to ' + wo.id);
+  renderWorkOrders();
+  renderDashboard();
 }
 
 // ============ RENDER CLIENTS ============
