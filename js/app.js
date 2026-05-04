@@ -221,6 +221,7 @@ function navigateTo(page) {
     clients: ['Client Management', `${CLIENTS.length} clients in your network`],
     wodetail: ['Work Order Detail', ''],
     docs: ['Documents & Reports', 'Generate and manage PDFs'],
+    fieldmode: ['Field Mode', 'Mobile-first task completion & photo evidence'],
     settings: ['Settings', 'Company profile, logo & preferences'],
   };
   const t = titles[page] || ['', ''];
@@ -229,6 +230,7 @@ function navigateTo(page) {
 
   // Page-specific init
   if (page === 'settings') populateSettingsForm();
+  if (page === 'fieldmode') initFieldMode();
   lucide.createIcons();
 }
 
@@ -1936,3 +1938,306 @@ function saveCroppedLogo() {
     setTimeout(initAddressAutocomplete, 300);
   }
 })();
+
+// ============ TOAST NOTIFICATION ============
+function showToast(message, duration) {
+  duration = duration || 3000;
+  var existing = document.getElementById('app-toast');
+  if (existing) existing.remove();
+  var toast = document.createElement('div');
+  toast.id = 'app-toast';
+  toast.textContent = message;
+  toast.style.cssText = 'position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(20px);background:#1a1d2e;color:#fff;padding:12px 24px;border-radius:12px;font-size:13px;font-weight:600;z-index:9999;opacity:0;transition:all 0.3s ease;box-shadow:0 8px 24px rgba(0,0,0,0.2);font-family:Inter,sans-serif;max-width:90vw;text-align:center';
+  document.body.appendChild(toast);
+  requestAnimationFrame(function() {
+    toast.style.opacity = '1';
+    toast.style.transform = 'translateX(-50%) translateY(0)';
+  });
+  setTimeout(function() {
+    toast.style.opacity = '0';
+    toast.style.transform = 'translateX(-50%) translateY(20px)';
+    setTimeout(function() { toast.remove(); }, 300);
+  }, duration);
+}
+
+// ============ FIELD MODE ============
+var _fmAgent = '';
+var _fmWO = null;
+var _fmItems = [];
+var _fmGPS = { lat: null, lng: null };
+var _fmPhotoFile = null;
+
+function initFieldMode() {
+  // Reset to agent selector
+  document.getElementById('fm-agent-selector').style.display = '';
+  document.getElementById('fm-wo-selector').style.display = 'none';
+  document.getElementById('fm-tasks').style.display = 'none';
+  document.getElementById('fm-photo-modal').style.display = 'none';
+  lucide.createIcons();
+}
+
+function selectFieldAgent(name) {
+  _fmAgent = name;
+  document.getElementById('fm-agent-selector').style.display = 'none';
+  document.getElementById('fm-wo-selector').style.display = '';
+  document.getElementById('fm-current-agent-tag').textContent = '👷 ' + name;
+  renderFMWorkOrders();
+  lucide.createIcons();
+}
+
+function renderFMWorkOrders() {
+  var activeWOs = WORK_ORDERS.filter(function(w) {
+    return w.status === 'open' || w.status === 'progress';
+  });
+  var list = document.getElementById('fm-wo-list');
+  if (activeWOs.length === 0) {
+    list.innerHTML = '<div class="empty-state"><div class="icon"><i data-lucide="inbox" style="width:48px;height:48px"></i></div><h3>No active work orders</h3><p>All work orders are completed or in draft</p></div>';
+    lucide.createIcons();
+    return;
+  }
+  list.innerHTML = activeWOs.map(function(wo) {
+    var progress = wo.items > 0 ? Math.round((wo.completed / wo.items) * 100) : 0;
+    var progressColor = progress === 100 ? 'var(--success)' : 'var(--accent)';
+    return '<div class="fm-wo-card" onclick="selectFieldWO(\'' + wo.id + '\')">' +
+      '<div class="fm-wo-icon"><i data-lucide="clipboard-list" style="width:22px;height:22px"></i></div>' +
+      '<div class="fm-wo-info">' +
+        '<h4>' + wo.id + ' — ' + wo.title + '</h4>' +
+        '<p>' + wo.client + ' • ' + wo.property + '</p>' +
+      '</div>' +
+      '<div class="fm-wo-progress">' +
+        '<div class="fm-wo-progress-ring" style="background:conic-gradient(' + progressColor + ' ' + progress + '%, var(--bg-input) 0);">' +
+          '<div style="width:34px;height:34px;border-radius:50%;background:var(--bg-card);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:800;color:' + progressColor + '">' + progress + '%</div>' +
+        '</div>' +
+      '</div>' +
+    '</div>';
+  }).join('');
+  lucide.createIcons();
+}
+
+async function selectFieldWO(woId) {
+  var wo = WORK_ORDERS.find(function(w) { return w.id === woId; });
+  if (!wo) return;
+  _fmWO = wo;
+
+  document.getElementById('fm-wo-selector').style.display = 'none';
+  document.getElementById('fm-tasks').style.display = '';
+  document.getElementById('fm-task-agent-tag').textContent = '👷 ' + _fmAgent;
+  document.getElementById('fm-task-wo-label').textContent = wo.id + ' — ' + wo.title;
+
+  // Show loading
+  document.getElementById('fm-task-list').innerHTML = '<div style="text-align:center;padding:40px;color:var(--text-muted)"><i data-lucide="loader" style="width:24px;height:24px;animation:spin 1s linear infinite"></i><p style="margin-top:8px">Loading tasks...</p></div>';
+  try { lucide.createIcons(); } catch(e) {}
+
+  // Load line items (same as WO detail)
+  if (typeof DB !== 'undefined' && isSupabaseReady()) {
+    try {
+      var dbItems = await DB.lineItems.getByWO(wo.id);
+      if (dbItems && dbItems.length > 0) {
+        _fmItems = dbItems;
+      } else {
+        _fmItems = SERVICES.slice(0, wo.items).map(function(s, i) {
+          return Object.assign({}, s, {
+            lineId: i,
+            status: i < wo.completed ? 'completed' : (i === wo.completed ? 'progress' : 'pending'),
+            qty: 1
+          });
+        });
+      }
+    } catch(e) {
+      _fmItems = SERVICES.slice(0, wo.items).map(function(s, i) {
+        return Object.assign({}, s, {
+          lineId: i,
+          status: i < wo.completed ? 'completed' : (i === wo.completed ? 'progress' : 'pending'),
+          qty: 1
+        });
+      });
+    }
+  } else {
+    _fmItems = SERVICES.slice(0, wo.items).map(function(s, i) {
+      return Object.assign({}, s, {
+        lineId: i,
+        status: i < wo.completed ? 'completed' : (i === wo.completed ? 'progress' : 'pending'),
+        qty: 1
+      });
+    });
+  }
+
+  renderFMTasks();
+  startGPSTracking();
+  lucide.createIcons();
+}
+
+function renderFMTasks() {
+  var completed = _fmItems.filter(function(i) { return i.status === 'completed'; }).length;
+  var total = _fmItems.length;
+  var pct = total > 0 ? Math.round((completed / total) * 100) : 0;
+
+  document.getElementById('fm-progress-fill').style.width = pct + '%';
+  document.getElementById('fm-progress-text').textContent = completed + '/' + total + ' complete (' + pct + '%)';
+
+  var list = document.getElementById('fm-task-list');
+  list.innerHTML = _fmItems.map(function(item, i) {
+    var cls = item.status === 'completed' ? 'completed' : (item.status === 'progress' ? 'in-progress' : '');
+    var checkIcon = item.status === 'completed' ? '<i data-lucide="check" style="width:14px;height:14px"></i>' : '';
+    return '<div class="fm-task-card ' + cls + '" onclick="fmToggleTask(' + i + ')">' +
+      '<div class="fm-task-check">' + checkIcon + '</div>' +
+      '<div class="fm-task-info">' +
+        '<h4>' + item.name + '</h4>' +
+        '<p>' + (item.category || '') + (item.sub ? ' • ' + item.sub : '') + '</p>' +
+      '</div>' +
+      '<div class="fm-task-price">$' + ((item.price || 0) * (item.qty || 1)).toLocaleString() + '</div>' +
+    '</div>';
+  }).join('');
+  lucide.createIcons();
+}
+
+function fmToggleTask(index) {
+  var item = _fmItems[index];
+  if (!item || item.status === 'completed') return;
+
+  item.status = 'completed';
+  item.completedAt = new Date().toISOString();
+  item.completedBy = _fmAgent;
+
+  // Persist to Supabase
+  if (typeof DB !== 'undefined' && isSupabaseReady() && item.id && typeof item.id === 'number') {
+    DB.lineItems.update(item.id, {
+      status: 'completed',
+      completedAt: item.completedAt,
+      completedBy: item.completedBy
+    }).then(function() {
+      console.log('✓ FM: Line item completed in DB:', item.name);
+    }).catch(function(e) { console.warn('FM: Failed to sync completion:', e); });
+  }
+
+  // Update WO counters
+  if (_fmWO) {
+    _fmWO.completed = _fmItems.filter(function(i) { return i.status === 'completed'; }).length;
+    _fmWO.items = _fmItems.length;
+    if (typeof DB !== 'undefined' && isSupabaseReady()) {
+      DB.workOrders.update(_fmWO.id, { completed: _fmWO.completed, items: _fmWO.items })
+        .catch(function(e) { console.warn('FM: WO sync failed:', e); });
+    }
+  }
+
+  // Also sync with global currentLineItems if same WO
+  if (currentWO && currentWO.id === _fmWO.id) {
+    currentLineItems = _fmItems;
+  }
+
+  renderFMTasks();
+  renderDashboard();
+  renderWorkOrders();
+  showToast('✅ ' + item.name + ' — Completed by ' + _fmAgent);
+
+  // Vibrate on mobile
+  if (navigator.vibrate) navigator.vibrate(50);
+}
+
+function fmBack(step) {
+  if (step === 'agent') {
+    document.getElementById('fm-wo-selector').style.display = 'none';
+    document.getElementById('fm-agent-selector').style.display = '';
+    _fmAgent = '';
+  } else if (step === 'wo') {
+    document.getElementById('fm-tasks').style.display = 'none';
+    document.getElementById('fm-wo-selector').style.display = '';
+    _fmWO = null;
+    _fmItems = [];
+  }
+  lucide.createIcons();
+}
+
+// ============ FIELD MODE: PHOTO CAPTURE ============
+function startGPSTracking() {
+  if (navigator.geolocation) {
+    navigator.geolocation.getCurrentPosition(
+      function(pos) {
+        _fmGPS.lat = pos.coords.latitude;
+        _fmGPS.lng = pos.coords.longitude;
+        var gpsText = document.getElementById('fm-gps-text');
+        if (gpsText) gpsText.textContent = '📍 ' + _fmGPS.lat.toFixed(5) + ', ' + _fmGPS.lng.toFixed(5);
+      },
+      function(err) {
+        var gpsText = document.getElementById('fm-gps-text');
+        if (gpsText) gpsText.textContent = 'GPS unavailable — ' + err.message;
+      },
+      { enableHighAccuracy: true, timeout: 10000 }
+    );
+  } else {
+    var gpsText = document.getElementById('fm-gps-text');
+    if (gpsText) gpsText.textContent = 'GPS not supported';
+  }
+}
+
+function fmCapturePhoto() {
+  if (!_fmWO) { showToast('Select a work order first'); return; }
+  _fmPhotoFile = null;
+  document.getElementById('fm-photo-modal').style.display = '';
+  document.getElementById('fm-photo-preview').innerHTML = '<i data-lucide="image-plus" style="width:48px;height:48px;color:var(--text-muted)"></i><p>Tap to take photo or select from gallery</p>';
+  document.getElementById('fm-photo-label').value = '';
+  document.getElementById('fm-photo-area').value = '';
+  document.getElementById('fm-photo-type').value = 'before';
+  startGPSTracking();
+  lucide.createIcons();
+}
+
+function fmClosePhotoModal() {
+  document.getElementById('fm-photo-modal').style.display = 'none';
+  _fmPhotoFile = null;
+}
+
+function fmPhotoSelected(event) {
+  var file = event.target.files[0];
+  if (!file) return;
+  _fmPhotoFile = file;
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    document.getElementById('fm-photo-preview').innerHTML = '<img src="' + e.target.result + '" alt="Photo preview">';
+  };
+  reader.readAsDataURL(file);
+}
+
+async function fmSavePhoto() {
+  if (!_fmWO) { showToast('No work order selected'); return; }
+  var label = document.getElementById('fm-photo-label').value.trim() || 'Field photo';
+  var area = document.getElementById('fm-photo-area').value.trim() || 'General';
+  var photoType = document.getElementById('fm-photo-type').value;
+  var photoUrl = '';
+
+  // Try to upload to Supabase Storage
+  if (_fmPhotoFile && typeof DB !== 'undefined' && isSupabaseReady()) {
+    try {
+      var sb = getSupabase();
+      var ext = _fmPhotoFile.name.split('.').pop();
+      var path = _fmWO.id + '/' + Date.now() + '.' + ext;
+      var uploadResult = await sb.storage.from('photos').upload(path, _fmPhotoFile);
+      if (uploadResult.data) {
+        var urlResult = sb.storage.from('photos').getPublicUrl(path);
+        photoUrl = urlResult.data.publicUrl || '';
+      }
+    } catch(e) { console.warn('Photo upload failed:', e); }
+  }
+
+  // Save photo record to DB
+  var photoRecord = {
+    work_order_id: _fmWO.id,
+    type: photoType,
+    label: label,
+    area: area,
+    photo_url: photoUrl,
+    gps_lat: _fmGPS.lat,
+    gps_lng: _fmGPS.lng,
+    taken_by: _fmAgent
+  };
+
+  if (typeof DB !== 'undefined' && isSupabaseReady()) {
+    DB.photos.create(photoRecord).then(function() {
+      console.log('✓ Photo saved to DB');
+    }).catch(function(e) { console.warn('Photo DB save failed:', e); });
+  }
+
+  fmClosePhotoModal();
+  showToast('📷 Photo saved: ' + label);
+  if (navigator.vibrate) navigator.vibrate([50, 50, 50]);
+}

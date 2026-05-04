@@ -51,6 +51,10 @@
         <div class="nav-item" data-page="docs">
           <i data-lucide="file-text" class="icon"></i> Documents
         </div>
+        <div class="nav-item" data-page="fieldmode">
+          <i data-lucide="smartphone" class="icon"></i> Field Mode
+          <span style="font-size:9px;color:var(--success);margin-left:auto;font-weight:700">NEW</span>
+        </div>
 
         <div class="nav-section-title">Oregon Compliance</div>
         <div class="nav-item" data-page="compliance" style="opacity:0.5;pointer-events:none">
@@ -103,7 +107,7 @@
           <div class="quick-action" onclick="navigateTo('services')"><i data-lucide="wrench" class="icon" style="width:18px;height:18px"></i> Service Library</div>
           <div class="quick-action" onclick="openNewServiceModal()"><i data-lucide="plus-circle" class="icon" style="width:18px;height:18px"></i> Add Service</div>
           <div class="quick-action" onclick="openNewClientModal()"><i data-lucide="user-plus" class="icon" style="width:18px;height:18px"></i> New Client</div>
-          <div class="quick-action" style="opacity:0.5"><i data-lucide="camera" class="icon" style="width:18px;height:18px"></i> Field Mode</div>
+          <div class="quick-action" onclick="navigateTo('fieldmode')"><i data-lucide="smartphone" class="icon" style="width:18px;height:18px"></i> Field Mode</div>
         </div>
 
         <div class="stats-grid">
@@ -374,6 +378,117 @@
               </thead>
               <tbody id="clients-table-body"></tbody>
             </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- ============ FIELD MODE PAGE ============ -->
+      <div class="page" id="page-fieldmode">
+
+        <!-- STEP 1: Agent Selector -->
+        <div id="fm-agent-selector" class="fm-step">
+          <div class="fm-hero">
+            <div class="fm-hero-icon"><i data-lucide="hard-hat" style="width:48px;height:48px;color:var(--accent)"></i></div>
+            <h2>Field Mode</h2>
+            <p class="fm-hero-sub">Select your identity to start working on site</p>
+          </div>
+          <div class="fm-agents" id="fm-agents-list">
+            <div class="fm-agent-card" onclick="selectFieldAgent('Rodolfo F.')">
+              <div class="fm-agent-avatar" style="background:linear-gradient(135deg,#f59e0b,#d97706)">RF</div>
+              <div class="fm-agent-info">
+                <h3>Rodolfo F.</h3>
+                <span>Owner / Lead</span>
+              </div>
+              <i data-lucide="chevron-right" style="width:20px;height:20px;color:var(--text-muted)"></i>
+            </div>
+            <div class="fm-agent-card" onclick="selectFieldAgent('Mike T.')">
+              <div class="fm-agent-avatar" style="background:linear-gradient(135deg,#3b82f6,#1d4ed8)">MT</div>
+              <div class="fm-agent-info">
+                <h3>Mike T.</h3>
+                <span>Electrical Sub</span>
+              </div>
+              <i data-lucide="chevron-right" style="width:20px;height:20px;color:var(--text-muted)"></i>
+            </div>
+            <div class="fm-agent-card" onclick="selectFieldAgent('Carlos R.')">
+              <div class="fm-agent-avatar" style="background:linear-gradient(135deg,#10b981,#047857)">CR</div>
+              <div class="fm-agent-info">
+                <h3>Carlos R.</h3>
+                <span>General Labor</span>
+              </div>
+              <i data-lucide="chevron-right" style="width:20px;height:20px;color:var(--text-muted)"></i>
+            </div>
+          </div>
+        </div>
+
+        <!-- STEP 2: WO Selector -->
+        <div id="fm-wo-selector" class="fm-step" style="display:none">
+          <div class="fm-header-bar">
+            <button class="btn btn-ghost btn-sm" onclick="fmBack('agent')"><i data-lucide="arrow-left" style="width:16px;height:16px"></i></button>
+            <div class="fm-header-info">
+              <div class="fm-agent-tag" id="fm-current-agent-tag"></div>
+              <span>Select Work Order</span>
+            </div>
+          </div>
+          <div class="fm-wo-list" id="fm-wo-list"></div>
+        </div>
+
+        <!-- STEP 3: Task Checklist -->
+        <div id="fm-tasks" class="fm-step" style="display:none">
+          <div class="fm-header-bar">
+            <button class="btn btn-ghost btn-sm" onclick="fmBack('wo')"><i data-lucide="arrow-left" style="width:16px;height:16px"></i></button>
+            <div class="fm-header-info">
+              <div class="fm-agent-tag" id="fm-task-agent-tag"></div>
+              <span id="fm-task-wo-label"></span>
+            </div>
+          </div>
+          <div class="fm-progress-section">
+            <div class="fm-progress-bar"><div class="fm-progress-fill" id="fm-progress-fill"></div></div>
+            <div class="fm-progress-text" id="fm-progress-text">0/0 complete</div>
+          </div>
+          <div class="fm-task-list" id="fm-task-list"></div>
+          <div class="fm-fab" id="fm-photo-fab" onclick="fmCapturePhoto()">
+            <i data-lucide="camera" style="width:24px;height:24px"></i>
+          </div>
+        </div>
+
+        <!-- Photo Capture Modal -->
+        <div class="fm-photo-modal" id="fm-photo-modal" style="display:none">
+          <div class="fm-photo-modal-inner">
+            <div class="fm-photo-modal-header">
+              <h3><i data-lucide="camera" style="width:18px;height:18px;margin-right:6px"></i> Capture Evidence</h3>
+              <button class="btn btn-ghost btn-sm" onclick="fmClosePhotoModal()"><i data-lucide="x" style="width:18px;height:18px"></i></button>
+            </div>
+            <div class="fm-photo-body">
+              <input type="file" id="fm-photo-input" accept="image/*" capture="environment" style="display:none" onchange="fmPhotoSelected(event)">
+              <div class="fm-photo-preview" id="fm-photo-preview" onclick="document.getElementById('fm-photo-input').click()">
+                <i data-lucide="image-plus" style="width:48px;height:48px;color:var(--text-muted)"></i>
+                <p>Tap to take photo or select from gallery</p>
+              </div>
+              <div class="form-group" style="margin-top:12px">
+                <label>Photo Type</label>
+                <select class="form-input" id="fm-photo-type">
+                  <option value="before">📷 Before</option>
+                  <option value="progress">🔨 In Progress</option>
+                  <option value="after">✅ After / Complete</option>
+                  <option value="issue">⚠️ Issue Found</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>Label / Description</label>
+                <input type="text" class="form-input" id="fm-photo-label" placeholder="e.g., Kitchen sink repair complete">
+              </div>
+              <div class="form-group">
+                <label>Area</label>
+                <input type="text" class="form-input" id="fm-photo-area" placeholder="e.g., Kitchen, Bathroom, Exterior">
+              </div>
+              <div class="fm-gps-tag" id="fm-gps-tag">
+                <i data-lucide="map-pin" style="width:14px;height:14px"></i>
+                <span id="fm-gps-text">Acquiring GPS...</span>
+              </div>
+              <button class="btn btn-primary" style="width:100%;margin-top:12px" onclick="fmSavePhoto()">
+                <i data-lucide="upload" style="width:16px;height:16px;margin-right:6px"></i> Save Photo
+              </button>
+            </div>
           </div>
         </div>
       </div>
