@@ -880,30 +880,47 @@ function initWODocument() {
   document.getElementById('doc-date').textContent = today;
   document.getElementById('doc-wo-num').textContent = wo.id;
 
-  // Load saved state or init from line items
-  if (!_docLines._woId || _docLines._woId !== wo.id) {
-    var saved = docLoadState(wo.id);
-    if (saved && saved.lines && saved.lines.length > 0) {
-      _docLines = saved.lines;
-      _docTemplate = saved.template || 'classic';
-      setDocTemplate(_docTemplate);
-      var taxEl = document.getElementById('doc-tax-pct');
-      if (taxEl) taxEl.value = saved.taxPct || 0;
-      var refEl = document.getElementById('doc-ref');
-      if (refEl) refEl.value = saved.ref || '';
-    } else {
-      _docLines = (currentLineItems || []).map(function(item, i) {
-        return {
-          id: 'dl-' + i,
-          name: item.name || item.service || 'Service',
-          desc: item.desc || item.description || '',
-          rate: item.price || 0,
-          qty: item.qty || 1
-        };
-      });
-    }
-    _docLines._woId = wo.id;
+  // Build doc lines from currentLineItems, merging with saved state
+  var saved = docLoadState(wo.id);
+  if (saved && saved.template) {
+    _docTemplate = saved.template;
+    setDocTemplate(_docTemplate);
+    var taxEl = document.getElementById('doc-tax-pct');
+    if (taxEl) taxEl.value = saved.taxPct || 0;
+    var refEl = document.getElementById('doc-ref');
+    if (refEl) refEl.value = saved.ref || '';
   }
+
+  // Always rebuild from currentLineItems so new items appear
+  var freshLines = (currentLineItems || []).map(function(item, i) {
+    return {
+      id: 'dl-' + i,
+      name: item.name || item.service || 'Service',
+      desc: item.desc || item.description || '',
+      rate: item.price || 0,
+      qty: item.qty || 1
+    };
+  });
+
+  // If we have saved doc lines, merge: keep saved edits for existing items,
+  // add new items that weren't in the saved doc
+  if (saved && saved.lines && saved.lines.length > 0) {
+    var savedNames = {};
+    saved.lines.forEach(function(sl) { savedNames[sl.name] = true; });
+
+    // Start with saved lines (preserves user edits)
+    _docLines = saved.lines.slice();
+
+    // Add any NEW items from currentLineItems that aren't in saved doc
+    freshLines.forEach(function(fl) {
+      if (!savedNames[fl.name]) {
+        _docLines.push(fl);
+      }
+    });
+  } else {
+    _docLines = freshLines;
+  }
+  _docLines._woId = wo.id;
 
   renderDocLines();
   updateDocTotals();
