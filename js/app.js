@@ -1437,7 +1437,11 @@ function renderClients() {
     };
     const color = typeColors[c.type] || 'info';
     return `
-    <tr>
+    <tr id="client-row-${c.id}">
+      <td style="padding-left:16px;width:40px">
+        <input type="checkbox" class="client-chk" data-id="${c.id}" onchange="clientsUpdateBulkBar()"
+          style="width:15px;height:15px;cursor:pointer;accent-color:var(--accent)">
+      </td>
       <td>
         <div style="display:flex;align-items:center;gap:10px">
           <div style="width:36px;height:36px;border-radius:8px;background:var(--${color}-bg);color:var(--${color === 'accent' ? 'accent' : color});display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;flex-shrink:0">${c.name.split(' ').map(n=>n[0]).join('').slice(0,2)}</div>
@@ -1454,17 +1458,111 @@ function renderClients() {
       <td class="fw-700">$${c.totalValue.toLocaleString()}</td>
       <td>
         <div style="display:flex;gap:6px;align-items:center">
-          <button class="btn btn-sm btn-primary" onclick="createWOForClient(${c.id})" title="Create Work Order for this client" style="gap:5px;padding:6px 10px">
+          <button class="btn btn-sm btn-primary" onclick="createWOForClient(${c.id})" title="Create Work Order" style="gap:5px;padding:6px 10px">
             <i data-lucide="file-plus" style="width:13px;height:13px"></i> New WO
           </button>
-          <button class="btn btn-sm btn-secondary" onclick="viewClientOrders(${c.id})"><i data-lucide="clipboard-list" style="width:14px;height:14px;margin-right:6px"></i>Orders</button>
+          <button class="btn btn-sm btn-secondary" onclick="viewClientOrders(${c.id})"><i data-lucide="clipboard-list" style="width:14px;height:14px;margin-right:4px"></i>Orders</button>
           <button class="btn btn-sm btn-ghost" onclick="editClient(${c.id})"><i data-lucide="edit-2" style="width:14px;height:14px"></i></button>
+          <button class="btn btn-sm btn-ghost" onclick="deleteClient(${c.id})" title="Delete" style="color:var(--danger)"><i data-lucide="trash-2" style="width:14px;height:14px"></i></button>
         </div>
       </td>
     </tr>`;
   }).join('');
+  // Reset select-all
+  var sa = document.getElementById('clients-select-all');
+  if (sa) sa.checked = false;
+  clientsUpdateBulkBar();
   lucide.createIcons();
 }
+
+// ====== BULK ACTIONS — CLIENTS ======
+function clientsGetSelected() {
+  return Array.from(document.querySelectorAll('.client-chk:checked'))
+    .map(function(chk) { return parseInt(chk.dataset.id); });
+}
+
+function clientsUpdateBulkBar() {
+  var selected = clientsGetSelected();
+  var bar = document.getElementById('clients-bulk-bar');
+  var count = document.getElementById('clients-bulk-count');
+  var sa = document.getElementById('clients-select-all');
+  var total = document.querySelectorAll('.client-chk').length;
+
+  if (selected.length > 0) {
+    bar.style.display = 'flex';
+    count.textContent = selected.length + ' client' + (selected.length > 1 ? 's' : '') + ' selected';
+    lucide.createIcons();
+  } else {
+    bar.style.display = 'none';
+  }
+  // Indeterminate state for select-all
+  if (sa) {
+    sa.checked = selected.length === total && total > 0;
+    sa.indeterminate = selected.length > 0 && selected.length < total;
+  }
+}
+
+function clientsToggleAll(checked) {
+  document.querySelectorAll('.client-chk').forEach(function(chk) {
+    chk.checked = checked;
+  });
+  clientsUpdateBulkBar();
+}
+
+function clientsClearSelection() {
+  document.querySelectorAll('.client-chk').forEach(function(chk) { chk.checked = false; });
+  var sa = document.getElementById('clients-select-all');
+  if (sa) { sa.checked = false; sa.indeterminate = false; }
+  document.getElementById('clients-bulk-bar').style.display = 'none';
+}
+
+function deleteClient(clientId) {
+  var c = CLIENTS.find(function(x) { return x.id === clientId; });
+  if (!c) return;
+  if (!confirm('Delete "' + c.name + '"? This cannot be undone.')) return;
+  CLIENTS.splice(CLIENTS.indexOf(c), 1);
+  saveClients();
+  if (typeof DB !== 'undefined' && isSupabaseReady()) {
+    DB.clients.delete(clientId).catch(function(e) { console.warn('Cloud delete failed:', e); });
+  }
+  renderClients();
+  renderDashboard();
+  showToast('🗑️ ' + c.name + ' deleted');
+}
+
+function clientsBulkDelete() {
+  var ids = clientsGetSelected();
+  if (ids.length === 0) return;
+  if (!confirm('Delete ' + ids.length + ' client(s)? This cannot be undone.')) return;
+  ids.forEach(function(id) {
+    var idx = CLIENTS.findIndex(function(c) { return c.id === id; });
+    if (idx !== -1) {
+      if (typeof DB !== 'undefined' && isSupabaseReady()) {
+        DB.clients.delete(id).catch(function(e) { console.warn('Cloud delete failed:', e); });
+      }
+      CLIENTS.splice(idx, 1);
+    }
+  });
+  saveClients();
+  renderClients();
+  renderDashboard();
+  showToast('🗑️ ' + ids.length + ' client(s) deleted');
+}
+
+function clientsBulkCreateWO() {
+  var ids = clientsGetSelected();
+  if (ids.length === 0) return;
+  if (ids.length === 1) {
+    // Single client — open WO modal pre-filled
+    createWOForClient(ids[0]);
+  } else {
+    // Multiple selected — just open blank WO modal
+    showToast('Select one client to pre-fill a Work Order');
+    openNewWOModal();
+  }
+  clientsClearSelection();
+}
+
 
 function filterClients(type) {
   currentClientFilter = type;

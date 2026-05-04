@@ -362,11 +362,29 @@
           <button class="btn btn-primary" onclick="openNewClientModal()">+ New Client</button>
         </div>
 
+        <!-- Bulk Action Bar (hidden until selection) -->
+        <div id="clients-bulk-bar" style="display:none;align-items:center;gap:12px;padding:10px 16px;background:var(--accent-glow);border:1px solid rgba(217,119,6,0.25);border-radius:var(--radius-md);margin-bottom:14px;animation:fadeIn 0.2s ease">
+          <span id="clients-bulk-count" style="font-size:13px;font-weight:700;color:var(--accent)">0 selected</span>
+          <div style="flex:1"></div>
+          <button class="btn btn-sm btn-secondary" onclick="clientsBulkCreateWO()" style="gap:6px">
+            <i data-lucide="file-plus" style="width:13px;height:13px"></i> New Work Order
+          </button>
+          <button class="btn btn-sm" onclick="clientsBulkDelete()" style="background:var(--danger-bg);color:var(--danger);border:1px solid rgba(220,38,38,0.25);gap:6px">
+            <i data-lucide="trash-2" style="width:13px;height:13px"></i> Delete Selected
+          </button>
+          <button class="btn btn-sm btn-ghost" onclick="clientsClearSelection()" style="color:var(--text-muted)">
+            <i data-lucide="x" style="width:13px;height:13px"></i> Cancel
+          </button>
+        </div>
+
         <div class="card">
           <div class="card-body" style="padding:0">
             <table class="wo-table">
               <thead>
                 <tr>
+                  <th style="width:40px;padding-left:16px">
+                    <input type="checkbox" id="clients-select-all" onchange="clientsToggleAll(this.checked)" style="width:15px;height:15px;cursor:pointer;accent-color:var(--accent)">
+                  </th>
                   <th>Client</th>
                   <th>Type</th>
                   <th>Contact</th>
