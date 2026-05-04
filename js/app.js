@@ -659,8 +659,24 @@ function renderLineItems() {
       <div class="drag-handle" title="Drag to reorder">⠿</div>
       <div class="line-item-number" style="${isCompleted ? 'background:var(--success-bg);color:var(--success)' : isProgress ? 'background:var(--accent-bg);color:var(--accent)' : ''}">${isCompleted ? '<i data-lucide="check" style="width:16px;height:16px"></i>' : i + 1}</div>
       <div class="line-item-info">
-        <h4 style="${isCompleted ? 'text-decoration:line-through;opacity:0.7' : ''}">${item.name}</h4>
-        <p>${item.category || ''} ${item.category && item.desc ? '•' : ''} ${item.desc || ''}</p>
+        <input class="li-name-input" value="${escHtml(item.name)}"
+          style="font-weight:600;font-size:13px;color:var(--text-primary);border:none;background:transparent;width:100%;padding:0;${isCompleted ? 'text-decoration:line-through;opacity:0.7' : ''}"
+          oninput="syncFromLineItem(${i},'name',this.value)"
+          placeholder="Item name">
+        <textarea class="li-desc-input" rows="1"
+          style="font-size:12px;color:var(--text-secondary);border:none;background:transparent;width:100%;padding:0;resize:none;overflow:hidden;"
+          oninput="syncFromLineItem(${i},'desc',this.value);this.style.height='auto';this.style.height=this.scrollHeight+'px'"
+          placeholder="Description">${escHtml(item.desc || '')}</textarea>
+        <div style="display:flex;gap:8px;align-items:center;margin-top:2px">
+          <span style="font-size:11px;color:var(--text-muted)">$</span>
+          <input type="number" class="li-price-input" value="${item.price||0}" min="0" step="0.01"
+            style="font-size:11px;width:70px;border:none;background:transparent;color:var(--text-muted);padding:0"
+            oninput="syncFromLineItem(${i},'price',parseFloat(this.value)||0)">
+          <span style="font-size:11px;color:var(--text-muted)">× qty</span>
+          <input type="number" class="li-qty-input" value="${item.qty||1}" min="1"
+            style="font-size:11px;width:35px;border:none;background:transparent;color:var(--text-muted);padding:0"
+            oninput="syncFromLineItem(${i},'qty',Math.max(1,parseInt(this.value)||1))">
+        </div>
       </div>
       <select class="line-item-status-select" onchange="changeLineItemStatus(${i}, this.value)" title="Change status">
         <option value="pending" ${item.status === 'pending' ? 'selected' : ''}>⏳ Pending</option>
@@ -982,9 +998,10 @@ function initWODocument() {
   }
 
   // Always rebuild from currentLineItems so new items appear
-  var freshLines = (currentLineItems || []).map(function(item, i) {
+  var freshLines = (currentLineItems || []).map(function(item) {
     return {
-      id: 'dl-' + i,
+      liId: item.id,            // stable bridge to currentLineItems
+      id: 'dl-' + item.id,     // unique DOM id
       name: item.name || item.service || 'Service',
       desc: item.desc || item.description || '',
       rate: item.price || 0,
@@ -993,19 +1010,21 @@ function initWODocument() {
   });
 
   // If we have saved doc lines, merge: keep saved edits for existing items,
-  // add new items that weren't in the saved doc
+  // add new items that weren't in the saved doc — match by liId only
   if (saved && saved.lines && saved.lines.length > 0) {
-    var savedNames = {};
-    saved.lines.forEach(function(sl) { savedNames[sl.name] = true; });
+    var savedLiIds = {};
+    saved.lines.forEach(function(sl) { if (sl.liId != null) savedLiIds[sl.liId] = true; });
 
-    // Start with saved lines (preserves user edits)
-    _docLines = saved.lines.slice();
+    // Start with saved lines (preserves user edits), ensure liId is stamped
+    _docLines = saved.lines.map(function(sl) {
+      // find the matching fresh line to get current liId/id if missing from old save
+      var match = freshLines.find(function(fl) { return fl.liId == sl.liId; });
+      return Object.assign({}, sl, match ? { liId: match.liId, id: match.id } : {});
+    });
 
     // Add any NEW items from currentLineItems that aren't in saved doc
     freshLines.forEach(function(fl) {
-      if (!savedNames[fl.name]) {
-        _docLines.push(fl);
-      }
+      if (!savedLiIds[fl.liId]) { _docLines.push(fl); }
     });
   } else {
     _docLines = freshLines;
@@ -1035,11 +1054,11 @@ function renderDocLines() {
             <div style="flex:1">
           <input class="doc-line-name-input"
             value="${escHtml(line.name)}"
-            oninput="_docLines[${idx}].name=this.value;docAutoSave()"
+            oninput="syncFromDoc(${idx},'name',this.value)"
             placeholder="Service name">
           <textarea class="doc-line-desc-input"
             placeholder="Add a description..."
-            oninput="_docLines[${idx}].desc=this.value;docAutoSave();this.style.height='auto';this.style.height=this.scrollHeight+'px'"
+            oninput="syncFromDoc(${idx},'desc',this.value);this.style.height='auto';this.style.height=this.scrollHeight+'px'"
             rows="2">${escHtml(line.desc)}</textarea>
             </div>
           </div>
@@ -1047,12 +1066,12 @@ function renderDocLines() {
         <td class="doc-td-rate">
           <input type="number" class="doc-rate-input"
             value="${parseFloat(line.rate).toFixed(2)}" min="0" step="0.01"
-            oninput="_docLines[${idx}].rate=parseFloat(this.value)||0;updateDocTotals();docUpdateLineTotal(${idx});docAutoSave()">
+            oninput="syncFromDoc(${idx},'rate',parseFloat(this.value)||0)">
         </td>
         <td class="doc-td-qty">
           <input type="number" class="doc-qty-input"
             value="${line.qty}" min="1"
-            oninput="_docLines[${idx}].qty=Math.max(1,parseInt(this.value)||1);updateDocTotals();docUpdateLineTotal(${idx});docAutoSave()">
+            oninput="syncFromDoc(${idx},'qty',Math.max(1,parseInt(this.value)||1))">
         </td>
         <td class="doc-td-total" id="doc-lt-${idx}">$${lineTotal.toFixed(2)}</td>
         <td><button class="doc-remove-btn" onclick="docRemoveLine(${idx})" title="Remove">&#x2715;</button></td>
@@ -1071,6 +1090,101 @@ function docUpdateLineTotal(idx) {
 
 function escHtml(str) {
   return String(str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ============ BIDIRECTIONAL SYNC — Document ↔ Line Items ============
+
+// Called when user edits a field in the Document tab
+function syncFromDoc(idx, field, value) {
+  if (!_docLines[idx]) return;
+  // 1. Update _docLines
+  _docLines[idx][field] = value;
+
+  // 2. Find matching item in currentLineItems by stable liId
+  var liId = _docLines[idx].liId;
+  var li = currentLineItems.find(function(i) { return i.id == liId; });
+  if (li) {
+    // 3. Map doc field → lineItem field
+    if (field === 'name') li.name  = value;
+    if (field === 'desc') li.desc  = value;
+    if (field === 'rate') li.price = value;
+    if (field === 'qty')  li.qty   = value;
+
+    // 4. Recalculate WO totals if price/qty changed
+    if (field === 'rate' || field === 'qty') {
+      currentWO.total = currentLineItems.reduce(function(s,i) { return s+(i.price*(i.qty||1)); }, 0);
+      saveWorkOrders();
+      renderDashboard();
+    }
+
+    // 5. Persist to Supabase if connected and item has real numeric DB id
+    if (typeof DB !== 'undefined' && isSupabaseReady() && typeof li.id === 'number') {
+      var dbChanges = {};
+      if (field === 'name') dbChanges.name  = value;
+      if (field === 'desc') dbChanges.desc  = value;
+      if (field === 'rate') dbChanges.price = value;
+      if (field === 'qty')  dbChanges.qty   = value;
+      DB.lineItems.update(li.id, dbChanges).catch(function(e) {
+        console.warn('syncFromDoc Supabase fail:', e);
+      });
+    }
+
+    // 6. Re-render Line Items tab only if WO detail page is active
+    if (typeof currentPage !== 'undefined' && currentPage === 'wodetail') {
+      renderLineItems();
+    }
+  }
+
+  // 7. Doc totals + line total cell + autosave (always)
+  if (field === 'rate' || field === 'qty') {
+    docUpdateLineTotal(idx);
+    updateDocTotals();
+  }
+  docAutoSave();
+}
+
+// Called when user edits a field in the Line Items tab
+function syncFromLineItem(idx, field, value) {
+  var li = currentLineItems[idx];
+  if (!li) return;
+
+  // 1. Update currentLineItems
+  if (field === 'name')  li.name  = value;
+  if (field === 'desc')  li.desc  = value;
+  if (field === 'price') li.price = value;
+  if (field === 'qty')   li.qty   = value;
+
+  // 2. Recalculate WO totals if price/qty changed
+  if (field === 'price' || field === 'qty') {
+    currentWO.total = currentLineItems.reduce(function(s,i) { return s+(i.price*(i.qty||1)); }, 0);
+    document.getElementById('wo-detail-total').textContent = '$' + currentWO.total.toLocaleString();
+    saveWorkOrders();
+    renderDashboard();
+  }
+
+  // 3. Mirror to _docLines by liId — only if doc was already initialized
+  if (_docLines && _docLines.length > 0) {
+    var dl = _docLines.find(function(d) { return d.liId == li.id; });
+    if (dl) {
+      if (field === 'name')  dl.name = value;
+      if (field === 'desc')  dl.desc = value;
+      if (field === 'price') dl.rate = value;
+      if (field === 'qty')   dl.qty  = value;
+      // Re-render document tab only if it's currently visible
+      var docTbody = document.getElementById('doc-line-tbody');
+      if (docTbody && docTbody.offsetParent !== null) {
+        renderDocLines();
+        updateDocTotals();
+      }
+      docAutoSave();
+    }
+  }
+
+  // 4. Persist to Supabase
+  if (typeof DB !== 'undefined' && isSupabaseReady() && typeof li.id === 'number') {
+    DB.lineItems.update(li.id, { [field]: value })
+      .catch(function(e) { console.warn('syncFromLineItem fail:', e); });
+  }
 }
 
 function updateDocTotals() {
