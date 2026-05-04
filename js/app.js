@@ -1063,7 +1063,10 @@ function startEditWOTitle(el) {
   input.focus();
   input.select();
 
+  var _saved = false;
   function saveTitle() {
+    if (_saved) return;
+    _saved = true;
     var val = input.value.trim() || current;
     var h2 = document.createElement('h2');
     h2.id = 'wo-detail-title';
@@ -1072,18 +1075,30 @@ function startEditWOTitle(el) {
     h2.onclick = function() { startEditWOTitle(this); };
     h2.textContent = val;
     input.replaceWith(h2);
-    if (currentWO && val !== current) {
+
+    if (currentWO) {
       currentWO.title = val;
       saveWorkOrders();
-      showToast('✅ Title updated');
+      renderWorkOrders();
+
+      // Persist to Supabase
+      if (typeof DB !== 'undefined' && isSupabaseReady()) {
+        DB.workOrders.update(currentWO.id, { title: val })
+          .catch(function(e) { console.warn('Title sync failed:', e); });
+      }
+
+      if (val !== current) {
+        showToast('✅ Title updated to "' + val + '"');
+      }
     }
   }
   input.addEventListener('blur', saveTitle);
   input.addEventListener('keydown', function(e) {
-    if (e.key === 'Enter') saveTitle();
-    if (e.key === 'Escape') { input.value = current; saveTitle(); }
+    if (e.key === 'Enter') { e.preventDefault(); input.blur(); }
+    if (e.key === 'Escape') { input.value = current; input.blur(); }
   });
 }
+
 
 
 // ============ PDF GENERATION ============
