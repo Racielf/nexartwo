@@ -134,17 +134,85 @@ async function loadData() {
 // Save to localStorage (always) + Supabase (if available)
 function saveServices() {
   try { localStorage.setItem('woims_services', JSON.stringify(SERVICES)); } catch(e) {}
+  _markGlobalUnsaved();
 }
 function saveClients() {
   try { localStorage.setItem('woims_clients', JSON.stringify(CLIENTS)); } catch(e) {}
+  _markGlobalUnsaved();
 }
 function saveWorkOrders() {
   try { localStorage.setItem('woims_work_orders', JSON.stringify(WORK_ORDERS)); } catch(e) {}
+  _markGlobalUnsaved();
 }
 function saveActivities() {
   try { localStorage.setItem('woims_activities', JSON.stringify(ACTIVITIES)); } catch(e) {}
+  _markGlobalUnsaved();
 }
 function saveAllData() { saveServices(); saveClients(); saveWorkOrders(); saveActivities(); }
+
+// ============ GLOBAL SAVE SYSTEM ============
+var _globalSaveTimer = null;
+var _lastSaveTime = 0;
+
+function _markGlobalUnsaved() {
+  var dot = document.getElementById('save-dot');
+  var txt = document.getElementById('save-status-text');
+  if (!dot || !txt) return;
+  dot.className = 'save-dot save-unsaved';
+  txt.textContent = 'Unsaved';
+  txt.style.color = '#f59e0b';
+
+  // Auto-save after 1.5s of no changes
+  clearTimeout(_globalSaveTimer);
+  _globalSaveTimer = setTimeout(function() {
+    _performGlobalSave();
+  }, 1500);
+}
+
+function _performGlobalSave() {
+  var dot = document.getElementById('save-dot');
+  var txt = document.getElementById('save-status-text');
+  if (!dot || !txt) return;
+
+  // Show saving state
+  dot.className = 'save-dot save-saving';
+  txt.textContent = 'Saving...';
+  txt.style.color = 'var(--accent)';
+
+  // Save everything to localStorage
+  try { localStorage.setItem('woims_services', JSON.stringify(SERVICES)); } catch(e) {}
+  try { localStorage.setItem('woims_clients', JSON.stringify(CLIENTS)); } catch(e) {}
+  try { localStorage.setItem('woims_work_orders', JSON.stringify(WORK_ORDERS)); } catch(e) {}
+  try { localStorage.setItem('woims_activities', JSON.stringify(ACTIVITIES)); } catch(e) {}
+
+  // Save document state if active
+  if (currentWO && _docLines && _docLines.length > 0) {
+    docSaveState();
+  }
+
+  // Save company settings
+  try { localStorage.setItem('woims_company', JSON.stringify(COMPANY)); } catch(e) {}
+
+  _lastSaveTime = Date.now();
+
+  // Simulate brief save delay for UX feedback
+  setTimeout(function() {
+    dot.className = 'save-dot save-ok';
+    txt.textContent = 'Saved';
+    txt.style.color = 'var(--success)';
+    // Fade back to muted after 3s
+    setTimeout(function() {
+      txt.style.color = 'var(--text-muted)';
+    }, 3000);
+  }, 400);
+}
+
+function globalSaveAll() {
+  clearTimeout(_globalSaveTimer);
+  _performGlobalSave();
+  showToast('💾 All changes saved');
+}
+
 
 // ============ APP STATE ============
 let currentPage = 'dashboard';
