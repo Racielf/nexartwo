@@ -1097,45 +1097,31 @@ function escHtml(str) {
 // Called when user edits a field in the Document tab
 function syncFromDoc(idx, field, value) {
   if (!_docLines[idx]) return;
-  // 1. Update _docLines
+  // 1. Update _docLines (Document owns all its own fields)
   _docLines[idx][field] = value;
 
-  // 2. Find matching item in currentLineItems by stable liId
-  var liId = _docLines[idx].liId;
-  var li = currentLineItems.find(function(i) { return i.id == liId; });
-  if (li) {
-    // 3. Map doc field → lineItem field
-    if (field === 'name') li.name  = value;
-    if (field === 'desc') li.desc  = value;
-    if (field === 'rate') li.price = value;
-    if (field === 'qty')  li.qty   = value;
+  // 2. Sync only name/desc to currentLineItems — price/qty stay Doc-only
+  if (field === 'name' || field === 'desc') {
+    var liId = _docLines[idx].liId;
+    var li = currentLineItems.find(function(i) { return i.id == liId; });
+    if (li) {
+      if (field === 'name') li.name = value;
+      if (field === 'desc') li.desc = value;
 
-    // 4. Recalculate WO totals if price/qty changed
-    if (field === 'rate' || field === 'qty') {
-      currentWO.total = currentLineItems.reduce(function(s,i) { return s+(i.price*(i.qty||1)); }, 0);
-      saveWorkOrders();
-      renderDashboard();
-    }
+      // Persist name/desc to Supabase
+      if (typeof DB !== 'undefined' && isSupabaseReady() && typeof li.id === 'number') {
+        DB.lineItems.update(li.id, { [field]: value })
+          .catch(function(e) { console.warn('syncFromDoc Supabase fail:', e); });
+      }
 
-    // 5. Persist to Supabase if connected and item has real numeric DB id
-    if (typeof DB !== 'undefined' && isSupabaseReady() && typeof li.id === 'number') {
-      var dbChanges = {};
-      if (field === 'name') dbChanges.name  = value;
-      if (field === 'desc') dbChanges.desc  = value;
-      if (field === 'rate') dbChanges.price = value;
-      if (field === 'qty')  dbChanges.qty   = value;
-      DB.lineItems.update(li.id, dbChanges).catch(function(e) {
-        console.warn('syncFromDoc Supabase fail:', e);
-      });
-    }
-
-    // 6. Re-render Line Items tab only if WO detail page is active
-    if (typeof currentPage !== 'undefined' && currentPage === 'wodetail') {
-      renderLineItems();
+      // Re-render Line Items tab if visible
+      if (typeof currentPage !== 'undefined' && currentPage === 'wodetail') {
+        renderLineItems();
+      }
     }
   }
 
-  // 7. Doc totals + line total cell + autosave (always)
+  // 3. Doc handles its own totals for rate/qty — no propagation
   if (field === 'rate' || field === 'qty') {
     docUpdateLineTotal(idx);
     updateDocTotals();
@@ -1148,39 +1134,28 @@ function syncFromLineItem(idx, field, value) {
   var li = currentLineItems[idx];
   if (!li) return;
 
-  // 1. Update currentLineItems
-  if (field === 'name')  li.name  = value;
-  if (field === 'desc')  li.desc  = value;
-  if (field === 'price') li.price = value;
-  if (field === 'qty')   li.qty   = value;
+  // 1. Only sync name/desc — price/qty are Line Items informational only
+  if (field !== 'name' && field !== 'desc') return;
 
-  // 2. Recalculate WO totals if price/qty changed
-  if (field === 'price' || field === 'qty') {
-    currentWO.total = currentLineItems.reduce(function(s,i) { return s+(i.price*(i.qty||1)); }, 0);
-    document.getElementById('wo-detail-total').textContent = '$' + currentWO.total.toLocaleString();
-    saveWorkOrders();
-    renderDashboard();
-  }
+  li.name = field === 'name' ? value : li.name;
+  li.desc = field === 'desc' ? value : li.desc;
 
-  // 3. Mirror to _docLines by liId — only if doc was already initialized
+  // 2. Mirror to _docLines by liId — only if doc was already initialized
   if (_docLines && _docLines.length > 0) {
     var dl = _docLines.find(function(d) { return d.liId == li.id; });
     if (dl) {
-      if (field === 'name')  dl.name = value;
-      if (field === 'desc')  dl.desc = value;
-      if (field === 'price') dl.rate = value;
-      if (field === 'qty')   dl.qty  = value;
-      // Re-render document tab only if it's currently visible
+      if (field === 'name') dl.name = value;
+      if (field === 'desc') dl.desc = value;
+      // Re-render document tab only if currently visible
       var docTbody = document.getElementById('doc-line-tbody');
       if (docTbody && docTbody.offsetParent !== null) {
         renderDocLines();
-        updateDocTotals();
       }
       docAutoSave();
     }
   }
 
-  // 4. Persist to Supabase
+  // 3. Persist name/desc to Supabase
   if (typeof DB !== 'undefined' && isSupabaseReady() && typeof li.id === 'number') {
     DB.lineItems.update(li.id, { [field]: value })
       .catch(function(e) { console.warn('syncFromLineItem fail:', e); });
