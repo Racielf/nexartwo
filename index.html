@@ -302,9 +302,6 @@
               <button class="doc-tpl-btn" id="tpl-btn-field" onclick="setDocTemplate('field')">Field Report</button>
             </div>
             <div style="flex:1"></div>
-            <button class="btn btn-sm btn-secondary" onclick="docAddLineModal()" style="gap:6px">
-              <i data-lucide="plus" style="width:13px;height:13px"></i> Add Line
-            </button>
             <button class="btn btn-sm btn-secondary" onclick="printWODocument()" style="gap:6px">
               <i data-lucide="printer" style="width:13px;height:13px"></i> Print / PDF
             </button>
@@ -361,9 +358,9 @@
                 <tbody id="doc-line-tbody"></tbody>
               </table>
 
-              <!-- Add a Line button -->
-              <div class="doc-add-line" onclick="docAddLineModal()">
-                <i data-lucide="plus-circle" style="width:16px;height:16px"></i> Add a Line
+              <!-- Go to Line Items to add services -->
+              <div class="doc-add-line" onclick="switchWOTab('items');showToast('Add services from Line Items tab')">
+                <i data-lucide="arrow-left" style="width:16px;height:16px"></i> Add services from Line Items
               </div>
 
               <!-- Totals -->
