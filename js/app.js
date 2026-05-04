@@ -608,32 +608,107 @@ function updateWOProgress() {
 }
 
 function renderLineItems() {
-  const total = currentLineItems.reduce((s, item) => s + (item.price * item.qty), 0);
+  const total = currentLineItems.reduce((s, item) => s + (item.price * (item.qty || 1)), 0);
   document.getElementById('wo-detail-total').textContent = '$' + total.toLocaleString();
 
   const list = document.getElementById('wo-line-items');
   list.innerHTML = currentLineItems.map((item, i) => {
     const isCompleted = item.status === 'completed';
+    const isProgress = item.status === 'progress';
     return `
     <div class="line-item" style="${isCompleted ? 'opacity:0.7;' : ''}">
-      <div class="line-item-number" style="${isCompleted ? 'background:var(--success-bg);color:var(--success)' : ''}">${isCompleted ? '<i data-lucide="check" style="width:16px;height:16px"></i>' : i + 1}</div>
+      <div class="line-item-number" style="${isCompleted ? 'background:var(--success-bg);color:var(--success)' : isProgress ? 'background:var(--accent-bg);color:var(--accent)' : ''}">${isCompleted ? '<i data-lucide="check" style="width:16px;height:16px"></i>' : i + 1}</div>
       <div class="line-item-info">
         <h4 style="${isCompleted ? 'text-decoration:line-through;opacity:0.7' : ''}">${item.name}</h4>
-        <p>${item.category} • ${item.desc}</p>
+        <p>${item.category || ''} ${item.category && item.desc ? '•' : ''} ${item.desc || ''}</p>
       </div>
-      <span class="negotiable-badge negotiable-${item.negotiable}">${item.negotiable === 'yes' ? '<i data-lucide="check" style="width:12px;height:12px"></i>' : item.negotiable === 'no' ? '<i data-lucide="x" style="width:12px;height:12px"></i>' : '<i data-lucide="help-circle" style="width:12px;height:12px"></i>'}</span>
-      <span class="badge badge-${item.status === 'completed' ? 'completed' : item.status === 'progress' ? 'progress' : 'draft'}">${capitalize(item.status)}</span>
-      <div class="line-item-actions">
-        ${isCompleted
-          ? '<button class="btn-completed-done"><i data-lucide="check-circle" style="width:16px;height:16px"></i> Done</button>'
-          : `<button class="btn-complete" onclick="markItemComplete(${i})"><i data-lucide="check" style="width:16px;height:16px"></i> Complete</button>`
-        }
-      </div>
-      <div class="line-item-price">$${(item.price * item.qty).toLocaleString()}</div>
+      <select class="line-item-status-select" onchange="changeLineItemStatus(${i}, this.value)" title="Change status">
+        <option value="pending" ${item.status === 'pending' ? 'selected' : ''}>⏳ Pending</option>
+        <option value="progress" ${item.status === 'progress' ? 'selected' : ''}>🔧 In Progress</option>
+        <option value="completed" ${item.status === 'completed' ? 'selected' : ''}>✅ Completed</option>
+      </select>
+      <div class="line-item-price">$${((item.price || 0) * (item.qty || 1)).toLocaleString()}</div>
+      <button class="doc-remove-btn" onclick="deleteLineItem(${i})" title="Delete line item" style="opacity:0.4;font-size:15px;padding:4px 6px">✕</button>
     </div>`;
   }).join('');
+
+  if (currentLineItems.length === 0) {
+    list.innerHTML = '<div style="text-align:center;padding:40px;color:var(--text-muted)"><i data-lucide="inbox" style="width:32px;height:32px;margin-bottom:8px"></i><p>No line items yet. Click "Add Item" to add services.</p></div>';
+  }
   lucide.createIcons();
 }
+
+function changeLineItemStatus(index, newStatus) {
+  if (!currentLineItems[index]) return;
+  var oldStatus = currentLineItems[index].status;
+  currentLineItems[index].status = newStatus;
+
+  if (newStatus === 'completed') {
+    currentLineItems[index].completedAt = new Date().toISOString();
+    currentLineItems[index].completedBy = COMPANY.owner || 'Field Agent';
+  } else {
+    currentLineItems[index].completedAt = null;
+    currentLineItems[index].completedBy = null;
+  }
+
+  // Persist to Supabase
+  var item = currentLineItems[index];
+  if (typeof DB !== 'undefined' && isSupabaseReady() && item.id && typeof item.id === 'number') {
+    DB.lineItems.update(item.id, {
+      status: newStatus,
+      completedAt: item.completedAt,
+      completedBy: item.completedBy
+    }).catch(function(e) { console.warn('Failed to sync line item status:', e); });
+  }
+
+  updateWOProgress();
+  // Sync WO totals to Supabase
+  if (typeof DB !== 'undefined' && isSupabaseReady() && currentWO) {
+    DB.workOrders.update(currentWO.id, {
+      completed: currentWO.completed,
+      items: currentWO.items
+    }).catch(function(e) { console.warn('Failed to sync WO progress:', e); });
+  }
+
+  renderLineItems();
+  renderDashboard();
+  renderWorkOrders();
+  saveWorkOrders();
+  showToast('✅ Status: ' + item.name + ' → ' + capitalize(newStatus));
+}
+
+function deleteLineItem(index) {
+  if (!currentLineItems[index]) return;
+  var item = currentLineItems[index];
+  if (!confirm('Delete line item "' + item.name + '"?\n\nThis will remove it from this work order.')) return;
+
+  currentLineItems.splice(index, 1);
+
+  // Persist delete to Supabase
+  if (typeof DB !== 'undefined' && isSupabaseReady() && item.id && typeof item.id === 'number') {
+    DB.lineItems.delete(item.id).catch(function(e) { console.warn('Failed to delete line item from DB:', e); });
+  }
+
+  // Update WO counts
+  updateWOProgress();
+  currentWO.total = currentLineItems.reduce((s, i) => s + ((i.price || 0) * (i.qty || 1)), 0);
+  saveWorkOrders();
+
+  if (typeof DB !== 'undefined' && isSupabaseReady() && currentWO) {
+    DB.workOrders.update(currentWO.id, {
+      items: currentWO.items,
+      completed: currentWO.completed,
+      total: currentWO.total
+    }).catch(function(e) { console.warn('WO sync failed:', e); });
+  }
+
+  renderLineItems();
+  renderDashboard();
+  renderWorkOrders();
+  document.getElementById('wo-tab-items-count').textContent = '(' + currentLineItems.length + ')';
+  showToast('🗑️ Removed: ' + item.name);
+}
+
 
 function markItemComplete(index) {
   if (!currentLineItems[index] || currentLineItems[index].status === 'completed') return;
@@ -1887,8 +1962,13 @@ function showServiceDetail(id) {
   WORK_ORDERS.forEach(function(wo) {
     sel.innerHTML += '<option value="' + wo.id + '">' + wo.id + ' — ' + escHtml(wo.title) + ' (' + escHtml(wo.client) + ')</option>';
   });
-  // Pre-select current WO if there is one
-  if (currentWO) sel.value = currentWO.id;
+  
+  // Auto-select if only 1 WO exists, or pre-select current WO
+  if (WORK_ORDERS.length === 1) {
+    sel.value = WORK_ORDERS[0].id;
+  } else if (currentWO) {
+    sel.value = currentWO.id;
+  }
   
   openModal('modal-svc-detail');
   lucide.createIcons();
