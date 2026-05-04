@@ -2134,20 +2134,51 @@ body {
   .doc-remove-btn, .doc-add-line, .doc-tpl-btn { display: none !important; }
   .doc-qty-input { border: none !important; }
   .doc-inline-input { border: none !important; background: transparent !important; }
-  .save-indicator, #btn-save-all { display: none !important; }
+  .save-btn { display: none !important; }
 }
 
-/* ============ GLOBAL SAVE INDICATOR ============ */
-.save-indicator {
-  display: flex;
+/* ============ GLOBAL SAVE BUTTON ============ */
+.save-btn {
+  display: inline-flex;
   align-items: center;
-  gap: 6px;
-  padding: 4px 10px;
-  border-radius: 20px;
-  background: var(--bg-input);
-  border: 1px solid var(--border);
-  transition: all 0.3s;
+  gap: 7px;
+  padding: 6px 14px 6px 12px;
+  border-radius: 22px;
+  background: var(--bg-secondary);
+  border: 1.5px solid var(--border);
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(.4,0,.2,1);
+  position: relative;
+  overflow: hidden;
+  user-select: none;
 }
+.save-btn:hover {
+  border-color: var(--accent);
+  background: var(--bg-input);
+  color: var(--text-primary);
+  box-shadow: 0 2px 12px rgba(217,119,6,0.12);
+  transform: translateY(-1px);
+}
+.save-btn:active {
+  transform: scale(0.93) translateY(0);
+  box-shadow: 0 0 0 3px rgba(217,119,6,0.15);
+  border-color: var(--accent);
+  transition: transform 0.08s;
+}
+.save-btn:active .save-btn-icon {
+  animation: saveIconBounce 0.3s ease;
+}
+
+.save-btn-icon {
+  color: var(--text-muted);
+  transition: color 0.2s;
+  flex-shrink: 0;
+}
+.save-btn:hover .save-btn-icon { color: var(--accent); }
 
 .save-dot {
   width: 8px;
@@ -2158,18 +2189,29 @@ body {
 }
 .save-dot.save-ok {
   background: var(--success);
-  box-shadow: 0 0 6px rgba(34,197,94,0.4);
+  box-shadow: 0 0 6px rgba(34,197,94,0.45);
 }
 .save-dot.save-saving {
   background: var(--accent);
-  animation: savePulse 0.8s ease-in-out infinite;
+  animation: savePulse 0.6s ease-in-out infinite;
 }
 .save-dot.save-unsaved {
   background: #f59e0b;
-  box-shadow: 0 0 6px rgba(245,158,11,0.4);
+  box-shadow: 0 0 8px rgba(245,158,11,0.5);
+  animation: unsavedGlow 1.5s ease-in-out infinite;
 }
 
 @keyframes savePulse {
   0%, 100% { opacity: 1; transform: scale(1); }
-  50% { opacity: 0.4; transform: scale(0.7); }
+  50% { opacity: 0.3; transform: scale(0.6); }
+}
+@keyframes unsavedGlow {
+  0%, 100% { box-shadow: 0 0 6px rgba(245,158,11,0.3); }
+  50% { box-shadow: 0 0 12px rgba(245,158,11,0.6); }
+}
+@keyframes saveIconBounce {
+  0% { transform: translateY(0); }
+  40% { transform: translateY(3px); }
+  70% { transform: translateY(-2px); }
+  100% { transform: translateY(0); }
 }

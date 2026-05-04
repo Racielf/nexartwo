@@ -95,13 +95,11 @@
             <i data-lucide="search" class="icon" style="width:16px;height:16px"></i>
             <input type="text" placeholder="Search work orders, services, clients...">
           </div>
-          <!-- Global Save Indicator -->
-          <div id="global-save-indicator" class="save-indicator" title="All changes auto-saved">
+          <!-- Global Save Indicator + Button -->
+          <button class="save-btn" id="btn-save-all" onclick="globalSaveAll()" title="Save all changes now">
             <span class="save-dot save-ok" id="save-dot"></span>
-            <span id="save-status-text" style="font-size:11px;color:var(--text-muted)">Saved</span>
-          </div>
-          <button class="btn btn-sm btn-ghost" id="btn-save-all" onclick="globalSaveAll()" title="Save all changes now" style="gap:5px;padding:6px 10px;font-size:12px">
-            <i data-lucide="save" style="width:14px;height:14px"></i> Save
+            <span id="save-status-text">Saved</span>
+            <i data-lucide="hard-drive-download" style="width:15px;height:15px" class="save-btn-icon"></i>
           </button>
           <button class="btn btn-primary" onclick="openNewWOModal()">+ New Work Order</button>
         </div>

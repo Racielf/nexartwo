@@ -209,6 +209,12 @@ function _performGlobalSave() {
 
 function globalSaveAll() {
   clearTimeout(_globalSaveTimer);
+  // Brief visual bounce on the button
+  var btn = document.getElementById('btn-save-all');
+  if (btn) {
+    btn.style.transform = 'scale(0.92)';
+    setTimeout(function() { btn.style.transform = ''; }, 120);
+  }
   _performGlobalSave();
   showToast('💾 All changes saved');
 }
