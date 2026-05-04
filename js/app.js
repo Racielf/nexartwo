@@ -419,7 +419,7 @@ function renderWorkOrders() {
       </td>
       <td class="fw-700">$${wo.total.toLocaleString()}</td>
       <td onclick="event.stopPropagation()" style="position:relative">
-        <button class="btn btn-sm btn-ghost" onclick="toggleWOMenu('${wo.id}')" style="padding:4px 8px;font-size:16px">⋯</button>
+        <button class="btn btn-sm btn-ghost" onclick="toggleWOMenu('${wo.id}', event)" style="padding:4px 8px;font-size:16px">⋯</button>
         <div class="action-dropdown" id="wo-menu-${wo.id}">
           <div class="action-dropdown-item" onclick="openWorkOrderDetail('${wo.id}');closeAllWOMenus()">
             <i data-lucide="eye" style="width:14px;height:14px"></i> View Detail
@@ -439,10 +439,26 @@ function renderWorkOrders() {
 }
 
 // WO Action Menu
-function toggleWOMenu(woId) {
+function toggleWOMenu(woId, e) {
   closeAllWOMenus();
   var menu = document.getElementById('wo-menu-' + woId);
-  if (menu) menu.classList.toggle('show');
+  if (!menu) return;
+  menu.classList.add('show');
+  // Position fixed relative to button
+  var btn = e ? e.currentTarget : null;
+  if (btn) {
+    var rect = btn.getBoundingClientRect();
+    menu.style.position = 'fixed';
+    menu.style.right = (window.innerWidth - rect.right) + 'px';
+    // Open upward if near bottom
+    if (rect.bottom > window.innerHeight - 200) {
+      menu.style.bottom = (window.innerHeight - rect.top + 4) + 'px';
+      menu.style.top = 'auto';
+    } else {
+      menu.style.top = (rect.bottom + 4) + 'px';
+      menu.style.bottom = 'auto';
+    }
+  }
 }
 function closeAllWOMenus() {
   document.querySelectorAll('.action-dropdown.show').forEach(function(m) { m.classList.remove('show'); });
