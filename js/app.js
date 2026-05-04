@@ -1295,26 +1295,28 @@ function closeModal(modalId) {
   document.getElementById(modalId).classList.remove('active');
 }
 
-function openNewWOModal() {
-  // Populate client dropdown from CLIENTS array
+function openNewWOModal(preselectedClient) {
+  // Populate client dropdown from CLIENTS array (always fresh)
   var sel = document.getElementById('new-wo-client');
-  var currentVal = sel.value;
   sel.innerHTML = '<option value="">Select client...</option>';
+
   CLIENTS.forEach(function(c) {
     var opt = document.createElement('option');
     opt.value = c.name;
     opt.textContent = c.name + (c.company ? ' — ' + c.company : '');
     sel.appendChild(opt);
   });
-  // Add quick "New Client" option
+
+  // Add quick "New Client" shortcut at bottom
   var newOpt = document.createElement('option');
   newOpt.value = '__new__';
-  newOpt.textContent = '＋ Add New Client...';
-  newOpt.style.fontWeight = '700';
+  newOpt.textContent = '＋ Agregar nuevo cliente...';
   sel.appendChild(newOpt);
-  if (currentVal) sel.value = currentVal;
 
-  // Listen for "new client" selection
+  // Pre-select client if coming from client page
+  if (preselectedClient) sel.value = preselectedClient;
+
+  // Handle 'new client' shortcut
   sel.onchange = function() {
     if (sel.value === '__new__') {
       sel.value = '';
@@ -1324,6 +1326,13 @@ function openNewWOModal() {
   };
 
   openModal('modal-new-wo');
+}
+
+// Called from Clients page — opens WO modal with client already selected
+function createWOForClient(clientId) {
+  var client = CLIENTS.find(function(c) { return c.id === clientId; });
+  if (!client) return;
+  openNewWOModal(client.name);
 }
 function openNewServiceModal() { openModal('modal-new-service'); }
 
@@ -1444,13 +1453,17 @@ function renderClients() {
       <td style="text-align:center">${c.totalOrders}</td>
       <td class="fw-700">$${c.totalValue.toLocaleString()}</td>
       <td>
-        <div style="display:flex;gap:6px">
-          <button class="btn btn-sm btn-secondary" onclick="viewClientOrders(${c.id})"><i data-lucide="clipboard-list" style="width:14px;height:14px;margin-right:6px"></i> Orders</button>
+        <div style="display:flex;gap:6px;align-items:center">
+          <button class="btn btn-sm btn-primary" onclick="createWOForClient(${c.id})" title="Create Work Order for this client" style="gap:5px;padding:6px 10px">
+            <i data-lucide="file-plus" style="width:13px;height:13px"></i> New WO
+          </button>
+          <button class="btn btn-sm btn-secondary" onclick="viewClientOrders(${c.id})"><i data-lucide="clipboard-list" style="width:14px;height:14px;margin-right:6px"></i>Orders</button>
           <button class="btn btn-sm btn-ghost" onclick="editClient(${c.id})"><i data-lucide="edit-2" style="width:14px;height:14px"></i></button>
         </div>
       </td>
     </tr>`;
   }).join('');
+  lucide.createIcons();
 }
 
 function filterClients(type) {
