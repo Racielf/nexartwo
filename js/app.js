@@ -358,7 +358,10 @@ function renderServiceLibrary() {
     <div class="service-card" onclick="showServiceDetail(${s.id})">
       <div class="service-card-top">
         <span class="service-category">${s.category}</span>
-        <div class="service-price">$${s.price.toLocaleString()}<span>/${s.unit}</span></div>
+        <div style="display:flex;align-items:center;gap:6px">
+          <div class="service-price">$${s.price.toLocaleString()}<span>/${s.unit}</span></div>
+          <button class="doc-remove-btn" onclick="event.stopPropagation();deleteService(${s.id})" title="Delete service" style="opacity:0.3;font-size:13px;padding:2px 4px">✕</button>
+        </div>
       </div>
       <div class="service-name">${s.name}</div>
       <div class="service-desc">${s.desc}</div>
@@ -409,9 +412,82 @@ function renderWorkOrders() {
         </div>
       </td>
       <td class="fw-700">$${wo.total.toLocaleString()}</td>
+      <td onclick="event.stopPropagation()" style="position:relative">
+        <button class="btn btn-sm btn-ghost" onclick="toggleWOMenu('${wo.id}')" style="padding:4px 8px;font-size:16px">⋯</button>
+        <div class="action-dropdown" id="wo-menu-${wo.id}">
+          <div class="action-dropdown-item" onclick="openWorkOrderDetail('${wo.id}');closeAllWOMenus()">
+            <i data-lucide="eye" style="width:14px;height:14px"></i> View Detail
+          </div>
+          <div class="action-dropdown-item" onclick="openWorkOrderDetail('${wo.id}');closeAllWOMenus();setTimeout(function(){switchWOTab('document')},200)">
+            <i data-lucide="file-text" style="width:14px;height:14px"></i> Open Document
+          </div>
+          <div class="action-dropdown-divider"></div>
+          <div class="action-dropdown-item action-dropdown-danger" onclick="deleteWorkOrder('${wo.id}')">
+            <i data-lucide="trash-2" style="width:14px;height:14px"></i> Delete
+          </div>
+        </div>
+      </td>
     </tr>`;
   }).join('');
   lucide.createIcons();
+}
+
+// WO Action Menu
+function toggleWOMenu(woId) {
+  closeAllWOMenus();
+  var menu = document.getElementById('wo-menu-' + woId);
+  if (menu) menu.classList.toggle('show');
+}
+function closeAllWOMenus() {
+  document.querySelectorAll('.action-dropdown.show').forEach(function(m) { m.classList.remove('show'); });
+}
+document.addEventListener('click', function(e) {
+  if (!e.target.closest('.action-dropdown') && !e.target.closest('[onclick*="toggleWOMenu"]') && !e.target.closest('[onclick*="toggleClientMenu"]')) {
+    closeAllWOMenus();
+    if (typeof closeAllClientMenus === 'function') closeAllClientMenus();
+  }
+});
+
+// Delete Work Order
+function deleteWorkOrder(woId) {
+  closeAllWOMenus();
+  var wo = WORK_ORDERS.find(function(w) { return w.id === woId; });
+  if (!wo) return;
+  if (!confirm('Delete work order ' + woId + ' — "' + wo.title + '"?\n\nThis cannot be undone.')) return;
+
+  WORK_ORDERS = WORK_ORDERS.filter(function(w) { return w.id !== woId; });
+  saveWorkOrders();
+
+  // Remove saved document
+  try { localStorage.removeItem('nexartwo_doc_' + woId); } catch(e) {}
+
+  // Supabase sync
+  if (typeof DB !== 'undefined' && isSupabaseReady()) {
+    DB.workOrders.delete(woId).catch(function(e) { console.warn('WO delete sync failed:', e); });
+  }
+
+  renderWorkOrders();
+  renderDashboard();
+  showToast('🗑️ Work Order ' + woId + ' deleted');
+}
+
+// Delete Service
+function deleteService(svcId) {
+  var svc = SERVICES.find(function(s) { return s.id === svcId; });
+  if (!svc) return;
+  if (!confirm('Delete service "' + svc.name + '"?\n\nThis cannot be undone.')) return;
+
+  SERVICES = SERVICES.filter(function(s) { return s.id !== svcId; });
+  saveServices();
+
+  // Supabase sync
+  if (typeof DB !== 'undefined' && isSupabaseReady()) {
+    DB.services.delete(svcId).catch(function(e) { console.warn('Service delete sync failed:', e); });
+  }
+
+  renderServiceLibrary();
+  lucide.createIcons();
+  showToast('🗑️ Service "' + svc.name + '" deleted');
 }
 
 // ============ WORK ORDER DETAIL ============
