@@ -1882,7 +1882,7 @@ body {
   border-radius: var(--radius-lg);
   overflow: hidden;
   box-shadow: 0 2px 24px rgba(0,0,0,0.10);
-  max-width: 960px;
+  max-width: 1020px;
   margin: 0 auto;
 }
 #wo-document-inner {
@@ -2002,10 +2002,12 @@ body {
 .doc-logo-img { width: 96px; height: 96px; object-fit: contain; border-radius: 10px; }
 
 
-.doc-th-desc { width: 55%; }
-.doc-th-rate, .doc-th-qty, .doc-th-total { width: 12%; text-align: right; }
-.doc-th-action { width: 4%; }
-.doc-table td.doc-td-rate, .doc-table td.doc-td-qty, .doc-table td.doc-td-total { text-align: right; }
+.doc-th-desc { width: 62%; }
+.doc-th-rate { width: 9%; text-align: right; }
+.doc-th-qty { width: 7%; text-align: right; }
+.doc-th-total { width: 10%; text-align: right; }
+.doc-th-action { width: 3%; }
+.doc-table td.doc-td-rate, .doc-table td.doc-td-qty, .doc-table td.doc-td-total { text-align: right; vertical-align: middle; }
 
 .doc-line-name { font-weight: 600; margin-bottom: 3px; }
 .doc-line-name-input {
@@ -2046,7 +2048,7 @@ body {
 .doc-line-desc-input::placeholder { opacity: 0.4; }
 
 .doc-rate-input {
-  width: 80px;
+  width: 65px;
   text-align: right;
   font-size: 13px;
   font-weight: 600;
@@ -2061,7 +2063,7 @@ body {
 .doc-rate-input:hover { background: rgba(0,0,0,0.03); }
 .doc-rate-input:focus { border-color: var(--accent); background: rgba(217,119,6,0.06); }
 .doc-qty-input {
-  width: 48px;
+  width: 40px;
   text-align: right;
   font-size: 13px;
   font-weight: 600;
