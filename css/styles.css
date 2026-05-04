@@ -263,6 +263,35 @@ body {
 .btn-ghost:hover { color: var(--text-primary); background: var(--bg-card); }
 
 .btn-sm { padding: 6px 12px; font-size: 12px; }
+.btn-danger {
+  background: #dc2626; color: #fff; border: none;
+}
+.btn-danger:hover { background: #b91c1c; }
+
+/* Confirmation Modal */
+.confirm-overlay {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0,0,0,0.45);
+  z-index: 9999;
+  display: flex; align-items: center; justify-content: center;
+  animation: fadeIn 0.15s ease;
+}
+.confirm-box {
+  background: #fff;
+  border-radius: 16px;
+  padding: 32px;
+  max-width: 400px;
+  width: 90%;
+  text-align: center;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+  animation: dropdownIn 0.2s ease;
+}
+.confirm-icon { font-size: 40px; margin-bottom: 12px; }
+.confirm-box h3 { font-size: 17px; font-weight: 700; color: var(--text-primary); margin-bottom: 8px; }
+.confirm-box p { font-size: 13px; color: var(--text-secondary); line-height: 1.5; margin-bottom: 24px; }
+.confirm-actions { display: flex; gap: 10px; justify-content: center; }
+.confirm-actions .btn { min-width: 100px; padding: 10px 20px; font-size: 13px; font-weight: 600; border-radius: 8px; cursor: pointer; }
 
 /* ============ PAGE CONTENT ============ */
 .page { display: none; padding: 28px 32px; animation: fadeIn 0.3s ease; }
@@ -378,12 +407,51 @@ body {
 .wo-table td {
   padding: 12px 14px;
   font-size: 13px;
-  border-bottom: 1px solid rgba(42, 45, 58, 0.5);
+  border-bottom: 1px solid var(--border);
   color: var(--text-secondary);
 }
 .wo-table tr { transition: var(--transition); cursor: pointer; }
+.wo-table tbody tr:last-child td { border-bottom: none; }
 .wo-table tbody tr:hover { background: var(--accent-soft); }
 .wo-table tbody tr:hover td { color: var(--text-primary); }
+
+/* Action dropdown menu */
+.action-dropdown {
+  display: none;
+  position: absolute;
+  top: 100%;
+  right: 0;
+  min-width: 180px;
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+  z-index: 100;
+  padding: 6px 0;
+  animation: dropdownIn 0.15s ease;
+}
+.action-dropdown.show { display: block; }
+@keyframes dropdownIn {
+  from { opacity: 0; transform: translateY(-6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.action-dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 16px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-primary);
+  cursor: pointer;
+  transition: background 0.12s;
+}
+.action-dropdown-item:hover { background: var(--accent-soft); }
+.action-dropdown-item i { opacity: 0.6; }
+.action-dropdown-divider { height: 1px; background: var(--border); margin: 4px 0; }
+.action-dropdown-danger { color: #dc2626; }
+.action-dropdown-danger:hover { background: #fef2f2; }
+
 
 /* Status badges */
 .badge {

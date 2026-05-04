@@ -454,46 +454,51 @@ document.addEventListener('click', function(e) {
   }
 });
 
+// ============ CONFIRMATION MODAL ============
+function showConfirmModal(title, msg, onConfirm) {
+  var overlay = document.getElementById('confirm-modal-overlay');
+  document.getElementById('confirm-modal-title').textContent = title;
+  document.getElementById('confirm-modal-msg').textContent = msg;
+  var btn = document.getElementById('confirm-modal-btn');
+  btn.onclick = function() { closeConfirmModal(); onConfirm(); };
+  overlay.style.display = 'flex';
+}
+function closeConfirmModal() {
+  document.getElementById('confirm-modal-overlay').style.display = 'none';
+}
+
 // Delete Work Order
 function deleteWorkOrder(woId) {
   closeAllWOMenus();
   var wo = WORK_ORDERS.find(function(w) { return w.id === woId; });
   if (!wo) return;
-  if (!confirm('Delete work order ' + woId + ' — "' + wo.title + '"?\n\nThis cannot be undone.')) return;
-
-  WORK_ORDERS = WORK_ORDERS.filter(function(w) { return w.id !== woId; });
-  saveWorkOrders();
-
-  // Remove saved document
-  try { localStorage.removeItem('nexartwo_doc_' + woId); } catch(e) {}
-
-  // Supabase sync
-  if (typeof DB !== 'undefined' && isSupabaseReady()) {
-    DB.workOrders.delete(woId).catch(function(e) { console.warn('WO delete sync failed:', e); });
-  }
-
-  renderWorkOrders();
-  renderDashboard();
-  showToast('🗑️ Work Order ' + woId + ' deleted');
+  showConfirmModal('Delete Work Order', 'Delete ' + woId + ' - "' + wo.title + '"? This cannot be undone.', function() {
+    WORK_ORDERS = WORK_ORDERS.filter(function(w) { return w.id !== woId; });
+    saveWorkOrders();
+    try { localStorage.removeItem('nexartwo_doc_' + woId); } catch(e) {}
+    if (typeof DB !== 'undefined' && isSupabaseReady()) {
+      DB.workOrders.delete(woId).catch(function(e) { console.warn('WO delete sync failed:', e); });
+    }
+    renderWorkOrders();
+    renderDashboard();
+    showToast('Work Order ' + woId + ' deleted');
+  });
 }
 
 // Delete Service
 function deleteService(svcId) {
   var svc = SERVICES.find(function(s) { return s.id === svcId; });
   if (!svc) return;
-  if (!confirm('Delete service "' + svc.name + '"?\n\nThis cannot be undone.')) return;
-
-  SERVICES = SERVICES.filter(function(s) { return s.id !== svcId; });
-  saveServices();
-
-  // Supabase sync
-  if (typeof DB !== 'undefined' && isSupabaseReady()) {
-    DB.services.delete(svcId).catch(function(e) { console.warn('Service delete sync failed:', e); });
-  }
-
-  renderServiceLibrary();
-  lucide.createIcons();
-  showToast('🗑️ Service "' + svc.name + '" deleted');
+  showConfirmModal('Delete Service', 'Delete "' + svc.name + '"? This cannot be undone.', function() {
+    SERVICES = SERVICES.filter(function(s) { return s.id !== svcId; });
+    saveServices();
+    if (typeof DB !== 'undefined' && isSupabaseReady()) {
+      DB.services.delete(svcId).catch(function(e) { console.warn('Service delete sync failed:', e); });
+    }
+    renderServiceLibrary();
+    lucide.createIcons();
+    showToast('Service "' + svc.name + '" deleted');
+  });
 }
 
 // ============ WORK ORDER DETAIL ============
@@ -755,33 +760,27 @@ function changeLineItemStatus(index, newStatus) {
 function deleteLineItem(index) {
   if (!currentLineItems[index]) return;
   var item = currentLineItems[index];
-  if (!confirm('Delete line item "' + item.name + '"?\n\nThis will remove it from this work order.')) return;
-
-  currentLineItems.splice(index, 1);
-
-  // Persist delete to Supabase
-  if (typeof DB !== 'undefined' && isSupabaseReady() && item.id && typeof item.id === 'number') {
-    DB.lineItems.delete(item.id).catch(function(e) { console.warn('Failed to delete line item from DB:', e); });
-  }
-
-  // Update WO counts
-  updateWOProgress();
-  currentWO.total = currentLineItems.reduce((s, i) => s + ((i.price || 0) * (i.qty || 1)), 0);
-  saveWorkOrders();
-
-  if (typeof DB !== 'undefined' && isSupabaseReady() && currentWO) {
-    DB.workOrders.update(currentWO.id, {
-      items: currentWO.items,
-      completed: currentWO.completed,
-      total: currentWO.total
-    }).catch(function(e) { console.warn('WO sync failed:', e); });
-  }
-
-  renderLineItems();
-  renderDashboard();
-  renderWorkOrders();
-  document.getElementById('wo-tab-items-count').textContent = '(' + currentLineItems.length + ')';
-  showToast('🗑️ Removed: ' + item.name);
+  showConfirmModal('Delete Line Item', 'Delete "' + item.name + '"? This will remove it from this work order.', function() {
+    currentLineItems.splice(index, 1);
+    if (typeof DB !== 'undefined' && isSupabaseReady() && item.id && typeof item.id === 'number') {
+      DB.lineItems.delete(item.id).catch(function(e) { console.warn('Failed to delete line item from DB:', e); });
+    }
+    updateWOProgress();
+    currentWO.total = currentLineItems.reduce((s, i) => s + ((i.price || 0) * (i.qty || 1)), 0);
+    saveWorkOrders();
+    if (typeof DB !== 'undefined' && isSupabaseReady() && currentWO) {
+      DB.workOrders.update(currentWO.id, {
+        items: currentWO.items,
+        completed: currentWO.completed,
+        total: currentWO.total
+      }).catch(function(e) { console.warn('WO sync failed:', e); });
+    }
+    renderLineItems();
+    renderDashboard();
+    renderWorkOrders();
+    document.getElementById('wo-tab-items-count').textContent = '(' + currentLineItems.length + ')';
+    showToast('Removed: ' + item.name);
+  });
 }
 
 
@@ -2276,34 +2275,36 @@ function clientsClearSelection() {
 function deleteClient(clientId) {
   var c = CLIENTS.find(function(x) { return x.id === clientId; });
   if (!c) return;
-  if (!confirm('Delete "' + c.name + '"? This cannot be undone.')) return;
-  CLIENTS.splice(CLIENTS.indexOf(c), 1);
-  saveClients();
-  if (typeof DB !== 'undefined' && isSupabaseReady()) {
-    DB.clients.delete(clientId).catch(function(e) { console.warn('Cloud delete failed:', e); });
-  }
-  renderClients();
-  renderDashboard();
-  showToast('🗑️ ' + c.name + ' deleted');
+  showConfirmModal('Delete Client', 'Delete "' + c.name + '"? This cannot be undone.', function() {
+    CLIENTS.splice(CLIENTS.indexOf(c), 1);
+    saveClients();
+    if (typeof DB !== 'undefined' && isSupabaseReady()) {
+      DB.clients.delete(clientId).catch(function(e) { console.warn('Cloud delete failed:', e); });
+    }
+    renderClients();
+    renderDashboard();
+    showToast(c.name + ' deleted');
+  });
 }
 
 function clientsBulkDelete() {
   var ids = clientsGetSelected();
   if (ids.length === 0) return;
-  if (!confirm('Delete ' + ids.length + ' client(s)? This cannot be undone.')) return;
-  ids.forEach(function(id) {
-    var idx = CLIENTS.findIndex(function(c) { return c.id === id; });
-    if (idx !== -1) {
-      if (typeof DB !== 'undefined' && isSupabaseReady()) {
-        DB.clients.delete(id).catch(function(e) { console.warn('Cloud delete failed:', e); });
+  showConfirmModal('Delete Clients', 'Delete ' + ids.length + ' client(s)? This cannot be undone.', function() {
+    ids.forEach(function(id) {
+      var idx = CLIENTS.findIndex(function(c) { return c.id === id; });
+      if (idx !== -1) {
+        if (typeof DB !== 'undefined' && isSupabaseReady()) {
+          DB.clients.delete(id).catch(function(e) { console.warn('Cloud delete failed:', e); });
+        }
+        CLIENTS.splice(idx, 1);
       }
-      CLIENTS.splice(idx, 1);
-    }
+    });
+    saveClients();
+    renderClients();
+    renderDashboard();
+    showToast(ids.length + ' client(s) deleted');
   });
-  saveClients();
-  renderClients();
-  renderDashboard();
-  showToast('🗑️ ' + ids.length + ' client(s) deleted');
 }
 
 function clientsBulkCreateWO() {
