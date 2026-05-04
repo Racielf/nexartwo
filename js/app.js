@@ -594,6 +594,35 @@ function switchWOTab(tab) {
 
 var _docLines = [];       // [{id, name, desc, rate, qty}]
 var _docTemplate = 'classic';
+var _docSaveTimer = null;
+
+// ---- Auto-save document state ----
+function docSaveState() {
+  if (!currentWO) return;
+  var state = {
+    lines: _docLines.map(function(l) { return {id:l.id,name:l.name,desc:l.desc,rate:l.rate,qty:l.qty}; }),
+    template: _docTemplate,
+    taxPct: parseFloat(document.getElementById('doc-tax-pct')?.value) || 0,
+    ref: document.getElementById('doc-ref')?.value || ''
+  };
+  try { localStorage.setItem('nexartwo_doc_' + currentWO.id, JSON.stringify(state)); } catch(e) {}
+}
+
+function docAutoSave() {
+  clearTimeout(_docSaveTimer);
+  _docSaveTimer = setTimeout(function() {
+    docSaveState();
+    showToast('💾 Document saved', 1200);
+  }, 800);
+}
+
+function docLoadState(woId) {
+  try {
+    var raw = localStorage.getItem('nexartwo_doc_' + woId);
+    if (raw) return JSON.parse(raw);
+  } catch(e) {}
+  return null;
+}
 
 function initWODocument() {
   if (!currentWO) return;
@@ -626,17 +655,28 @@ function initWODocument() {
   document.getElementById('doc-date').textContent = today;
   document.getElementById('doc-wo-num').textContent = wo.id;
 
-  // Load line items into doc lines (only if _docLines is empty for this WO)
+  // Load saved state or init from line items
   if (!_docLines._woId || _docLines._woId !== wo.id) {
-    _docLines = (currentLineItems || []).map(function(item, i) {
-      return {
-        id: 'dl-' + i,
-        name: item.name || item.service || 'Service',
-        desc: item.desc || item.description || '',
-        rate: item.price || 0,
-        qty: item.qty || 1
-      };
-    });
+    var saved = docLoadState(wo.id);
+    if (saved && saved.lines && saved.lines.length > 0) {
+      _docLines = saved.lines;
+      _docTemplate = saved.template || 'classic';
+      setDocTemplate(_docTemplate);
+      var taxEl = document.getElementById('doc-tax-pct');
+      if (taxEl) taxEl.value = saved.taxPct || 0;
+      var refEl = document.getElementById('doc-ref');
+      if (refEl) refEl.value = saved.ref || '';
+    } else {
+      _docLines = (currentLineItems || []).map(function(item, i) {
+        return {
+          id: 'dl-' + i,
+          name: item.name || item.service || 'Service',
+          desc: item.desc || item.description || '',
+          rate: item.price || 0,
+          qty: item.qty || 1
+        };
+      });
+    }
     _docLines._woId = wo.id;
   }
 
@@ -656,22 +696,22 @@ function renderDocLines() {
         <td class="doc-td-desc">
           <input class="doc-line-name-input"
             value="${escHtml(line.name)}"
-            oninput="_docLines[${idx}].name=this.value"
+            oninput="_docLines[${idx}].name=this.value;docAutoSave()"
             placeholder="Service name">
           <textarea class="doc-line-desc-input"
             placeholder="Add a description (optional)"
-            oninput="_docLines[${idx}].desc=this.value"
+            oninput="_docLines[${idx}].desc=this.value;docAutoSave()"
             rows="1">${escHtml(line.desc)}</textarea>
         </td>
         <td class="doc-td-rate">
           <input type="number" class="doc-rate-input"
             value="${parseFloat(line.rate).toFixed(2)}" min="0" step="0.01"
-            oninput="_docLines[${idx}].rate=parseFloat(this.value)||0;updateDocTotals();docUpdateLineTotal(${idx})">
+            oninput="_docLines[${idx}].rate=parseFloat(this.value)||0;updateDocTotals();docUpdateLineTotal(${idx});docAutoSave()">
         </td>
         <td class="doc-td-qty">
           <input type="number" class="doc-qty-input"
             value="${line.qty}" min="1"
-            oninput="_docLines[${idx}].qty=Math.max(1,parseInt(this.value)||1);updateDocTotals();docUpdateLineTotal(${idx})">
+            oninput="_docLines[${idx}].qty=Math.max(1,parseInt(this.value)||1);updateDocTotals();docUpdateLineTotal(${idx});docAutoSave()">
         </td>
         <td class="doc-td-total" id="doc-lt-${idx}">$${lineTotal.toFixed(2)}</td>
         <td><button class="doc-remove-btn" onclick="docRemoveLine(${idx})" title="Remove">&#x2715;</button></td>
@@ -703,6 +743,7 @@ function updateDocTotals() {
   document.getElementById('doc-subtotal').textContent = fmt(subtotal);
   document.getElementById('doc-tax-amt').textContent = fmt(taxAmt);
   document.getElementById('doc-grand-total').textContent = fmt(grand);
+  docAutoSave();
 }
 
 function setDocTemplate(tpl) {
@@ -712,12 +753,14 @@ function setDocTemplate(tpl) {
   document.querySelectorAll('.doc-tpl-btn').forEach(function(btn) {
     btn.classList.toggle('active', btn.id === 'tpl-btn-' + tpl);
   });
+  docAutoSave();
 }
 
 function docRemoveLine(idx) {
   _docLines.splice(idx, 1);
   renderDocLines();
   updateDocTotals();
+  docAutoSave();
 }
 
 // ---- Add Line Modal ----
@@ -783,6 +826,7 @@ function docAddLine() {
   updateDocTotals();
   closeModal('modal-doc-addline');
   showToast('✅ Line added to document');
+  docAutoSave();
   lucide.createIcons();
 }
 
