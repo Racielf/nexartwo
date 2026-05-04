@@ -272,26 +272,25 @@ body {
 .confirm-overlay {
   position: fixed;
   top: 0; left: 0; right: 0; bottom: 0;
-  background: rgba(0,0,0,0.45);
+  background: rgba(0,0,0,0.35);
   z-index: 9999;
   display: flex; align-items: center; justify-content: center;
-  animation: fadeIn 0.15s ease;
 }
 .confirm-box {
   background: #fff;
-  border-radius: 16px;
-  padding: 32px;
-  max-width: 400px;
+  border-radius: 12px;
+  padding: 24px;
+  max-width: 320px;
   width: 90%;
   text-align: center;
-  box-shadow: 0 20px 60px rgba(0,0,0,0.2);
-  animation: dropdownIn 0.2s ease;
+  box-shadow: 0 12px 40px rgba(0,0,0,0.18);
+  animation: dropdownIn 0.15s ease;
 }
-.confirm-icon { font-size: 40px; margin-bottom: 12px; }
-.confirm-box h3 { font-size: 17px; font-weight: 700; color: var(--text-primary); margin-bottom: 8px; }
-.confirm-box p { font-size: 13px; color: var(--text-secondary); line-height: 1.5; margin-bottom: 24px; }
-.confirm-actions { display: flex; gap: 10px; justify-content: center; }
-.confirm-actions .btn { min-width: 100px; padding: 10px 20px; font-size: 13px; font-weight: 600; border-radius: 8px; cursor: pointer; }
+.confirm-box h3 { font-size: 15px; font-weight: 700; color: var(--text-primary); margin-bottom: 6px; }
+.confirm-box p { font-size: 12px; color: var(--text-muted); line-height: 1.4; margin-bottom: 18px; }
+.confirm-actions { display: flex; gap: 8px; justify-content: center; }
+.confirm-actions .btn { min-width: 90px; padding: 8px 16px; font-size: 12px; font-weight: 600; border-radius: 6px; cursor: pointer; }
+
 
 /* ============ PAGE CONTENT ============ */
 .page { display: none; padding: 28px 32px; animation: fadeIn 0.3s ease; }
@@ -377,7 +376,7 @@ body {
   background: var(--gradient-card);
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
-  overflow: hidden;
+  overflow: visible;
   transition: var(--transition);
 }
 .card:hover { border-color: var(--border-light); }
@@ -419,16 +418,16 @@ body {
 .action-dropdown {
   display: none;
   position: absolute;
-  top: 100%;
+  bottom: 100%;
   right: 0;
-  min-width: 180px;
+  min-width: 170px;
   background: #fff;
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
-  box-shadow: 0 8px 24px rgba(0,0,0,0.12);
-  z-index: 100;
-  padding: 6px 0;
-  animation: dropdownIn 0.15s ease;
+  box-shadow: 0 8px 30px rgba(0,0,0,0.18);
+  z-index: 9000;
+  padding: 4px 0;
+  animation: dropdownIn 0.12s ease;
 }
 .action-dropdown.show { display: block; }
 @keyframes dropdownIn {
