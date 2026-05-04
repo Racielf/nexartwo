@@ -250,7 +250,10 @@
               <h2 id="wo-detail-id">WO-2025-0041</h2>
               <span id="wo-detail-status"></span>
             </div>
-            <h2 id="wo-detail-title" style="font-size:18px;font-weight:600;color:var(--text-secondary)">Kitchen Renovation</h2>
+            <h2 id="wo-detail-title"
+              style="font-size:18px;font-weight:600;color:var(--text-secondary);cursor:pointer;border-radius:6px;padding:2px 6px;transition:background 0.15s"
+              title="Click to edit title"
+              onclick="startEditWOTitle(this)">Kitchen Renovation</h2>
             <div class="wo-meta-row">
               <div class="wo-meta-item"><i data-lucide="user" style="width:14px;height:14px;margin-right:4px;vertical-align:text-bottom"></i> <strong id="wo-detail-client">—</strong></div>
               <div class="wo-meta-item"><i data-lucide="map-pin" style="width:14px;height:14px;margin-right:4px;vertical-align:text-bottom"></i> <span id="wo-detail-property">—</span></div>
@@ -269,6 +272,7 @@
 
         <div class="wo-tabs" id="wo-detail-tabs">
           <div class="wo-tab active" data-tab="items" onclick="switchWOTab('items')"><i data-lucide="list" style="width:14px;height:14px;margin-right:6px"></i> Line Items <span id="wo-tab-items-count" style="font-size:11px;opacity:0.6"></span></div>
+          <div class="wo-tab" data-tab="document" onclick="switchWOTab('document')"><i data-lucide="file-text" style="width:14px;height:14px;margin-right:6px"></i> Document</div>
           <div class="wo-tab" data-tab="photos" onclick="switchWOTab('photos')"><i data-lucide="camera" style="width:14px;height:14px;margin-right:6px"></i> Photos <span id="wo-tab-photos-count" style="font-size:11px;opacity:0.6"></span></div>
           <div class="wo-tab" data-tab="comms" style="opacity:0.5"><i data-lucide="message-square" style="width:14px;height:14px;margin-right:6px"></i> Communications</div>
           <div class="wo-tab" data-tab="changes" style="opacity:0.5"><i data-lucide="edit-3" style="width:14px;height:14px;margin-right:6px"></i> Change Orders</div>
@@ -278,6 +282,115 @@
         <!-- TAB: LINE ITEMS -->
         <div id="wo-tab-content-items" class="wo-tab-content active">
           <div id="wo-line-items" class="line-items-list"></div>
+        </div>
+
+        <!-- TAB: DOCUMENT BUILDER -->
+        <div id="wo-tab-content-document" class="wo-tab-content" style="display:none">
+          <!-- Toolbar -->
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:18px;flex-wrap:wrap">
+            <span style="font-size:13px;font-weight:600;color:var(--text-secondary)">Template:</span>
+            <div style="display:flex;gap:8px">
+              <button class="doc-tpl-btn active" id="tpl-btn-classic" onclick="setDocTemplate('classic')">Classic</button>
+              <button class="doc-tpl-btn" id="tpl-btn-modern" onclick="setDocTemplate('modern')">Modern</button>
+              <button class="doc-tpl-btn" id="tpl-btn-field" onclick="setDocTemplate('field')">Field Report</button>
+            </div>
+            <div style="flex:1"></div>
+            <button class="btn btn-sm btn-secondary" onclick="docAddLineModal()" style="gap:6px">
+              <i data-lucide="plus" style="width:13px;height:13px"></i> Add Line
+            </button>
+            <button class="btn btn-sm btn-secondary" onclick="printWODocument()" style="gap:6px">
+              <i data-lucide="printer" style="width:13px;height:13px"></i> Print / PDF
+            </button>
+          </div>
+
+          <!-- Live Document Preview -->
+          <div id="wo-document-wrap" class="doc-template-classic">
+            <div id="wo-document-inner">
+              <!-- Header -->
+              <div class="doc-header">
+                <div class="doc-logo-area" id="doc-logo-area"></div>
+                <div class="doc-company-info">
+                  <div class="doc-company-name" id="doc-co-name">R.C Art Construction LLC</div>
+                  <div class="doc-company-detail" id="doc-co-phone"></div>
+                  <div class="doc-company-detail" id="doc-co-ccb"></div>
+                  <div class="doc-company-detail" id="doc-co-city"></div>
+                </div>
+              </div>
+
+              <!-- Client + Doc Meta -->
+              <div class="doc-meta-row">
+                <div class="doc-meta-col">
+                  <div class="doc-meta-label">Prepared For</div>
+                  <div class="doc-meta-value" id="doc-client-name">—</div>
+                  <div class="doc-meta-sub" id="doc-client-addr">—</div>
+                </div>
+                <div class="doc-meta-col">
+                  <div class="doc-meta-label">Date</div>
+                  <div class="doc-meta-value" id="doc-date">—</div>
+                </div>
+                <div class="doc-meta-col">
+                  <div class="doc-meta-label">Work Order #</div>
+                  <div class="doc-meta-value" id="doc-wo-num">—</div>
+                </div>
+                <div class="doc-meta-col">
+                  <div class="doc-meta-label">Reference / PO#</div>
+                  <div class="doc-meta-value">
+                    <input id="doc-ref" class="doc-inline-input" placeholder="Enter value (optional)" style="width:130px">
+                  </div>
+                </div>
+              </div>
+
+              <!-- Line Items Table -->
+              <table class="doc-table" id="doc-line-table">
+                <thead>
+                  <tr>
+                    <th class="doc-th-desc">Description</th>
+                    <th class="doc-th-rate">Rate</th>
+                    <th class="doc-th-qty">Qty</th>
+                    <th class="doc-th-total">Line Total</th>
+                    <th class="doc-th-action"></th>
+                  </tr>
+                </thead>
+                <tbody id="doc-line-tbody"></tbody>
+              </table>
+
+              <!-- Add a Line button -->
+              <div class="doc-add-line" onclick="docAddLineModal()">
+                <i data-lucide="plus-circle" style="width:16px;height:16px"></i> Add a Line
+              </div>
+
+              <!-- Totals -->
+              <div class="doc-totals">
+                <div class="doc-total-row">
+                  <span>Subtotal</span>
+                  <span id="doc-subtotal">$0.00</span>
+                </div>
+                <div class="doc-total-row">
+                  <span>Tax
+                    (<input id="doc-tax-pct" type="number" min="0" max="100" value="0"
+                      class="doc-inline-input" style="width:36px;text-align:center" oninput="updateDocTotals()">%)
+                  </span>
+                  <span id="doc-tax-amt">$0.00</span>
+                </div>
+                <div class="doc-total-row doc-grand-total">
+                  <span>TOTAL</span>
+                  <span id="doc-grand-total">$0.00</span>
+                </div>
+              </div>
+
+              <!-- Signature Block -->
+              <div class="doc-signature-block">
+                <div class="doc-sig-col">
+                  <div class="doc-sig-line"></div>
+                  <div class="doc-sig-label">Client Signature &amp; Date</div>
+                </div>
+                <div class="doc-sig-col">
+                  <div class="doc-sig-line"></div>
+                  <div class="doc-sig-label">Contractor Signature &amp; Date</div>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
 
         <!-- TAB: PHOTOS -->
@@ -293,6 +406,50 @@
         <div id="wo-tab-content-log" class="wo-tab-content" style="display:none">
           <div class="card">
             <div class="card-body" id="wo-activity-log"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ===== ADD LINE MODAL ===== -->
+      <div class="modal-overlay" id="modal-doc-addline">
+        <div class="modal" style="max-width:520px">
+          <div class="modal-header">
+            <h3 style="display:flex;align-items:center;gap:8px">
+              <i data-lucide="plus-circle" style="width:20px;height:20px"></i> Add Line Item
+            </h3>
+            <button class="modal-close" onclick="closeModal('modal-doc-addline')">&times;</button>
+          </div>
+          <div class="modal-body">
+            <!-- Search from Service Library -->
+            <div class="form-group">
+              <label>Search Service Library</label>
+              <input type="text" id="docline-search" class="form-input" placeholder="Type to search services..."
+                oninput="doclineSearchServices(this.value)">
+              <div id="docline-suggestions" style="margin-top:8px;max-height:200px;overflow-y:auto;border:1px solid var(--border);border-radius:var(--radius-md);display:none"></div>
+            </div>
+            <div style="text-align:center;color:var(--text-muted);font-size:12px;margin:8px 0">— or enter custom item —</div>
+            <div class="form-row">
+              <div class="form-group" style="flex:2">
+                <label>Item Name *</label>
+                <input type="text" id="docline-name" class="form-input" placeholder="e.g., Drywall Repair">
+              </div>
+              <div class="form-group" style="flex:1">
+                <label>Rate ($)</label>
+                <input type="number" id="docline-rate" class="form-input" placeholder="0.00" min="0">
+              </div>
+              <div class="form-group" style="flex:0.6">
+                <label>Qty</label>
+                <input type="number" id="docline-qty" class="form-input" value="1" min="1">
+              </div>
+            </div>
+            <div class="form-group">
+              <label>Description <span style="color:var(--text-muted);font-weight:400">(optional)</span></label>
+              <textarea id="docline-desc" class="form-input" rows="2" placeholder="Add a description for this line item..."></textarea>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button class="btn btn-ghost" onclick="closeModal('modal-doc-addline')">Cancel</button>
+            <button class="btn btn-primary" onclick="docAddLine()">Add to Document</button>
           </div>
         </div>
       </div>

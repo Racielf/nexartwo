@@ -582,11 +582,231 @@ function switchWOTab(tab) {
   document.querySelectorAll('#wo-detail-tabs .wo-tab').forEach(t => t.classList.remove('active'));
   document.querySelector(`#wo-detail-tabs .wo-tab[data-tab="${tab}"]`)?.classList.add('active');
 
-  ['items', 'photos', 'log'].forEach(t => {
+  ['items', 'document', 'photos', 'log'].forEach(t => {
     const el = document.getElementById('wo-tab-content-' + t);
     if (el) el.style.display = t === tab ? 'block' : 'none';
   });
+
+  if (tab === 'document') initWODocument();
 }
+
+// ============ DOCUMENT BUILDER ============
+
+var _docLines = [];       // [{id, name, desc, rate, qty}]
+var _docTemplate = 'classic';
+
+function initWODocument() {
+  if (!currentWO) return;
+  var wo = currentWO;
+  var client = CLIENTS.find(c => c.name === wo.client) || {};
+
+  // Company header
+  var coName = COMPANY.name || 'R.C Art Construction LLC';
+  document.getElementById('doc-co-name').textContent = coName;
+  document.getElementById('doc-co-phone').textContent = COMPANY.phone || '';
+  document.getElementById('doc-co-ccb').textContent = COMPANY.ccb ? 'CCB #' + COMPANY.ccb : '';
+  document.getElementById('doc-co-city').textContent =
+    [COMPANY.city, COMPANY.state].filter(Boolean).join(', ') || 'Portland, OR';
+
+  // Logo
+  var logoArea = document.getElementById('doc-logo-area');
+  if (COMPANY.logo_url) {
+    logoArea.innerHTML = '<img src="' + COMPANY.logo_url + '" class="doc-logo-img">';
+  } else {
+    var initials = coName.split(' ').map(w => w[0]).join('').substring(0,3).toUpperCase();
+    logoArea.innerHTML = '<div class="doc-logo-initials">' + initials + '</div>';
+  }
+
+  // Client info
+  document.getElementById('doc-client-name').textContent = client.name || wo.client || '—';
+  document.getElementById('doc-client-addr').textContent = client.address || wo.property || '—';
+
+  // Doc meta
+  var today = new Date().toLocaleDateString('en-US', {month:'2-digit', day:'2-digit', year:'numeric'});
+  document.getElementById('doc-date').textContent = today;
+  document.getElementById('doc-wo-num').textContent = wo.id;
+
+  // Load line items into doc lines (only if _docLines is empty for this WO)
+  if (!_docLines._woId || _docLines._woId !== wo.id) {
+    _docLines = (currentLineItems || []).map(function(item, i) {
+      return {
+        id: 'dl-' + i,
+        name: item.name || item.service || 'Service',
+        desc: item.desc || item.description || '',
+        rate: item.price || 0,
+        qty: item.qty || 1
+      };
+    });
+    _docLines._woId = wo.id;
+  }
+
+  renderDocLines();
+  updateDocTotals();
+  lucide.createIcons();
+}
+
+function renderDocLines() {
+  var tbody = document.getElementById('doc-line-tbody');
+  if (!tbody) return;
+
+  tbody.innerHTML = _docLines.map(function(line, idx) {
+    var lineTotal = (parseFloat(line.rate) || 0) * (parseInt(line.qty) || 1);
+    return `
+      <tr id="docrow-${line.id}">
+        <td class="doc-td-desc">
+          <div class="doc-line-name">${escHtml(line.name)}</div>
+          <input class="doc-line-desc-input"
+            placeholder="Add a description (optional)"
+            value="${escHtml(line.desc)}"
+            oninput="_docLines[${idx}].desc=this.value"
+            title="Edit description">
+        </td>
+        <td class="doc-td-rate">$${parseFloat(line.rate).toFixed(2)}</td>
+        <td class="doc-td-qty">
+          <input type="number" class="doc-qty-input"
+            value="${line.qty}" min="1"
+            oninput="_docLines[${idx}].qty=Math.max(1,parseInt(this.value)||1);updateDocTotals();renderDocLines()">
+        </td>
+        <td class="doc-td-total">$${lineTotal.toFixed(2)}</td>
+        <td><button class="doc-remove-btn" onclick="docRemoveLine(${idx})" title="Remove">&#x2715;</button></td>
+      </tr>`;
+  }).join('');
+}
+
+function escHtml(str) {
+  return String(str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function updateDocTotals() {
+  var subtotal = _docLines.reduce(function(s, line) {
+    return s + (parseFloat(line.rate) || 0) * (parseInt(line.qty) || 1);
+  }, 0);
+  var taxPct = parseFloat(document.getElementById('doc-tax-pct')?.value) || 0;
+  var taxAmt = subtotal * taxPct / 100;
+  var grand = subtotal + taxAmt;
+  var fmt = function(n) { return '$' + n.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g,','); };
+  document.getElementById('doc-subtotal').textContent = fmt(subtotal);
+  document.getElementById('doc-tax-amt').textContent = fmt(taxAmt);
+  document.getElementById('doc-grand-total').textContent = fmt(grand);
+}
+
+function setDocTemplate(tpl) {
+  _docTemplate = tpl;
+  var wrap = document.getElementById('wo-document-wrap');
+  wrap.className = 'doc-template-' + tpl;
+  document.querySelectorAll('.doc-tpl-btn').forEach(function(btn) {
+    btn.classList.toggle('active', btn.id === 'tpl-btn-' + tpl);
+  });
+}
+
+function docRemoveLine(idx) {
+  _docLines.splice(idx, 1);
+  renderDocLines();
+  updateDocTotals();
+}
+
+// ---- Add Line Modal ----
+function docAddLineModal() {
+  document.getElementById('docline-search').value = '';
+  document.getElementById('docline-name').value = '';
+  document.getElementById('docline-rate').value = '';
+  document.getElementById('docline-qty').value = '1';
+  document.getElementById('docline-desc').value = '';
+  document.getElementById('docline-suggestions').style.display = 'none';
+  document.getElementById('docline-suggestions').innerHTML = '';
+  openModal('modal-doc-addline');
+  setTimeout(function() { document.getElementById('docline-search').focus(); }, 200);
+}
+
+function doclineSearchServices(query) {
+  var box = document.getElementById('docline-suggestions');
+  if (!query || query.length < 1) { box.style.display = 'none'; return; }
+  var results = SERVICES.filter(function(s) {
+    return s.name.toLowerCase().includes(query.toLowerCase()) ||
+           (s.category || '').toLowerCase().includes(query.toLowerCase());
+  }).slice(0, 8);
+
+  if (results.length === 0) { box.style.display = 'none'; return; }
+
+  box.style.display = 'block';
+  box.innerHTML = results.map(function(s) {
+    return `<div class="docline-svc-item" onclick="doclinePickService(${s.id})">
+      <div>
+        <div style="font-weight:600">${escHtml(s.name)}</div>
+        <div style="font-size:11px;color:var(--text-muted)">${escHtml(s.category)} &bull; ${escHtml(s.sub||'')}</div>
+      </div>
+      <span class="docline-svc-price">$${parseFloat(s.price||0).toFixed(2)}</span>
+    </div>`;
+  }).join('');
+}
+
+function doclinePickService(svcId) {
+  var svc = SERVICES.find(function(s) { return s.id === svcId; });
+  if (!svc) return;
+  document.getElementById('docline-name').value = svc.name;
+  document.getElementById('docline-rate').value = svc.price || 0;
+  document.getElementById('docline-desc').value = svc.desc || '';
+  document.getElementById('docline-search').value = svc.name;
+  document.getElementById('docline-suggestions').style.display = 'none';
+}
+
+function docAddLine() {
+  var name = document.getElementById('docline-name').value.trim();
+  if (!name) {
+    document.getElementById('docline-name').style.borderColor = 'var(--danger)';
+    showToast('⚠️ Item name is required');
+    return;
+  }
+  _docLines.push({
+    id: 'dl-' + Date.now(),
+    name: name,
+    desc: document.getElementById('docline-desc').value.trim(),
+    rate: parseFloat(document.getElementById('docline-rate').value) || 0,
+    qty: Math.max(1, parseInt(document.getElementById('docline-qty').value) || 1)
+  });
+  renderDocLines();
+  updateDocTotals();
+  closeModal('modal-doc-addline');
+  showToast('✅ Line added to document');
+  lucide.createIcons();
+}
+
+function printWODocument() {
+  window.print();
+}
+
+// ---- Inline editable WO Title ----
+function startEditWOTitle(el) {
+  var current = el.textContent.trim();
+  var input = document.createElement('input');
+  input.value = current;
+  input.style.cssText = 'font-size:18px;font-weight:600;color:var(--text-primary);background:var(--bg-input);border:1.5px solid var(--accent);border-radius:6px;padding:2px 8px;width:360px;max-width:90vw;outline:none;font-family:inherit';
+  el.replaceWith(input);
+  input.focus();
+  input.select();
+
+  function saveTitle() {
+    var val = input.value.trim() || current;
+    var h2 = document.createElement('h2');
+    h2.id = 'wo-detail-title';
+    h2.style.cssText = 'font-size:18px;font-weight:600;color:var(--text-secondary);cursor:pointer;border-radius:6px;padding:2px 6px;transition:background 0.15s';
+    h2.title = 'Click to edit title';
+    h2.onclick = function() { startEditWOTitle(this); };
+    h2.textContent = val;
+    input.replaceWith(h2);
+    if (currentWO && val !== current) {
+      currentWO.title = val;
+      saveWorkOrders();
+      showToast('✅ Title updated');
+    }
+  }
+  input.addEventListener('blur', saveTitle);
+  input.addEventListener('keydown', function(e) {
+    if (e.key === 'Enter') saveTitle();
+    if (e.key === 'Escape') { input.value = current; saveTitle(); }
+  });
+}
+
 
 // ============ PDF GENERATION ============
 function generatePDF() {
