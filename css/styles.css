@@ -2104,12 +2104,85 @@ body {
   line-height: 1.5;
   position: relative;
   overflow: hidden;
+  padding: 48px 56px;
+  border-radius: 10px;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+  margin-bottom: 24px;
 }
 .doc-template-classic .co-doc-inner { background: #ffffff; color: #1a1a1a; }
 .doc-template-modern .co-doc-inner { background: #fff; color: #1e1e2e; }
 .doc-template-modern .co-doc-inner::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 5px; background: linear-gradient(90deg, #4f46e5 0%, #7c3aed 40%, #a78bfa 100%); }
 .doc-template-field .co-doc-inner { background: #faf9f7; color: #2c2418; }
 .doc-template-field .co-doc-inner::before { content: ''; position: absolute; top: 0; left: 0; bottom: 0; width: 5px; background: linear-gradient(180deg, #b8860b 0%, #8b6914 50%, #6b4f12 100%); border-radius: 4px 0 0 4px; }
+
+/* ---- CO Action Bar ---- */
+.co-action-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 18px;
+  padding: 10px 0;
+}
+.co-action-bar-center {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+}
+
+/* ---- CO Title Block (inside document body) ---- */
+.co-title-block {
+  margin: 24px 0 20px 0;
+  padding-bottom: 16px;
+  border-bottom: 2px solid var(--accent, #e67e22);
+}
+.co-title-input {
+  display: block;
+  width: 100%;
+  border: none;
+  outline: none;
+  background: transparent;
+  font-family: 'Inter', sans-serif;
+  font-size: 22px;
+  font-weight: 700;
+  color: inherit;
+  padding: 4px 0;
+  letter-spacing: -0.3px;
+}
+.co-title-input::placeholder { color: #aaa; font-weight: 400; }
+.co-title-input:focus { border-bottom: 1px solid var(--accent, #e67e22); }
+.co-desc-input {
+  display: block;
+  width: 100%;
+  border: none;
+  outline: none;
+  background: transparent;
+  font-family: 'Inter', sans-serif;
+  font-size: 13px;
+  color: #666;
+  padding: 4px 0 0 0;
+  margin-top: 4px;
+}
+.co-desc-input::placeholder { color: #bbb; }
+.co-desc-input:focus { border-bottom: 1px solid #ddd; }
+
+/* ---- CO Inline Status Select ---- */
+.co-status-inline {
+  border: none;
+  outline: none;
+  background: transparent;
+  font-family: 'Inter', sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  color: inherit;
+  cursor: pointer;
+  padding: 2px 4px;
+  border-radius: 4px;
+  appearance: auto;
+}
+.co-status-inline:hover { background: rgba(0,0,0,0.04); }
+.co-status-inline:focus { box-shadow: 0 0 0 2px var(--accent, #e67e22); }
 
 /* ---- SHARED DOC ELEMENTS ---- */
 .doc-logo-initials {
