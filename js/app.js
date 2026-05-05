@@ -1367,7 +1367,10 @@ function renderChangeOrders() {
                 onchange="updateCOStatus(${idx}, this.value)">${statusOptions}</select>
             </div>
           </div>
-          <button onclick="deleteCO(${idx})" title="Delete" style="background:none;border:none;cursor:pointer;opacity:0.35;font-size:16px;padding:2px 4px;color:var(--text-primary)" onmouseover="this.style.opacity='0.8'" onmouseout="this.style.opacity='0.35'">✕</button>
+          <div style="display:flex;flex-direction:column;gap:4px">
+            <button onclick="editCO(${idx})" title="Edit" style="background:none;border:none;cursor:pointer;opacity:0.35;font-size:14px;padding:2px 4px;color:var(--text-primary)" onmouseover="this.style.opacity='0.8'" onmouseout="this.style.opacity='0.35'">✏️</button>
+            <button onclick="deleteCO(${idx})" title="Delete" style="background:none;border:none;cursor:pointer;opacity:0.35;font-size:14px;padding:2px 4px;color:var(--text-primary)" onmouseover="this.style.opacity='0.8'" onmouseout="this.style.opacity='0.35'">✕</button>
+          </div>
         </div>
       </div>
     </div>`;
@@ -1377,8 +1380,12 @@ function renderChangeOrders() {
   lucide.createIcons();
 }
 
-function openCOModal() {
-  showConfirmModal('New Change Order', '', null);
+var _coEditIdx = -1; // -1 = new, >= 0 = editing existing CO
+
+function openCOModal(editIdx) {
+  _coEditIdx = (typeof editIdx === 'number') ? editIdx : -1;
+  var editCo = _coEditIdx >= 0 ? _currentCOs[_coEditIdx] : null;
+  showConfirmModal(editCo ? 'Edit Change Order' : 'New Change Order', '', null);
 
   var box = document.querySelector('.confirm-box');
   // Build line items checklist from currentLineItems
@@ -1398,9 +1405,12 @@ function openCOModal() {
           <option value="remove">Remove</option>
           <option value="modify_price">Modify Price</option>
           <option value="modify_qty">Modify Qty</option>
+          <option value="modify_scope">Modify Scope</option>
         </select>
         <input id="co-newprice-${i}" type="number" class="form-control" placeholder="New price" step="0.01" style="font-size:11px;padding:2px 6px;width:80px;margin-top:4px;display:none">
         <input id="co-newqty-${i}" type="number" class="form-control" placeholder="New qty" step="1" style="font-size:11px;padding:2px 6px;width:80px;margin-top:4px;display:none">
+        <input id="co-newname-${i}" type="text" class="form-control" placeholder="New name/scope" style="font-size:11px;padding:2px 6px;width:100%;margin-top:4px;display:none">
+        <input id="co-newdesc-${i}" type="text" class="form-control" placeholder="New description" style="font-size:11px;padding:2px 6px;width:100%;margin-top:4px;display:none">
         <input id="co-reason-${i}" type="text" class="form-control" placeholder="Reason" style="font-size:11px;padding:2px 6px;width:100%;margin-top:4px">
       </div>
     </div>`;
@@ -1440,8 +1450,50 @@ function openCOModal() {
     </div>
     <div class="confirm-actions" style="margin-top:16px">
       <button type="button" class="btn btn-secondary" onclick="closeConfirmModal()">Cancel</button>
-      <button type="button" class="btn btn-primary" onclick="saveCO()">Create Change Order</button>
+      <button type="button" class="btn btn-primary" onclick="saveCO()">${editCo ? 'Update Change Order' : 'Create Change Order'}</button>
     </div>`;
+
+  // If editing, populate fields
+  if (editCo) {
+    document.getElementById('co-title').value = editCo.title || '';
+    document.getElementById('co-desc').value = editCo.description || '';
+    document.getElementById('co-requestedby').value = editCo.requestedBy || '';
+    document.getElementById('co-status').value = editCo.status || 'draft';
+    // Restore selected items
+    if (editCo.items && editCo.items.length > 0) {
+      var cbs = document.querySelectorAll('.co-item-cb');
+      editCo.items.forEach(function(coItem) {
+        // Find matching checkbox by line_item_id or name
+        (currentLineItems || []).forEach(function(li, i) {
+          if ((li.id || ('li-' + i)) === coItem.line_item_id || li.name === coItem.name) {
+            if (cbs[i] && !cbs[i].disabled) {
+              cbs[i].checked = true;
+              coCBChanged(i);
+              var actionEl = document.getElementById('co-action-' + i);
+              if (actionEl) { actionEl.value = coItem.action; coActionChanged(i); }
+              if (coItem.action === 'modify_price') {
+                var pEl = document.getElementById('co-newprice-' + i);
+                if (pEl) pEl.value = coItem.new_price;
+              }
+              if (coItem.action === 'modify_qty') {
+                var qEl = document.getElementById('co-newqty-' + i);
+                if (qEl) qEl.value = coItem.new_qty;
+              }
+              if (coItem.action === 'modify_scope') {
+                var nEl = document.getElementById('co-newname-' + i);
+                var dEl = document.getElementById('co-newdesc-' + i);
+                if (nEl) nEl.value = coItem.new_name || '';
+                if (dEl) dEl.value = coItem.new_desc || '';
+              }
+              var rEl = document.getElementById('co-reason-' + i);
+              if (rEl) rEl.value = coItem.reason || '';
+            }
+          }
+        });
+      });
+      coUpdateNetImpact();
+    }
+  }
 }
 
 // CO modal helpers
@@ -1459,9 +1511,13 @@ function coActionChanged(idx) {
   var action = document.getElementById('co-action-' + idx);
   var priceInput = document.getElementById('co-newprice-' + idx);
   var qtyInput = document.getElementById('co-newqty-' + idx);
+  var nameInput = document.getElementById('co-newname-' + idx);
+  var descInput = document.getElementById('co-newdesc-' + idx);
   if (!action) return;
   priceInput.style.display = action.value === 'modify_price' ? 'block' : 'none';
   qtyInput.style.display = action.value === 'modify_qty' ? 'block' : 'none';
+  if (nameInput) nameInput.style.display = action.value === 'modify_scope' ? 'block' : 'none';
+  if (descInput) descInput.style.display = action.value === 'modify_scope' ? 'block' : 'none';
   coUpdateNetImpact();
 }
 
@@ -1506,16 +1562,24 @@ function saveCO() {
     var item = {
       line_item_id: li.id || ('li-' + i),
       name: li.name,
+      original_desc: li.desc || '',
+      original_category: li.category || '',
       action: action,
       original_price: li.price,
       original_qty: li.qty || 1,
       new_price: li.price,
       new_qty: li.qty || 1,
+      new_name: '',
+      new_desc: '',
       reason: (document.getElementById('co-reason-' + i)?.value || '').trim()
     };
     if (action === 'remove') { item.new_price = 0; item.new_qty = 0; }
     if (action === 'modify_price') { item.new_price = parseFloat(document.getElementById('co-newprice-' + i)?.value) || 0; }
     if (action === 'modify_qty') { item.new_qty = parseFloat(document.getElementById('co-newqty-' + i)?.value) || 0; }
+    if (action === 'modify_scope') {
+      item.new_name = (document.getElementById('co-newname-' + i)?.value || '').trim();
+      item.new_desc = (document.getElementById('co-newdesc-' + i)?.value || '').trim();
+    }
     coItems.push(item);
   });
 
@@ -1524,25 +1588,45 @@ function saveCO() {
     return sum + ((it.new_price * it.new_qty) - (it.original_price * it.original_qty));
   }, 0);
 
-  var co = {
-    id:          'co-' + Date.now(),
-    woId:        currentWO.id,
-    coNumber:    genCONumber(),
-    title:       title,
-    description: (document.getElementById('co-desc')?.value || '').trim(),
-    items:       coItems,
-    amount:      Math.round(amount * 100) / 100,
-    requestedBy: (document.getElementById('co-requestedby')?.value || '').trim(),
-    status:      document.getElementById('co-status')?.value || 'draft',
-    createdAt:   new Date().toISOString(),
-    approvedAt:  (document.getElementById('co-status')?.value === 'approved') ? new Date().toISOString() : null
-  };
+  var newStatus = document.getElementById('co-status')?.value || 'draft';
 
-  _currentCOs.unshift(co);
-  saveCOs(currentWO.id);
-  closeConfirmModal();
-  renderChangeOrders();
-  showToast('✅ Change Order ' + co.coNumber + ' created');
+  if (_coEditIdx >= 0 && _currentCOs[_coEditIdx]) {
+    // Edit mode — update existing CO
+    var existing = _currentCOs[_coEditIdx];
+    existing.title = title;
+    existing.description = (document.getElementById('co-desc')?.value || '').trim();
+    existing.items = coItems;
+    existing.amount = Math.round(amount * 100) / 100;
+    existing.requestedBy = (document.getElementById('co-requestedby')?.value || '').trim();
+    existing.status = newStatus;
+    if (newStatus === 'approved' && !existing.approvedAt) existing.approvedAt = new Date().toISOString();
+    saveCOs(currentWO.id);
+    closeConfirmModal();
+    _coEditIdx = -1;
+    renderChangeOrders();
+    showToast('✅ ' + existing.coNumber + ' updated');
+  } else {
+    // Create mode — new CO
+    var co = {
+      id:          'co-' + Date.now(),
+      woId:        currentWO.id,
+      coNumber:    genCONumber(),
+      title:       title,
+      description: (document.getElementById('co-desc')?.value || '').trim(),
+      items:       coItems,
+      amount:      Math.round(amount * 100) / 100,
+      requestedBy: (document.getElementById('co-requestedby')?.value || '').trim(),
+      status:      newStatus,
+      createdAt:   new Date().toISOString(),
+      approvedAt:  newStatus === 'approved' ? new Date().toISOString() : null
+    };
+    _currentCOs.unshift(co);
+    saveCOs(currentWO.id);
+    closeConfirmModal();
+    _coEditIdx = -1;
+    renderChangeOrders();
+    showToast('✅ Change Order ' + co.coNumber + ' created');
+  }
 }
 
 function updateCOStatus(idx, status) {
@@ -1560,6 +1644,10 @@ function deleteCO(idx) {
     renderChangeOrders();
     showToast('Change Order deleted');
   });
+}
+
+function editCO(idx) {
+  openCOModal(idx);
 }
 
 // ============ NEGOTIATION ENGINE ============
@@ -1594,8 +1682,6 @@ function buildNegotiationSummary() {
   // Sort approved by date (oldest first)
   approvedCOs.sort(function(a, b) { return (a.createdAt || '').localeCompare(b.createdAt || ''); });
 
-  // Track added items
-  var addedItems = [];
 
   // Apply each approved CO sequentially
   approvedCOs.forEach(function(co) {
@@ -1619,6 +1705,9 @@ function buildNegotiationSummary() {
       } else if (coItem.action === 'modify_qty') {
         match.negotiated_qty = coItem.new_qty;
         match.status = 'modified';
+      } else if (coItem.action === 'modify_scope') {
+        // Scope change — no financial impact, but mark as modified
+        match.status = 'modified';
       }
       match.negotiated_total = match.negotiated_price * match.negotiated_qty;
       match.difference = match.negotiated_total - match.original_total;
@@ -1627,8 +1716,7 @@ function buildNegotiationSummary() {
     });
   });
 
-  // Merge added items
-  var allItems = items.concat(addedItems);
+  var allItems = items;
 
   // Calculate totals
   var originalTotal = allItems.reduce(function(s, i) { return s + i.original_total; }, 0);
@@ -1657,7 +1745,7 @@ function buildNegotiationSummary() {
     items_unchanged: allItems.filter(function(i) { return i.status === 'unchanged'; }).length,
     items_modified: allItems.filter(function(i) { return i.status === 'modified'; }).length,
     items_removed: allItems.filter(function(i) { return i.status === 'removed'; }).length,
-    items_added: addedItems.length,
+    items_added: 0,
     change_orders_applied: approvedCOs.length,
     change_orders_pending: pendingCOs.length,
     change_orders_rejected: rejectedCOs.length,
