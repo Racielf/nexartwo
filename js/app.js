@@ -1352,7 +1352,8 @@ function renderChangeOrders() {
             <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;flex-wrap:wrap">
               <span style="font-size:12px;font-weight:700;color:var(--accent)">${escHtml(co.coNumber)}</span>
               <span style="font-size:11px;font-weight:600;color:${st.color};background:${st.color}18;padding:2px 8px;border-radius:10px">${st.label}</span>
-              ${co.amount ? `<span style="font-size:12px;font-weight:600;color:var(--text-primary)">$${parseFloat(co.amount).toLocaleString()}</span>` : ''}
+              ${co.amount ? `<span style="font-size:12px;font-weight:600;color:${co.amount < 0 ? '#ef4444' : '#10b981'}">${co.amount < 0 ? '' : '+'}$${parseFloat(co.amount).toLocaleString()}</span>` : ''}
+              ${co.items && co.items.length ? `<span style="font-size:10px;color:var(--text-muted);background:var(--bg-secondary);padding:2px 6px;border-radius:8px">${co.items.length} item${co.items.length > 1 ? 's' : ''}</span>` : ''}
             </div>
             <div style="font-weight:600;font-size:13px;color:var(--text-primary);margin-bottom:4px">${escHtml(co.title)}</div>
             ${co.description ? `<div style="font-size:12px;color:var(--text-secondary);margin-bottom:8px;white-space:pre-wrap">${escHtml(co.description)}</div>` : ''}
@@ -1380,32 +1381,57 @@ function openCOModal() {
   showConfirmModal('New Change Order', '', null);
 
   var box = document.querySelector('.confirm-box');
+  // Build line items checklist from currentLineItems
+  var itemRows = (currentLineItems || []).map(function(li, i) {
+    return `<div class="co-item-row" style="display:flex;align-items:center;gap:8px;padding:8px 10px;border:1px solid var(--border);border-radius:6px;margin-bottom:6px;font-size:12px">
+      <input type="checkbox" class="co-item-cb" data-idx="${i}" onchange="coCBChanged(${i})" style="accent-color:var(--accent)">
+      <div style="flex:1;min-width:0">
+        <div style="font-weight:600;color:var(--text-primary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escHtml(li.name)}</div>
+        <div style="color:var(--text-muted);font-size:11px">$${(li.price * (li.qty || 1)).toLocaleString()} · ${escHtml(li.category || '')}</div>
+      </div>
+      <div id="co-item-fields-${i}" style="display:none;flex-shrink:0">
+        <select id="co-action-${i}" class="form-control" style="font-size:11px;padding:2px 6px;width:auto" onchange="coActionChanged(${i})">
+          <option value="remove">Remove</option>
+          <option value="modify_price">Modify Price</option>
+          <option value="modify_qty">Modify Qty</option>
+        </select>
+        <input id="co-newprice-${i}" type="number" class="form-control" placeholder="New price" step="0.01" style="font-size:11px;padding:2px 6px;width:80px;margin-top:4px;display:none">
+        <input id="co-newqty-${i}" type="number" class="form-control" placeholder="New qty" step="1" style="font-size:11px;padding:2px 6px;width:80px;margin-top:4px;display:none">
+        <input id="co-reason-${i}" type="text" class="form-control" placeholder="Reason" style="font-size:11px;padding:2px 6px;width:100%;margin-top:4px">
+      </div>
+    </div>`;
+  }).join('');
+
   box.innerHTML = `
     <h3 style="margin:0 0 16px;font-size:16px">New Change Order</h3>
-    <div style="display:flex;flex-direction:column;gap:10px;text-align:left">
+    <div style="display:flex;flex-direction:column;gap:10px;text-align:left;max-height:70vh;overflow-y:auto">
       <div>
         <label style="font-size:12px;color:var(--text-secondary);display:block;margin-bottom:4px">Title *</label>
         <input type="text" id="co-title" class="form-control" placeholder="Brief title of the change" style="width:100%">
       </div>
       <div>
         <label style="font-size:12px;color:var(--text-secondary);display:block;margin-bottom:4px">Description / Scope</label>
-        <textarea id="co-desc" class="form-control" rows="3" placeholder="What is changing and why..." style="width:100%;resize:vertical"></textarea>
+        <textarea id="co-desc" class="form-control" rows="2" placeholder="What is changing and why..." style="width:100%;resize:vertical"></textarea>
       </div>
       <div style="display:flex;gap:10px">
         <div style="flex:1">
-          <label style="font-size:12px;color:var(--text-secondary);display:block;margin-bottom:4px">Amount (optional)</label>
-          <input type="number" id="co-amount" class="form-control" placeholder="0.00" min="0" step="0.01" style="width:100%">
+          <label style="font-size:12px;color:var(--text-secondary);display:block;margin-bottom:4px">Requested By</label>
+          <input type="text" id="co-requestedby" class="form-control" placeholder="Client / realtor" style="width:100%">
         </div>
         <div style="flex:1">
-          <label style="font-size:12px;color:var(--text-secondary);display:block;margin-bottom:4px">Requested By</label>
-          <input type="text" id="co-requestedby" class="form-control" placeholder="Client / field agent" style="width:100%">
+          <label style="font-size:12px;color:var(--text-secondary);display:block;margin-bottom:4px">Status</label>
+          <select id="co-status" class="form-control" style="width:100%">
+            ${Object.keys(CO_STATUSES).map(k => `<option value="${k}">${CO_STATUSES[k].label}</option>`).join('')}
+          </select>
         </div>
       </div>
       <div>
-        <label style="font-size:12px;color:var(--text-secondary);display:block;margin-bottom:4px">Status</label>
-        <select id="co-status" class="form-control" style="width:100%">
-          ${Object.keys(CO_STATUSES).map(k => `<option value="${k}">${CO_STATUSES[k].label}</option>`).join('')}
-        </select>
+        <label style="font-size:12px;font-weight:600;color:var(--text-primary);display:block;margin-bottom:6px">Affected Line Items</label>
+        <div style="font-size:11px;color:var(--text-muted);margin-bottom:8px">Select which items this change order affects. Leave unchecked for a description-only CO.</div>
+        <div id="co-items-list">${itemRows || '<div style="font-size:12px;color:var(--text-muted);padding:12px;text-align:center">No line items in this Work Order</div>'}</div>
+      </div>
+      <div style="font-size:13px;font-weight:600;color:var(--text-primary)">
+        Net impact: <span id="co-net-impact" style="color:var(--accent)">$0</span>
       </div>
     </div>
     <div class="confirm-actions" style="margin-top:16px">
@@ -1414,9 +1440,85 @@ function openCOModal() {
     </div>`;
 }
 
+// CO modal helpers
+function coCBChanged(idx) {
+  var cb = document.querySelectorAll('.co-item-cb')[idx];
+  var fields = document.getElementById('co-item-fields-' + idx);
+  if (cb && fields) {
+    fields.style.display = cb.checked ? 'block' : 'none';
+    if (cb.checked) coActionChanged(idx);
+  }
+  coUpdateNetImpact();
+}
+
+function coActionChanged(idx) {
+  var action = document.getElementById('co-action-' + idx);
+  var priceInput = document.getElementById('co-newprice-' + idx);
+  var qtyInput = document.getElementById('co-newqty-' + idx);
+  if (!action) return;
+  priceInput.style.display = action.value === 'modify_price' ? 'block' : 'none';
+  qtyInput.style.display = action.value === 'modify_qty' ? 'block' : 'none';
+  coUpdateNetImpact();
+}
+
+function coUpdateNetImpact() {
+  var total = 0;
+  var cbs = document.querySelectorAll('.co-item-cb');
+  cbs.forEach(function(cb, i) {
+    if (!cb.checked) return;
+    var li = currentLineItems[i];
+    if (!li) return;
+    var action = (document.getElementById('co-action-' + i)?.value) || 'remove';
+    var origTotal = li.price * (li.qty || 1);
+    if (action === 'remove') {
+      total -= origTotal;
+    } else if (action === 'modify_price') {
+      var np = parseFloat(document.getElementById('co-newprice-' + i)?.value) || 0;
+      total += (np * (li.qty || 1)) - origTotal;
+    } else if (action === 'modify_qty') {
+      var nq = parseFloat(document.getElementById('co-newqty-' + i)?.value) || 0;
+      total += (li.price * nq) - origTotal;
+    }
+  });
+  var el = document.getElementById('co-net-impact');
+  if (el) {
+    el.textContent = (total >= 0 ? '+' : '') + '$' + total.toLocaleString();
+    el.style.color = total < 0 ? '#ef4444' : total > 0 ? '#10b981' : 'var(--accent)';
+  }
+}
+
 function saveCO() {
   var title = (document.getElementById('co-title')?.value || '').trim();
   if (!title) { alert('Title is required.'); return; }
+
+  // Collect affected items
+  var coItems = [];
+  var cbs = document.querySelectorAll('.co-item-cb');
+  cbs.forEach(function(cb, i) {
+    if (!cb.checked) return;
+    var li = currentLineItems[i];
+    if (!li) return;
+    var action = (document.getElementById('co-action-' + i)?.value) || 'remove';
+    var item = {
+      line_item_id: li.id || ('li-' + i),
+      name: li.name,
+      action: action,
+      original_price: li.price,
+      original_qty: li.qty || 1,
+      new_price: li.price,
+      new_qty: li.qty || 1,
+      reason: (document.getElementById('co-reason-' + i)?.value || '').trim()
+    };
+    if (action === 'remove') { item.new_price = 0; item.new_qty = 0; }
+    if (action === 'modify_price') { item.new_price = parseFloat(document.getElementById('co-newprice-' + i)?.value) || 0; }
+    if (action === 'modify_qty') { item.new_qty = parseFloat(document.getElementById('co-newqty-' + i)?.value) || 0; }
+    coItems.push(item);
+  });
+
+  // Auto-calculate amount from items
+  var amount = coItems.reduce(function(sum, it) {
+    return sum + ((it.new_price * it.new_qty) - (it.original_price * it.original_qty));
+  }, 0);
 
   var co = {
     id:          'co-' + Date.now(),
@@ -1424,13 +1526,14 @@ function saveCO() {
     coNumber:    genCONumber(),
     title:       title,
     description: (document.getElementById('co-desc')?.value || '').trim(),
-    amount:      parseFloat(document.getElementById('co-amount')?.value) || 0,
+    items:       coItems,
+    amount:      Math.round(amount * 100) / 100,
     requestedBy: (document.getElementById('co-requestedby')?.value || '').trim(),
     status:      document.getElementById('co-status')?.value || 'draft',
     createdAt:   new Date().toISOString()
   };
 
-  _currentCOs.unshift(co); // newest first
+  _currentCOs.unshift(co);
   saveCOs(currentWO.id);
   closeConfirmModal();
   renderChangeOrders();
@@ -1440,6 +1543,7 @@ function saveCO() {
 function updateCOStatus(idx, status) {
   if (!_currentCOs[idx]) return;
   _currentCOs[idx].status = status;
+  if (status === 'approved') _currentCOs[idx].approvedAt = new Date().toISOString();
   saveCOs(currentWO.id);
   showToast('Status updated');
 }
@@ -1452,6 +1556,129 @@ function deleteCO(idx) {
     showToast('Change Order deleted');
   });
 }
+
+// ============ NEGOTIATION ENGINE ============
+// Compares original WO line items against approved Change Orders
+// Returns a summary object for the PDF template
+function buildNegotiationSummary() {
+  if (!currentWO || !currentLineItems) return null;
+
+  var items = currentLineItems.map(function(li) {
+    return {
+      id: li.id || li.name,
+      name: li.name,
+      category: li.category || '',
+      original_price: li.price,
+      original_qty: li.qty || 1,
+      original_total: li.price * (li.qty || 1),
+      negotiated_price: li.price,
+      negotiated_qty: li.qty || 1,
+      negotiated_total: li.price * (li.qty || 1),
+      difference: 0,
+      status: 'unchanged',
+      change_order_ref: '',
+      reason: ''
+    };
+  });
+
+  // Separate COs by status
+  var approvedCOs = _currentCOs.filter(function(co) { return co.status === 'approved' && co.items && co.items.length > 0; });
+  var pendingCOs = _currentCOs.filter(function(co) { return co.status === 'pending'; });
+  var rejectedCOs = _currentCOs.filter(function(co) { return co.status === 'rejected'; });
+
+  // Sort approved by date (oldest first)
+  approvedCOs.sort(function(a, b) { return (a.createdAt || '').localeCompare(b.createdAt || ''); });
+
+  // Track added items
+  var addedItems = [];
+
+  // Apply each approved CO sequentially
+  approvedCOs.forEach(function(co) {
+    if (!co.items) return;
+    co.items.forEach(function(coItem) {
+      // Find matching item in the comparison
+      var match = items.find(function(it) {
+        return it.id === coItem.line_item_id || it.name === coItem.name;
+      });
+
+      if (!match && coItem.action === 'add') {
+        // New item added by CO
+        addedItems.push({
+          id: coItem.line_item_id || ('added-' + Date.now()),
+          name: coItem.name || 'Added item',
+          category: '',
+          original_price: 0, original_qty: 0, original_total: 0,
+          negotiated_price: coItem.new_price || 0,
+          negotiated_qty: coItem.new_qty || 1,
+          negotiated_total: (coItem.new_price || 0) * (coItem.new_qty || 1),
+          difference: (coItem.new_price || 0) * (coItem.new_qty || 1),
+          status: 'added',
+          change_order_ref: co.coNumber,
+          reason: coItem.reason || ''
+        });
+        return;
+      }
+
+      if (!match) return;
+
+      if (coItem.action === 'remove') {
+        match.negotiated_price = 0;
+        match.negotiated_qty = 0;
+        match.status = 'removed';
+      } else if (coItem.action === 'modify_price') {
+        match.negotiated_price = coItem.new_price;
+        match.status = 'modified';
+      } else if (coItem.action === 'modify_qty') {
+        match.negotiated_qty = coItem.new_qty;
+        match.status = 'modified';
+      }
+      match.negotiated_total = match.negotiated_price * match.negotiated_qty;
+      match.difference = match.negotiated_total - match.original_total;
+      match.change_order_ref = co.coNumber;
+      match.reason = coItem.reason || match.reason;
+    });
+  });
+
+  // Merge added items
+  var allItems = items.concat(addedItems);
+
+  // Calculate totals
+  var originalTotal = allItems.reduce(function(s, i) { return s + i.original_total; }, 0);
+  var negotiatedTotal = allItems.reduce(function(s, i) { return s + i.negotiated_total; }, 0);
+
+  // Category breakdown
+  var byCategory = {};
+  allItems.forEach(function(it) {
+    var cat = it.category || 'Other';
+    if (!byCategory[cat]) byCategory[cat] = { original: 0, negotiated: 0, diff: 0 };
+    byCategory[cat].original += it.original_total;
+    byCategory[cat].negotiated += it.negotiated_total;
+    byCategory[cat].diff += it.difference;
+  });
+
+  return {
+    wo_id: currentWO.id,
+    wo_title: currentWO.title,
+    client: currentWO.client,
+    property: currentWO.property,
+    original_total: Math.round(originalTotal * 100) / 100,
+    negotiated_total: Math.round(negotiatedTotal * 100) / 100,
+    total_difference: Math.round((negotiatedTotal - originalTotal) * 100) / 100,
+    total_difference_pct: originalTotal > 0 ? Math.round(((negotiatedTotal - originalTotal) / originalTotal) * 1000) / 10 : 0,
+    total_original_items: currentLineItems.length,
+    items_unchanged: allItems.filter(function(i) { return i.status === 'unchanged'; }).length,
+    items_modified: allItems.filter(function(i) { return i.status === 'modified'; }).length,
+    items_removed: allItems.filter(function(i) { return i.status === 'removed'; }).length,
+    items_added: addedItems.length,
+    change_orders_applied: approvedCOs.length,
+    change_orders_pending: pendingCOs.length,
+    change_orders_rejected: rejectedCOs.length,
+    approved_cos: approvedCOs,
+    by_category: byCategory,
+    items: allItems
+  };
+}
+
 
 
 function switchWOTab(tab) {
@@ -1898,33 +2125,7 @@ function pdfBackToTemplates() {
   document.getElementById('pdf-template-list').style.display = '';
 }
 
-// ============ NEGOTIATION SUMMARY ============
-function openNegotiationInput() {
-  document.getElementById('pdf-template-list').style.display = 'none';
-  document.getElementById('pdf-pricing-step').style.display = 'none';
-  document.getElementById('pdf-negotiation-step').style.display = 'block';
-  // Clear fields
-  document.getElementById('neg-original').value = '';
-  document.getElementById('neg-negotiated').value = '';
-  document.getElementById('neg-scope').value = '';
-  document.getElementById('neg-notes').value = '';
-  // Pre-fill original total from current line items
-  if (currentLineItems && currentLineItems.length > 0) {
-    var woTotal = currentLineItems.reduce(function(s, i) { return s + (i.price * (i.qty || 1)); }, 0);
-    document.getElementById('neg-original').value = woTotal;
-  }
-  lucide.createIcons();
-}
 
-function generateNegotiationPDF() {
-  var negData = {
-    originalTotal: parseFloat(document.getElementById('neg-original').value) || 0,
-    negotiatedTotal: parseFloat(document.getElementById('neg-negotiated').value) || 0,
-    scopeChanges: document.getElementById('neg-scope').value.trim(),
-    notes: document.getElementById('neg-notes').value.trim()
-  };
-  buildPDF('negotiation', false, 'classic', negData);
-}
 
 function buildPDF(template, hidePrices, docStyle) {
   docStyle = docStyle || 'classic';
@@ -2029,47 +2230,42 @@ function buildPDF(template, hidePrices, docStyle) {
       '<p style="font-size:13px">Payment Terms: <strong>Net 30</strong> from invoice date</p></div>';
   }
 
-  // ---- NEGOTIATION SUMMARY ----
+  // ---- NEGOTIATION SUMMARY (auto-generated from engine) ----
   if (template === 'negotiation') {
-    var neg = docStyle; // negData passed as 4th param, received via docStyle override
-    if (arguments.length >= 4) neg = arguments[3];
-    if (!neg || typeof neg !== 'object') neg = { originalTotal: 0, negotiatedTotal: 0, scopeChanges: '', notes: '' };
-    var savings = neg.originalTotal - neg.negotiatedTotal;
-    var savingsPct = neg.originalTotal > 0 ? Math.round((savings / neg.originalTotal) * 100) : 0;
-
-    bodyContent =
-      '<div class="section"><h2>Project Information</h2>' +
-      '<table class="info-table">' +
-      '<tr><td class="label">Work Order</td><td>' + wo.id + '</td><td class="label">Status</td><td><span class="status-tag">' + statusLabel(wo.status) + '</span></td></tr>' +
-      '<tr><td class="label">Project</td><td>' + wo.title + '</td><td class="label">Type</td><td>Type ' + wo.type + '</td></tr>' +
-      '<tr><td class="label">Client</td><td>' + wo.client + '</td><td class="label">Priority</td><td>' + capitalize(wo.priority) + '</td></tr>' +
-      '<tr><td class="label">Property</td><td colspan="3">' + wo.property + '</td></tr>' +
-      '</table></div>' +
-
-      '<div class="section"><h2>Pricing Comparison</h2>' +
-      '<table class="items-table">' +
-      '<thead><tr><th></th><th class="right">Amount</th></tr></thead>' +
-      '<tbody>' +
-      '<tr><td><strong>Original Estimate</strong></td><td class="right" style="font-size:16px">$' + neg.originalTotal.toLocaleString() + '</td></tr>' +
-      '<tr><td><strong>Negotiated Total</strong></td><td class="right" style="font-size:16px;color:#10b981;font-weight:700">$' + neg.negotiatedTotal.toLocaleString() + '</td></tr>' +
-      '</tbody>' +
-      '<tfoot><tr><td><strong>Client Savings</strong></td><td class="right" style="font-size:15px;color:#10b981;font-weight:700">$' + savings.toLocaleString() + ' (' + savingsPct + '%)</td></tr></tfoot>' +
-      '</table></div>';
-
-    if (neg.scopeChanges) {
-      bodyContent += '<div class="section"><h2>Scope Changes</h2>' +
-        '<div style="font-size:13px;line-height:1.7;white-space:pre-wrap">' + neg.scopeChanges.replace(/</g,'&lt;') + '</div></div>';
+    var neg = buildNegotiationSummary();
+    if (!neg) { showToast('No data to generate negotiation summary'); return; }
+    if (neg.change_orders_applied === 0) {
+      showToast(neg.change_orders_pending > 0 ? '⏳ ' + neg.change_orders_pending + ' CO(s) pending — none approved yet' : 'ℹ️ No change orders — WO is unchanged');
+      return;
     }
-
-    if (neg.notes) {
-      bodyContent += '<div class="section"><h2>Notes</h2>' +
-        '<div style="font-size:13px;line-height:1.7;white-space:pre-wrap">' + neg.notes.replace(/</g,'&lt;') + '</div></div>';
+    var sIcons = { unchanged: '✓', modified: '↓', removed: '✗', added: '+' };
+    var dClr = neg.total_difference < 0 ? '#ef4444' : '#10b981';
+    bodyContent = '<div class="section"><h2>Executive Summary</h2><table class="info-table"><tr><td class="label">Work Order</td><td>' + wo.id + '</td><td class="label">Client</td><td>' + wo.client + '</td></tr><tr><td class="label">Project</td><td>' + wo.title + '</td><td class="label">Property</td><td>' + wo.property + '</td></tr></table>' +
+      '<table class="items-table" style="margin-top:16px"><thead><tr><th>Original</th><th>Negotiated</th><th>Difference</th></tr></thead><tbody><tr style="font-size:18px;font-weight:700"><td>$' + neg.original_total.toLocaleString() + '</td><td style="color:#10b981">$' + neg.negotiated_total.toLocaleString() + '</td><td style="color:' + dClr + '">' + (neg.total_difference >= 0 ? '+' : '') + '$' + neg.total_difference.toLocaleString() + ' (' + neg.total_difference_pct + '%)</td></tr></tbody></table>' +
+      '<div style="font-size:12px;color:#666;margin-top:10px">' + neg.items_unchanged + ' unchanged · ' + neg.items_modified + ' modified · ' + neg.items_removed + ' removed · ' + neg.items_added + ' added · ' + neg.change_orders_applied + ' CO(s)</div></div>';
+    bodyContent += '<div class="section"><h2>Detailed Comparison</h2><table class="items-table"><thead><tr><th>#</th><th>Item</th><th class="right">Original</th><th class="right">Negotiated</th><th>Status</th></tr></thead><tbody>';
+    neg.items.forEach(function(it, i) {
+      var rs = it.status === 'removed' ? 'text-decoration:line-through;color:#999' : '';
+      bodyContent += '<tr style="' + rs + '"><td>' + (i+1) + '</td><td><strong>' + it.name + '</strong>' + (it.reason ? '<br><small style="color:#888">' + it.reason + '</small>' : '') + '</td><td class="right">$' + it.original_total.toLocaleString() + '</td><td class="right" style="font-weight:600">$' + it.negotiated_total.toLocaleString() + '</td><td style="text-align:center;font-size:16px">' + (sIcons[it.status] || '') + '</td></tr>';
+    });
+    bodyContent += '</tbody></table><div style="font-size:11px;color:#888;margin-top:8px">✓ Unchanged · ↓ Modified · ✗ Removed · + Added</div></div>';
+    if (neg.approved_cos && neg.approved_cos.length > 0) {
+      bodyContent += '<div class="section"><h2>Change Orders Applied</h2>';
+      neg.approved_cos.forEach(function(co) {
+        bodyContent += '<div style="padding:10px 12px;border:1px solid #e5e7eb;border-radius:6px;margin-bottom:8px"><div style="font-weight:700;font-size:13px">' + co.coNumber + ' — ' + co.title + ' <span style="color:#10b981;font-size:11px">✅ Approved</span></div>' +
+          (co.requestedBy ? '<div style="font-size:12px;color:#666">Requested by: ' + co.requestedBy + '</div>' : '') +
+          '<div style="font-size:12px">Impact: <strong style="color:' + (co.amount < 0 ? '#ef4444' : '#10b981') + '">' + (co.amount >= 0 ? '+' : '') + '$' + co.amount.toLocaleString() + '</strong></div></div>';
+      });
+      bodyContent += '</div>';
     }
-
-    bodyContent += '<div class="section" style="margin-top:24px;padding:16px;background:#f8f8f8;border-radius:8px">' +
-      '<p style="font-size:12px;color:#888;margin:0">This negotiation summary is for discussion purposes. Final pricing subject to signed agreement.</p></div>';
-
-    docStyle = 'classic'; // force classic style for negotiation
+    var cats = Object.keys(neg.by_category);
+    if (cats.length > 0) {
+      bodyContent += '<div class="section"><h2>Cost by Category</h2><table class="items-table"><thead><tr><th>Category</th><th class="right">Original</th><th class="right">Negotiated</th><th class="right">Change</th></tr></thead><tbody>';
+      cats.forEach(function(cat) { var c = neg.by_category[cat]; bodyContent += '<tr><td>' + cat + '</td><td class="right">$' + c.original.toLocaleString() + '</td><td class="right">$' + c.negotiated.toLocaleString() + '</td><td class="right" style="color:' + (c.diff < 0 ? '#ef4444' : c.diff > 0 ? '#10b981' : '#666') + '">' + (c.diff >= 0 ? '+' : '') + '$' + c.diff.toLocaleString() + '</td></tr>'; });
+      bodyContent += '</tbody></table></div>';
+    }
+    bodyContent += '<div class="section" style="margin-top:24px"><div style="display:flex;gap:40px;margin-bottom:20px"><div style="flex:1"><div style="border-bottom:1px solid #333;height:40px"></div><div style="font-size:11px;color:#888;margin-top:4px">Contractor Signature / Date</div></div><div style="flex:1"><div style="border-bottom:1px solid #333;height:40px"></div><div style="font-size:11px;color:#888;margin-top:4px">Client Signature / Date</div></div></div><p style="font-size:11px;color:#888;margin:0">This negotiation summary is for discussion purposes. Final pricing subject to signed agreement.</p></div>';
+    docStyle = 'classic';
   }
 
   var printWindow = window.open('', '_blank');
