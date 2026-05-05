@@ -2299,27 +2299,25 @@ async function sendEmailNow() {
   }
 
   try {
-    var sb = getSupabase();
-    if (!sb) throw new Error('Database connection not available');
-
-    var result = await sb.functions.invoke('send-email', {
-      body: {
+    var res = await fetch('https://udaeifoibydcokefcmbg.supabase.co/functions/v1/send-email', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
         to: to,
         cc: cc || undefined,
         subject: subject,
         body: body,
         from_name: COMPANY.name || 'R.C Art Construction LLC',
         reply_to: COMPANY.email || 'info@rcartconstruction.com',
-      }
+      })
     });
 
-    // Supabase functions.invoke returns { data, error }
-    if (result.error) {
-      var errMsg = result.error.message || result.error;
-      throw new Error(typeof errMsg === 'string' ? errMsg : JSON.stringify(errMsg));
+    if (!res.ok) {
+      var errBody = await res.json().catch(function() { return {}; });
+      throw new Error(errBody.error || 'Server returned ' + res.status);
     }
 
-    var data = result.data;
+    var data = await res.json();
     // Do NOT save as sent unless success is explicitly true
     if (!data || data.success !== true) throw new Error(data && data.error ? data.error : 'Unexpected response');
 
