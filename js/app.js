@@ -395,12 +395,19 @@ function filterServices(cat) {
 }
 
 // ============ RENDER WORK ORDERS ============
+var _woSelected = new Set();
+
 function renderWorkOrders() {
   const tbody = document.getElementById('wo-table-body');
   tbody.innerHTML = WORK_ORDERS.map(wo => {
     const progress = wo.items > 0 ? Math.round((wo.completed / wo.items) * 100) : 0;
+    const isChecked = _woSelected.has(wo.id);
     return `
     <tr onclick="openWorkOrderDetail('${wo.id}')">
+      <td onclick="event.stopPropagation()" style="text-align:center">
+        <input type="checkbox" class="wo-row-cb" data-woid="${wo.id}" ${isChecked ? 'checked' : ''}
+          onchange="woToggleSelect('${wo.id}', this.checked)">
+      </td>
       <td><strong class="text-accent">${wo.id}</strong></td>
       <td>
         <div style="font-weight:600;color:var(--text-primary)">${wo.title}</div>
@@ -436,7 +443,117 @@ function renderWorkOrders() {
     </tr>`;
   }).join('');
   lucide.createIcons();
+  woUpdateSelectionUI();
 }
+
+// ============ BATCH SELECTION ============
+function woToggleSelect(woId, checked) {
+  if (checked) { _woSelected.add(woId); } else { _woSelected.delete(woId); }
+  woUpdateSelectionUI();
+}
+
+function woToggleSelectAll() {
+  var allCb = document.getElementById('wo-select-all');
+  var rowCbs = document.querySelectorAll('.wo-row-cb');
+  if (allCb.checked) {
+    rowCbs.forEach(function(cb) { _woSelected.add(cb.dataset.woid); cb.checked = true; });
+  } else {
+    rowCbs.forEach(function(cb) { _woSelected.delete(cb.dataset.woid); cb.checked = false; });
+  }
+  woUpdateSelectionUI();
+}
+
+function woUpdateSelectionUI() {
+  var bar = document.getElementById('wo-selection-bar');
+  var count = document.getElementById('wo-sel-count');
+  var allCb = document.getElementById('wo-select-all');
+  var rowCbs = document.querySelectorAll('.wo-row-cb');
+  var total = rowCbs.length;
+  var checked = 0;
+  rowCbs.forEach(function(cb) { if (_woSelected.has(cb.dataset.woid)) checked++; });
+
+  // Selection bar visibility
+  if (_woSelected.size > 0) {
+    bar.style.display = '';
+    count.textContent = _woSelected.size + ' selected';
+    lucide.createIcons();
+  } else {
+    bar.style.display = 'none';
+  }
+
+  // Header checkbox state: checked / unchecked / indeterminate
+  if (allCb) {
+    if (total === 0 || checked === 0) {
+      allCb.checked = false;
+      allCb.indeterminate = false;
+    } else if (checked === total) {
+      allCb.checked = true;
+      allCb.indeterminate = false;
+    } else {
+      allCb.checked = false;
+      allCb.indeterminate = true;
+    }
+  }
+}
+
+function woClearSelection() {
+  _woSelected.clear();
+  renderWorkOrders();
+}
+
+async function woDeleteSelected() {
+  if (_woSelected.size === 0) return;
+  var ids = Array.from(_woSelected);
+  var n = ids.length;
+
+  showConfirmModal(
+    'Delete ' + n + ' Work Order' + (n > 1 ? 's' : ''),
+    n + ' work order' + (n > 1 ? 's' : '') + ' will be permanently deleted. This cannot be undone.',
+    async function() {
+      var deletedIds = [];
+      var failedIds = [];
+
+      // Attempt all deletes in parallel
+      if (typeof DB !== 'undefined' && isSupabaseReady()) {
+        var results = await Promise.all(ids.map(function(id) {
+          return DB.workOrders.delete(id)
+            .then(function(ok) { return { id: id, ok: ok }; })
+            .catch(function() { return { id: id, ok: false }; });
+        }));
+        results.forEach(function(r) {
+          if (r.ok) { deletedIds.push(r.id); } else { failedIds.push(r.id); }
+        });
+      } else {
+        // No Supabase — all succeed locally
+        deletedIds = ids.slice();
+      }
+
+      // Remove only confirmed-deleted WOs from array and storage
+      if (deletedIds.length > 0) {
+        WORK_ORDERS = WORK_ORDERS.filter(function(w) { return deletedIds.indexOf(w.id) === -1; });
+        deletedIds.forEach(function(id) {
+          try { localStorage.removeItem('nexartwo_doc_' + id); } catch(e) {}
+          try { localStorage.removeItem('wo_comms_' + id); } catch(e) {}
+          try { localStorage.removeItem('wo_changes_' + id); } catch(e) {}
+        });
+        saveWorkOrders();
+      }
+
+      // Clear selection, re-render
+      _woSelected.clear();
+      renderWorkOrders();
+      renderDashboard();
+
+      // Toast feedback
+      if (failedIds.length > 0) {
+        showToast('⚠️ ' + deletedIds.length + ' deleted, ' + failedIds.length + ' failed — check connection');
+      } else {
+        showToast('✅ ' + deletedIds.length + ' Work Order' + (deletedIds.length > 1 ? 's' : '') + ' deleted');
+      }
+    }
+  );
+}
+
 
 // WO Action Menu
 function toggleWOMenu(woId, e) {

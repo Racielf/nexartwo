@@ -231,11 +231,23 @@
           <button class="btn btn-primary" onclick="openNewWOModal()">+ New Work Order</button>
         </div>
 
+        <!-- Batch selection bar (hidden by default) -->
+        <div id="wo-selection-bar" class="wo-selection-bar" style="display:none">
+          <div style="display:flex;align-items:center;gap:12px">
+            <span id="wo-sel-count" style="font-weight:600;font-size:13px;color:var(--text-primary)">0 selected</span>
+            <button class="btn btn-sm" onclick="woDeleteSelected()" style="background:var(--danger);color:#fff;gap:4px;border:none">
+              <i data-lucide="trash-2" style="width:13px;height:13px"></i> Delete Selected
+            </button>
+            <button class="btn btn-sm btn-ghost" onclick="woClearSelection()" style="font-size:12px">Clear</button>
+          </div>
+        </div>
+
         <div class="card">
           <div class="card-body" style="padding:0">
             <table class="wo-table">
               <thead>
                 <tr>
+                  <th style="width:36px;text-align:center"><input type="checkbox" id="wo-select-all" onchange="woToggleSelectAll()" title="Select all"></th>
                   <th>WO #</th>
                   <th>Project</th>
                   <th>Client</th>
