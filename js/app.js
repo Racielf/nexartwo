@@ -674,13 +674,11 @@ function renderLineItems() {
         const nameField = _liEditMode
           ? `<input id="li-name-${i}" class="li-name-input"
                value="${escHtml(item.name)}"
-               style="font-weight:600;font-size:13px;color:var(--text-primary);border:1px solid var(--border);border-radius:4px;background:var(--bg-input);width:100%;padding:4px 6px;"
                placeholder="Item name">`
           : `<div style="font-weight:600;font-size:13px;color:var(--text-primary);${isCompleted ? 'text-decoration:line-through;opacity:0.7' : ''}">${escHtml(item.name)}</div>`;
 
         const descField = _liEditMode
           ? `<textarea id="li-desc-${i}" class="li-desc-input" rows="2"
-               style="font-size:12px;color:var(--text-secondary);border:1px solid var(--border);border-radius:4px;background:var(--bg-input);width:100%;padding:4px 6px;resize:vertical;margin-top:4px"
                placeholder="Description">${escHtml(item.desc || '')}</textarea>`
           : `<div style="font-size:12px;color:var(--text-secondary);margin-top:2px">${escHtml(item.desc || '')}</div>`;
 
