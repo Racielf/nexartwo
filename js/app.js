@@ -1428,7 +1428,7 @@ function initWODocument() {
     if (refEl) refEl.value = saved.ref || '';
   }
 
-  // Always rebuild from currentLineItems so new items appear
+  // Always rebuild from currentLineItems so Document only shows this Work Order's items
   var freshLines = (currentLineItems || []).map(function(item) {
     return {
       liId: item.id,            // stable bridge to currentLineItems
@@ -1440,20 +1440,25 @@ function initWODocument() {
     };
   });
 
-  // If we have saved doc lines, merge: keep saved edits for existing items,
-  // add new items that weren't in the saved doc — match by liId only
-  if (saved && saved.lines && saved.lines.length > 0) {
-    var savedLiIds = {};
-    saved.lines.forEach(function(sl) { if (sl.liId != null) savedLiIds[sl.liId] = true; });
+  var allowedLiIds = {};
+  freshLines.forEach(function(fl) { allowedLiIds[fl.liId] = true; });
 
-    // Start with saved lines (preserves user edits), ensure liId is stamped
-    _docLines = saved.lines.map(function(sl) {
-      // find the matching fresh line to get current liId/id if missing from old save
-      var match = freshLines.find(function(fl) { return fl.liId == sl.liId; });
-      return Object.assign({}, sl, match ? { liId: match.liId, id: match.id } : {});
+  if (saved && saved.lines && saved.lines.length > 0) {
+    // Keep only saved lines whose liId still exists in currentLineItems (drop orphans)
+    var keptSavedLines = saved.lines.filter(function(sl) {
+      return sl.liId != null && allowedLiIds[sl.liId];
     });
 
-    // Add any NEW items from currentLineItems that aren't in saved doc
+    var savedLiIds = {};
+    keptSavedLines.forEach(function(sl) { savedLiIds[sl.liId] = true; });
+
+    // Merge: saved edits + fresh data for liId/id stamps
+    _docLines = keptSavedLines.map(function(sl) {
+      var match = freshLines.find(function(fl) { return fl.liId == sl.liId; });
+      return Object.assign({}, match || {}, sl, match ? { liId: match.liId, id: match.id } : {});
+    });
+
+    // Add any NEW items from currentLineItems not already in saved doc
     freshLines.forEach(function(fl) {
       if (!savedLiIds[fl.liId]) { _docLines.push(fl); }
     });
@@ -1461,6 +1466,9 @@ function initWODocument() {
     _docLines = freshLines;
   }
   _docLines._woId = wo.id;
+
+  // One-time cleanup: overwrite saved document state with valid lines only
+  docSaveState();
 
   renderDocLines();
   updateDocTotals();
