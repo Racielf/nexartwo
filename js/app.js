@@ -1330,10 +1330,13 @@ function renderChangeOrders() {
   var container = document.getElementById('wo-changes-list');
   if (!container) return;
 
+  var hasApproved = _currentCOs.some(function(co) { return co.status === 'approved'; });
+  var debugBtn = hasApproved ? '<button class="btn btn-sm btn-secondary" onclick="debugNegotiationEngine()" style="gap:4px;margin-right:6px;font-size:11px" title="Run negotiation engine and log results to console"><i data-lucide="activity" style="width:12px;height:12px"></i> Debug Engine</button>' : '';
   var toolbar = '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">' +
     '<div style="font-size:13px;color:var(--text-secondary)">' + _currentCOs.length + ' change order' + (_currentCOs.length !== 1 ? 's' : '') + '</div>' +
+    '<div style="display:flex;gap:6px">' + debugBtn +
     '<button class="btn btn-sm btn-primary" onclick="createNewCO()" style="gap:6px">' +
-    '<i data-lucide="plus" style="width:13px;height:13px"></i> New Change Order</button></div>';
+    '<i data-lucide="plus" style="width:13px;height:13px"></i> New Change Order</button></div></div>';
 
   if (_currentCOs.length === 0) {
     container.innerHTML = toolbar + '<div style="text-align:center;padding:48px 0;color:var(--text-muted)">' +
@@ -1854,6 +1857,78 @@ function buildNegotiationSummary() {
   };
 }
 
+// ============ NEGOTIATION ENGINE — DEBUG OUTPUT ============
+// Read-only: calls buildNegotiationSummary() and logs structured results
+function debugNegotiationEngine() {
+  var result = buildNegotiationSummary();
+  if (!result) {
+    console.warn('[NegotiationEngine] No data — open a Work Order with line items first.');
+    showToast('⚠ Open a Work Order with line items first', 2500);
+    return null;
+  }
+
+  // ── Header ──
+  var sep = '═'.repeat(50);
+  console.log('\n' + sep);
+  console.log('  NEGOTIATION ENGINE DEBUG');
+  console.log(sep);
+  console.log('  WO: ' + (result.wo_id || '—') + ' | Client: ' + (result.client || '—'));
+  console.log('  Property: ' + (result.property || '—'));
+  console.log('');
+
+  // ── Totals ──
+  var fmt = function(n) { return '$' + Number(n).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ','); };
+  var sign = result.total_difference >= 0 ? '+' : '';
+  console.log('  TOTALS:');
+  console.log('    Original:   ' + fmt(result.original_total));
+  console.log('    Negotiated: ' + fmt(result.negotiated_total));
+  console.log('    Net Impact: ' + sign + fmt(result.total_difference) + ' (' + sign + result.total_difference_pct + '%)');
+  console.log('');
+
+  // ── Per-line comparison (console.table) ──
+  var tableData = result.items.map(function(it) {
+    return {
+      'Name': it.name,
+      'Orig $': it.original_price,
+      'Orig Qty': it.original_qty,
+      'Orig Total': it.original_total,
+      'Neg $': it.negotiated_price,
+      'Neg Qty': it.negotiated_qty,
+      'Neg Total': it.negotiated_total,
+      'Diff': it.difference,
+      'Status': it.status,
+      'CO Ref': it.change_order_ref || '—'
+    };
+  });
+  console.log('  PER-LINE COMPARISON:');
+  console.table(tableData);
+
+  // ── Category breakdown ──
+  var cats = result.by_category;
+  if (cats && Object.keys(cats).length > 0) {
+    console.log('  BY CATEGORY:');
+    var catTable = Object.keys(cats).map(function(cat) {
+      var c = cats[cat];
+      return {
+        'Category': cat,
+        'Original': c.original,
+        'Negotiated': c.negotiated,
+        'Diff': c.diff
+      };
+    });
+    console.table(catTable);
+  }
+
+  // ── CO Summary ──
+  console.log('  CHANGE ORDERS: ' + result.change_orders_applied + ' approved | ' + result.change_orders_pending + ' pending | ' + result.change_orders_rejected + ' rejected');
+  console.log('  ITEMS: ' + result.items_unchanged + ' unchanged | ' + result.items_modified + ' modified | ' + result.items_removed + ' removed');
+  console.log(sep + '\n');
+
+  // Toast notification
+  showToast('✅ Engine output logged to console (F12)', 3000);
+
+  return result;
+}
 
 
 function switchWOTab(tab) {
@@ -2413,33 +2488,171 @@ function buildPDF(template, hidePrices, docStyle) {
       showToast(neg.change_orders_pending > 0 ? '⏳ ' + neg.change_orders_pending + ' CO(s) pending — none approved yet' : 'ℹ️ No change orders — WO is unchanged');
       return;
     }
-    var sIcons = { unchanged: '✓', modified: '↓', removed: '✗', added: '+' };
+
+    // Helper: format money with sign
+    function negFmt(v) { return (v >= 0 ? '+' : '') + '$' + Math.abs(v).toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2}); }
+    function negMoney(v) { return '$' + v.toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2}); }
+    function negPct(orig, diff) { return orig > 0 ? (Math.round((diff / orig) * 1000) / 10) + '%' : '—'; }
+
     var dClr = neg.total_difference < 0 ? '#ef4444' : '#10b981';
-    bodyContent = '<div class="section"><h2>Executive Summary</h2><table class="info-table"><tr><td class="label">Work Order</td><td>' + escHtml(wo.id) + '</td><td class="label">Client</td><td>' + escHtml(wo.client) + '</td></tr><tr><td class="label">Project</td><td>' + escHtml(wo.title) + '</td><td class="label">Property</td><td>' + escHtml(wo.property) + '</td></tr></table>' +
-      '<table class="items-table" style="margin-top:16px"><thead><tr><th>Original</th><th>Negotiated</th><th>Difference</th></tr></thead><tbody><tr style="font-size:18px;font-weight:700"><td>$' + neg.original_total.toLocaleString() + '</td><td style="color:#10b981">$' + neg.negotiated_total.toLocaleString() + '</td><td style="color:' + dClr + '">' + (neg.total_difference >= 0 ? '+' : '') + '$' + neg.total_difference.toLocaleString() + ' (' + neg.total_difference_pct + '%)</td></tr></tbody></table>' +
-      '<div style="font-size:12px;color:#666;margin-top:10px">' + neg.items_unchanged + ' unchanged Ã‚Â· ' + neg.items_modified + ' modified Ã‚Â· ' + neg.items_removed + ' removed Ã‚Â· ' + neg.items_added + ' added Ã‚Â· ' + neg.change_orders_applied + ' CO(s)</div></div>';
-    bodyContent += '<div class="section"><h2>Detailed Comparison</h2><table class="items-table"><thead><tr><th>#</th><th>Item</th><th class="right">Original</th><th class="right">Negotiated</th><th>Status</th></tr></thead><tbody>';
+    var dArrow = neg.total_difference < 0 ? '▼' : neg.total_difference > 0 ? '▲' : '—';
+
+    // ---- EXECUTIVE SUMMARY ----
+    bodyContent = '<div class="section"><h2>Executive Summary</h2>' +
+      '<table class="info-table">' +
+        '<tr><td class="label">Work Order</td><td>' + escHtml(wo.id) + '</td><td class="label">Client</td><td>' + escHtml(wo.client) + '</td></tr>' +
+        '<tr><td class="label">Project</td><td>' + escHtml(wo.title) + '</td><td class="label">Property</td><td>' + escHtml(wo.property) + '</td></tr>' +
+        '<tr><td class="label">Report Date</td><td>' + today + '</td><td class="label">Change Orders</td><td>' + neg.change_orders_applied + ' approved</td></tr>' +
+      '</table>' +
+      // Financial impact cards
+      '<div style="display:flex;gap:12px;margin-top:20px">' +
+        '<div style="flex:1;padding:14px 16px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;text-align:center">' +
+          '<div style="font-size:11px;color:#64748b;text-transform:uppercase;font-weight:600;letter-spacing:0.5px">Original Estimate</div>' +
+          '<div style="font-size:22px;font-weight:700;margin-top:4px;color:#1e293b">' + negMoney(neg.original_total) + '</div>' +
+        '</div>' +
+        '<div style="flex:1;padding:14px 16px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;text-align:center">' +
+          '<div style="font-size:11px;color:#16a34a;text-transform:uppercase;font-weight:600;letter-spacing:0.5px">Negotiated Total</div>' +
+          '<div style="font-size:22px;font-weight:700;margin-top:4px;color:#15803d">' + negMoney(neg.negotiated_total) + '</div>' +
+        '</div>' +
+        '<div style="flex:1;padding:14px 16px;background:' + (neg.total_difference < 0 ? '#fef2f2' : '#f0fdf4') + ';border:1px solid ' + (neg.total_difference < 0 ? '#fecaca' : '#bbf7d0') + ';border-radius:8px;text-align:center">' +
+          '<div style="font-size:11px;color:' + dClr + ';text-transform:uppercase;font-weight:600;letter-spacing:0.5px">Net Impact</div>' +
+          '<div style="font-size:22px;font-weight:700;margin-top:4px;color:' + dClr + '">' + dArrow + ' ' + negFmt(neg.total_difference) + '</div>' +
+          '<div style="font-size:12px;color:' + dClr + ';margin-top:2px">' + neg.total_difference_pct + '% change</div>' +
+        '</div>' +
+      '</div>' +
+      // Stats row
+      '<div style="display:flex;gap:16px;margin-top:14px;font-size:12px;color:#64748b">' +
+        '<span style="display:inline-flex;align-items:center;gap:4px"><span style="width:8px;height:8px;border-radius:50%;background:#94a3b8;display:inline-block"></span>' + neg.items_unchanged + ' unchanged</span>' +
+        '<span style="display:inline-flex;align-items:center;gap:4px"><span style="width:8px;height:8px;border-radius:50%;background:#3b82f6;display:inline-block"></span>' + neg.items_modified + ' modified</span>' +
+        '<span style="display:inline-flex;align-items:center;gap:4px"><span style="width:8px;height:8px;border-radius:50%;background:#ef4444;display:inline-block"></span>' + neg.items_removed + ' removed</span>' +
+        '<span style="display:inline-flex;align-items:center;gap:4px"><span style="width:8px;height:8px;border-radius:50%;background:#10b981;display:inline-block"></span>' + neg.items_added + ' added</span>' +
+      '</div>' +
+    '</div>';
+
+    // ---- DETAILED COMPARISON TABLE ----
+    bodyContent += '<div class="section"><h2>Detailed Comparison</h2>' +
+      '<table class="items-table" style="font-size:12px">' +
+        '<thead><tr>' +
+          '<th style="width:28px">#</th>' +
+          '<th>Item</th>' +
+          '<th style="width:80px">Category</th>' +
+          '<th class="right" style="width:85px">Original</th>' +
+          '<th class="right" style="width:65px">New Rate</th>' +
+          '<th class="right" style="width:40px">Qty</th>' +
+          '<th class="right" style="width:85px">Negotiated</th>' +
+          '<th class="right" style="width:75px">Diff ($)</th>' +
+          '<th style="width:55px;text-align:center">CO</th>' +
+          '<th style="width:70px;text-align:center">Status</th>' +
+        '</tr></thead><tbody>';
+
     neg.items.forEach(function(it, i) {
-      var rs = it.status === 'removed' ? 'text-decoration:line-through;color:#999' : '';
-      bodyContent += '<tr style="' + rs + '"><td>' + (i+1) + '</td><td><strong>' + escHtml(it.name) + '</strong>' + (it.reason ? '<br><small style="color:#888">' + escHtml(it.reason) + '</small>' : '') + '</td><td class="right">$' + it.original_total.toLocaleString() + '</td><td class="right" style="font-weight:600">$' + it.negotiated_total.toLocaleString() + '</td><td style="text-align:center;font-size:16px">' + (sIcons[it.status] || '') + '</td></tr>';
+      var isRemoved = it.status === 'removed';
+      var isModified = it.status === 'modified';
+      var rowStyle = isRemoved ? 'color:#9ca3af;' : '';
+      var diffColor = it.difference < 0 ? '#ef4444' : it.difference > 0 ? '#10b981' : '#64748b';
+      // Status badge
+      var badge = '';
+      if (isRemoved) badge = '<span style="display:inline-block;padding:2px 6px;border-radius:4px;background:#fef2f2;color:#ef4444;font-size:10px;font-weight:600">REMOVED</span>';
+      else if (isModified) badge = '<span style="display:inline-block;padding:2px 6px;border-radius:4px;background:#eff6ff;color:#3b82f6;font-size:10px;font-weight:600">MODIFIED</span>';
+      else badge = '<span style="display:inline-block;padding:2px 6px;border-radius:4px;background:#f1f5f9;color:#94a3b8;font-size:10px;font-weight:600">SAME</span>';
+
+      bodyContent += '<tr style="' + rowStyle + '">' +
+        '<td>' + (i + 1) + '</td>' +
+        '<td><strong>' + escHtml(it.name) + '</strong>' +
+          (it.reason ? '<br><small style="color:#888">' + escHtml(it.reason) + '</small>' : '') + '</td>' +
+        '<td style="font-size:11px">' + escHtml(it.category || '—') + '</td>' +
+        '<td class="right"' + (isRemoved ? ' style="text-decoration:line-through"' : '') + '>' + negMoney(it.original_total) + '</td>' +
+        '<td class="right">' + (isModified || isRemoved ? negMoney(it.negotiated_price) : '—') + '</td>' +
+        '<td class="right">' + (isModified || isRemoved ? it.negotiated_qty : '—') + '</td>' +
+        '<td class="right" style="font-weight:600">' + negMoney(it.negotiated_total) + '</td>' +
+        '<td class="right" style="color:' + diffColor + ';font-weight:600">' + (it.difference !== 0 ? negFmt(it.difference) : '—') + '</td>' +
+        '<td style="text-align:center;font-size:11px">' + (it.change_order_ref || '—') + '</td>' +
+        '<td style="text-align:center">' + badge + '</td>' +
+      '</tr>';
     });
-    bodyContent += '</tbody></table><div style="font-size:11px;color:#888;margin-top:8px">✓ Unchanged Ã‚Â· ↓ Modified Ã‚Â· ✗ Removed Ã‚Â· + Added</div></div>';
+
+    // Detail totals row
+    var negTotalOrig = neg.items.reduce(function(s,i){return s+i.original_total},0);
+    var negTotalNew = neg.items.reduce(function(s,i){return s+i.negotiated_total},0);
+    var negTotalDiff = negTotalNew - negTotalOrig;
+    bodyContent += '</tbody><tfoot><tr style="font-weight:700;border-top:2px solid #1e293b">' +
+      '<td></td><td>TOTAL</td><td></td>' +
+      '<td class="right">' + negMoney(negTotalOrig) + '</td>' +
+      '<td></td><td></td>' +
+      '<td class="right" style="color:#15803d">' + negMoney(negTotalNew) + '</td>' +
+      '<td class="right" style="color:' + (negTotalDiff < 0 ? '#ef4444' : '#10b981') + '">' + negFmt(negTotalDiff) + '</td>' +
+      '<td></td><td></td>' +
+    '</tr></tfoot></table></div>';
+
+    // ---- CHANGE ORDERS APPLIED ----
     if (neg.approved_cos && neg.approved_cos.length > 0) {
-      bodyContent += '<div class="section"><h2>Change Orders Applied</h2>';
+      bodyContent += '<div class="section"><h2>Change Orders Applied (' + neg.approved_cos.length + ')</h2>';
       neg.approved_cos.forEach(function(co) {
-        bodyContent += '<div style="padding:10px 12px;border:1px solid #e5e7eb;border-radius:6px;margin-bottom:8px"><div style="font-weight:700;font-size:13px">' + escHtml(co.coNumber) + ' — ' + escHtml(co.title) + ' <span style="color:#10b981;font-size:11px">✅ Approved</span></div>' +
-          (co.requestedBy ? '<div style="font-size:12px;color:#666">Requested by: ' + escHtml(co.requestedBy) + '</div>' : '') +
-          '<div style="font-size:12px">Impact: <strong style="color:' + (co.amount < 0 ? '#ef4444' : '#10b981') + '">' + (co.amount >= 0 ? '+' : '') + '$' + co.amount.toLocaleString() + '</strong></div></div>';
+        // Calculate live impact from item diffs
+        var liveImpact = 0;
+        if (co.items) {
+          co.items.forEach(function(coItem) {
+            var match = neg.items.find(function(ni) { return ni.id === coItem.line_item_id || ni.name === coItem.name; });
+            if (match) liveImpact += match.difference;
+          });
+        }
+        var impactClr = liveImpact < 0 ? '#ef4444' : '#10b981';
+        var itemCount = co.items ? co.items.length : 0;
+        var modCount = co.items ? co.items.filter(function(ci){return ci.action !== 'unchanged'}).length : 0;
+
+        bodyContent += '<div style="padding:12px 16px;border:1px solid #e2e8f0;border-radius:8px;margin-bottom:10px;display:flex;align-items:center;gap:16px">' +
+          '<div style="flex:1">' +
+            '<div style="font-weight:700;font-size:14px">' + escHtml(co.coNumber) + ' — ' + escHtml(co.title) + '</div>' +
+            (co.description ? '<div style="font-size:12px;color:#64748b;margin-top:2px">' + escHtml(co.description) + '</div>' : '') +
+            (co.requestedBy ? '<div style="font-size:12px;color:#64748b;margin-top:2px">Requested by: ' + escHtml(co.requestedBy) + '</div>' : '') +
+            '<div style="font-size:11px;color:#94a3b8;margin-top:4px">' + modCount + ' of ' + itemCount + ' items changed</div>' +
+          '</div>' +
+          '<div style="text-align:right">' +
+            '<div style="font-size:18px;font-weight:700;color:' + impactClr + '">' + negFmt(liveImpact) + '</div>' +
+            '<div style="font-size:11px;color:#10b981;font-weight:600;margin-top:2px">✅ Approved</div>' +
+          '</div>' +
+        '</div>';
       });
       bodyContent += '</div>';
     }
+
+    // ---- COST BY CATEGORY ----
     var cats = Object.keys(neg.by_category);
     if (cats.length > 0) {
-      bodyContent += '<div class="section"><h2>Cost by Category</h2><table class="items-table"><thead><tr><th>Category</th><th class="right">Original</th><th class="right">Negotiated</th><th class="right">Change</th></tr></thead><tbody>';
-      cats.forEach(function(cat) { var c = neg.by_category[cat]; bodyContent += '<tr><td>' + escHtml(cat) + '</td><td class="right">$' + c.original.toLocaleString() + '</td><td class="right">$' + c.negotiated.toLocaleString() + '</td><td class="right" style="color:' + (c.diff < 0 ? '#ef4444' : c.diff > 0 ? '#10b981' : '#666') + '">' + (c.diff >= 0 ? '+' : '') + '$' + c.diff.toLocaleString() + '</td></tr>'; });
-      bodyContent += '</tbody></table></div>';
+      bodyContent += '<div class="section"><h2>Cost by Category</h2>' +
+        '<table class="items-table">' +
+          '<thead><tr><th>Category</th><th class="right">Original</th><th class="right">Negotiated</th><th class="right">Change ($)</th><th class="right">Change (%)</th></tr></thead><tbody>';
+      var catTotalOrig = 0, catTotalNeg = 0, catTotalDiff = 0;
+      cats.forEach(function(cat) {
+        var c = neg.by_category[cat];
+        var pctChange = negPct(c.original, c.diff);
+        var clr = c.diff < 0 ? '#ef4444' : c.diff > 0 ? '#10b981' : '#64748b';
+        catTotalOrig += c.original; catTotalNeg += c.negotiated; catTotalDiff += c.diff;
+        bodyContent += '<tr>' +
+          '<td><strong>' + escHtml(cat) + '</strong></td>' +
+          '<td class="right">' + negMoney(c.original) + '</td>' +
+          '<td class="right">' + negMoney(c.negotiated) + '</td>' +
+          '<td class="right" style="color:' + clr + ';font-weight:600">' + negFmt(c.diff) + '</td>' +
+          '<td class="right" style="color:' + clr + '">' + pctChange + '</td>' +
+        '</tr>';
+      });
+      bodyContent += '</tbody><tfoot><tr style="font-weight:700;border-top:2px solid #1e293b">' +
+        '<td>TOTAL</td>' +
+        '<td class="right">' + negMoney(catTotalOrig) + '</td>' +
+        '<td class="right">' + negMoney(catTotalNeg) + '</td>' +
+        '<td class="right" style="color:' + (catTotalDiff < 0 ? '#ef4444' : '#10b981') + '">' + negFmt(catTotalDiff) + '</td>' +
+        '<td class="right" style="color:' + (catTotalDiff < 0 ? '#ef4444' : '#10b981') + '">' + negPct(catTotalOrig, catTotalDiff) + '</td>' +
+      '</tr></tfoot></table></div>';
     }
-    bodyContent += '<div class="section" style="margin-top:24px"><div style="display:flex;gap:40px;margin-bottom:20px"><div style="flex:1"><div style="border-bottom:1px solid #333;height:40px"></div><div style="font-size:11px;color:#888;margin-top:4px">Contractor Signature / Date</div></div><div style="flex:1"><div style="border-bottom:1px solid #333;height:40px"></div><div style="font-size:11px;color:#888;margin-top:4px">Client Signature / Date</div></div></div><p style="font-size:11px;color:#888;margin:0">This negotiation summary is for discussion purposes. Final pricing subject to signed agreement.</p></div>';
+
+    // ---- SIGNATURE BLOCK ----
+    bodyContent += '<div class="section" style="margin-top:24px">' +
+      '<div style="display:flex;gap:40px;margin-bottom:20px">' +
+        '<div style="flex:1"><div style="border-bottom:1px solid #333;height:40px"></div><div style="font-size:11px;color:#888;margin-top:4px">Contractor Signature / Date</div></div>' +
+        '<div style="flex:1"><div style="border-bottom:1px solid #333;height:40px"></div><div style="font-size:11px;color:#888;margin-top:4px">Client Signature / Date</div></div>' +
+      '</div>' +
+      '<p style="font-size:11px;color:#888;margin:0">This negotiation summary is for discussion purposes. Final pricing subject to signed agreement.</p>' +
+    '</div>';
     docStyle = 'classic';
   }
 
