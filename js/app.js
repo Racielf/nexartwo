@@ -1378,37 +1378,111 @@ function renderChangeOrders() {
   lucide.createIcons();
 }
 
-// ---- Create new CO: just confirm, then copy Document items ----
+// ---- Create new CO: snapshot from Document (what the client sees) ----
 function createNewCO() {
   if (!currentWO) return;
-  var eligible = (currentLineItems || []).filter(function(li) { return li.status !== 'completed'; });
-  if (eligible.length === 0) { showToast('No editable line items to create a Change Order'); return; }
 
-  showConfirmModal('Create Change Order?',
-    'This will create a copy of ' + eligible.length + ' line items. You can then edit prices, quantities, or remove items.',
-    function() {
-      // Build Document description lookup (read-only — never mutate _docLines)
-      var docDescMap = {};
-      if (typeof _docLines !== 'undefined' && _docLines && _docLines.length > 0) {
-        _docLines.forEach(function(dl) {
-          if (dl.liId && (dl.desc || '').trim()) {
-            docDescMap[dl.liId] = dl.desc.trim();
-          }
-        });
-      }
+  // ── Step 1: Get Document lines (read-only — never mutate _docLines) ──
+  var docLines = [];
 
-      var coItems = eligible.map(function(li, i) {
-        var liId = li.id || ('li-' + i);
-        // Priority: 1) Document description  2) li.desc  3) li.description  4) li.details  5) ''
-        var bestDesc = docDescMap[li.id] || (li.desc || '').trim() || (li.description || '').trim() || (li.details || '').trim() || '';
-        return {
-          line_item_id: liId, name: li.name, original_name: li.name,
-          original_desc: bestDesc,
-          original_category: li.category || '', action: 'unchanged',
-          original_price: li.price, original_qty: li.qty || 1,
-          new_price: li.price, new_qty: li.qty || 1, new_name: '', new_desc: '', reason: ''
-        };
+  // A) Try in-memory _docLines (available if Document tab was visited)
+  if (typeof _docLines !== 'undefined' && _docLines && _docLines.length > 0 && _docLines._woId === currentWO.id) {
+    docLines = _docLines.map(function(dl) { return { liId: dl.liId, id: dl.id, name: dl.name, desc: dl.desc, rate: dl.rate, qty: dl.qty }; });
+  } else {
+    // B) Load from localStorage (Document saved state)
+    var saved = docLoadState(currentWO.id);
+    if (saved && saved.lines && saved.lines.length > 0) {
+      // Rebuild liId from currentLineItems (localStorage doesn't persist liId)
+      var freshLookup = {};
+      (currentLineItems || []).forEach(function(item) {
+        freshLookup['dl-' + item.id] = item;
       });
+      docLines = saved.lines.map(function(sl) {
+        var match = freshLookup[sl.id] || null;
+        // Try id suffix match: 'dl-42' → liId = 42
+        var liId = null;
+        if (sl.id) {
+          var m = sl.id.match(/^dl-(.+)$/);
+          if (m) liId = isNaN(m[1]) ? m[1] : parseInt(m[1]);
+        }
+        // Verify liId points to a real Line Item
+        if (liId && !match) {
+          match = (currentLineItems || []).find(function(item) { return item.id == liId; });
+        }
+        return { liId: liId, id: sl.id, name: sl.name, desc: sl.desc || '', rate: sl.rate || 0, qty: sl.qty || 1, _li: match };
+      });
+    }
+  }
+
+  // C) Final fallback: build from ALL currentLineItems (no filter)
+  if (docLines.length === 0) {
+    docLines = (currentLineItems || []).map(function(item) {
+      return { liId: item.id, id: 'dl-' + item.id, name: item.name || item.service || 'Service', desc: item.desc || item.description || '', rate: item.price || 0, qty: item.qty || 1, _li: item };
+    });
+  }
+
+  if (docLines.length === 0) { showToast('No items found to create a Change Order'); return; }
+
+  // ── Step 2: Build CO items from Document lines ──
+  var coveredLiIds = {};
+  var coItems = docLines.map(function(dl, i) {
+    // Find matching Line Item for category + fallback data
+    var liId = dl.liId || null;
+    var li = dl._li || null;
+    if (!li && liId) {
+      li = (currentLineItems || []).find(function(item) { return item.id == liId; });
+    }
+    if (!li) {
+      li = (currentLineItems || []).find(function(item) { return item.name === dl.name; });
+    }
+    if (li && li.id) coveredLiIds[li.id] = true;
+
+    var stableId = liId || (dl.id || ('doc-' + i));
+
+    // Description fallback chain: Document → li.desc → li.description → li.details → ''
+    var bestDesc = (dl.desc || '').trim()
+      || (li ? (li.desc || '').trim() : '')
+      || (li ? (li.description || '').trim() : '')
+      || (li ? (li.details || '').trim() : '')
+      || '';
+
+    var price = parseFloat(dl.rate) || (li ? li.price : 0) || 0;
+    var qty = parseInt(dl.qty) || (li ? li.qty : 1) || 1;
+
+    return {
+      line_item_id: stableId,
+      name: dl.name || (li ? li.name : 'Service'),
+      original_name: dl.name || (li ? li.name : 'Service'),
+      original_desc: bestDesc,
+      original_category: (li ? li.category : '') || '',
+      action: 'unchanged',
+      original_price: price,
+      original_qty: qty,
+      new_price: price,
+      new_qty: qty,
+      new_name: '', new_desc: '', reason: ''
+    };
+  });
+
+  // ── Step 3: Append orphan Line Items not in Document ──
+  (currentLineItems || []).forEach(function(li, i) {
+    if (li.id && coveredLiIds[li.id]) return;
+    coItems.push({
+      line_item_id: li.id || ('li-' + i),
+      name: li.name, original_name: li.name,
+      original_desc: (li.desc || li.description || li.details || '').trim(),
+      original_category: li.category || '',
+      action: 'unchanged',
+      original_price: li.price || 0, original_qty: li.qty || 1,
+      new_price: li.price || 0, new_qty: li.qty || 1,
+      new_name: '', new_desc: '', reason: ''
+    });
+  });
+
+  // ── Step 4: Confirmation + create CO ──
+  showConfirmModal('Create Change Order?',
+    'This will create a snapshot of ' + coItems.length + ' Document line items. You can then edit prices, quantities, or remove items.',
+    function() {
       var co = {
         id: 'co-' + Date.now(), woId: currentWO.id, coNumber: genCONumber(),
         title: 'Change Order ' + genCONumber(), description: '',
