@@ -1383,10 +1383,14 @@ function openCOModal() {
   var box = document.querySelector('.confirm-box');
   // Build line items checklist from currentLineItems
   var itemRows = (currentLineItems || []).map(function(li, i) {
-    return `<div class="co-item-row" style="display:flex;align-items:center;gap:8px;padding:8px 10px;border:1px solid var(--border);border-radius:6px;margin-bottom:6px;font-size:12px">
-      <input type="checkbox" class="co-item-cb" data-idx="${i}" onchange="coCBChanged(${i})" style="accent-color:var(--accent)">
+    var isCompleted = li.status === 'completed';
+    var disabledAttr = isCompleted ? 'disabled' : '';
+    var rowOpacity = isCompleted ? 'opacity:0.5;' : '';
+    var completedTag = isCompleted ? '<span style="font-size:10px;color:#10b981;margin-left:4px">✓ Done</span>' : '';
+    return `<div class="co-item-row" style="display:flex;align-items:center;gap:8px;padding:8px 10px;border:1px solid var(--border);border-radius:6px;margin-bottom:6px;font-size:12px;${rowOpacity}">
+      <input type="checkbox" class="co-item-cb" data-idx="${i}" onchange="coCBChanged(${i})" style="accent-color:var(--accent)" ${disabledAttr}>
       <div style="flex:1;min-width:0">
-        <div style="font-weight:600;color:var(--text-primary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escHtml(li.name)}</div>
+        <div style="font-weight:600;color:var(--text-primary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escHtml(li.name)}${completedTag}</div>
         <div style="color:var(--text-muted);font-size:11px">$${(li.price * (li.qty || 1)).toLocaleString()} · ${escHtml(li.category || '')}</div>
       </div>
       <div id="co-item-fields-${i}" style="display:none;flex-shrink:0">
@@ -1530,7 +1534,8 @@ function saveCO() {
     amount:      Math.round(amount * 100) / 100,
     requestedBy: (document.getElementById('co-requestedby')?.value || '').trim(),
     status:      document.getElementById('co-status')?.value || 'draft',
-    createdAt:   new Date().toISOString()
+    createdAt:   new Date().toISOString(),
+    approvedAt:  (document.getElementById('co-status')?.value === 'approved') ? new Date().toISOString() : null
   };
 
   _currentCOs.unshift(co);
@@ -1601,24 +1606,7 @@ function buildNegotiationSummary() {
         return it.id === coItem.line_item_id || it.name === coItem.name;
       });
 
-      if (!match && coItem.action === 'add') {
-        // New item added by CO
-        addedItems.push({
-          id: coItem.line_item_id || ('added-' + Date.now()),
-          name: coItem.name || 'Added item',
-          category: '',
-          original_price: 0, original_qty: 0, original_total: 0,
-          negotiated_price: coItem.new_price || 0,
-          negotiated_qty: coItem.new_qty || 1,
-          negotiated_total: (coItem.new_price || 0) * (coItem.new_qty || 1),
-          difference: (coItem.new_price || 0) * (coItem.new_qty || 1),
-          status: 'added',
-          change_order_ref: co.coNumber,
-          reason: coItem.reason || ''
-        });
-        return;
-      }
-
+      // 'add' action is not yet supported in the UI — skip gracefully
       if (!match) return;
 
       if (coItem.action === 'remove') {
@@ -2240,20 +2228,20 @@ function buildPDF(template, hidePrices, docStyle) {
     }
     var sIcons = { unchanged: '✓', modified: '↓', removed: '✗', added: '+' };
     var dClr = neg.total_difference < 0 ? '#ef4444' : '#10b981';
-    bodyContent = '<div class="section"><h2>Executive Summary</h2><table class="info-table"><tr><td class="label">Work Order</td><td>' + wo.id + '</td><td class="label">Client</td><td>' + wo.client + '</td></tr><tr><td class="label">Project</td><td>' + wo.title + '</td><td class="label">Property</td><td>' + wo.property + '</td></tr></table>' +
+    bodyContent = '<div class="section"><h2>Executive Summary</h2><table class="info-table"><tr><td class="label">Work Order</td><td>' + escHtml(wo.id) + '</td><td class="label">Client</td><td>' + escHtml(wo.client) + '</td></tr><tr><td class="label">Project</td><td>' + escHtml(wo.title) + '</td><td class="label">Property</td><td>' + escHtml(wo.property) + '</td></tr></table>' +
       '<table class="items-table" style="margin-top:16px"><thead><tr><th>Original</th><th>Negotiated</th><th>Difference</th></tr></thead><tbody><tr style="font-size:18px;font-weight:700"><td>$' + neg.original_total.toLocaleString() + '</td><td style="color:#10b981">$' + neg.negotiated_total.toLocaleString() + '</td><td style="color:' + dClr + '">' + (neg.total_difference >= 0 ? '+' : '') + '$' + neg.total_difference.toLocaleString() + ' (' + neg.total_difference_pct + '%)</td></tr></tbody></table>' +
       '<div style="font-size:12px;color:#666;margin-top:10px">' + neg.items_unchanged + ' unchanged · ' + neg.items_modified + ' modified · ' + neg.items_removed + ' removed · ' + neg.items_added + ' added · ' + neg.change_orders_applied + ' CO(s)</div></div>';
     bodyContent += '<div class="section"><h2>Detailed Comparison</h2><table class="items-table"><thead><tr><th>#</th><th>Item</th><th class="right">Original</th><th class="right">Negotiated</th><th>Status</th></tr></thead><tbody>';
     neg.items.forEach(function(it, i) {
       var rs = it.status === 'removed' ? 'text-decoration:line-through;color:#999' : '';
-      bodyContent += '<tr style="' + rs + '"><td>' + (i+1) + '</td><td><strong>' + it.name + '</strong>' + (it.reason ? '<br><small style="color:#888">' + it.reason + '</small>' : '') + '</td><td class="right">$' + it.original_total.toLocaleString() + '</td><td class="right" style="font-weight:600">$' + it.negotiated_total.toLocaleString() + '</td><td style="text-align:center;font-size:16px">' + (sIcons[it.status] || '') + '</td></tr>';
+      bodyContent += '<tr style="' + rs + '"><td>' + (i+1) + '</td><td><strong>' + escHtml(it.name) + '</strong>' + (it.reason ? '<br><small style="color:#888">' + escHtml(it.reason) + '</small>' : '') + '</td><td class="right">$' + it.original_total.toLocaleString() + '</td><td class="right" style="font-weight:600">$' + it.negotiated_total.toLocaleString() + '</td><td style="text-align:center;font-size:16px">' + (sIcons[it.status] || '') + '</td></tr>';
     });
     bodyContent += '</tbody></table><div style="font-size:11px;color:#888;margin-top:8px">✓ Unchanged · ↓ Modified · ✗ Removed · + Added</div></div>';
     if (neg.approved_cos && neg.approved_cos.length > 0) {
       bodyContent += '<div class="section"><h2>Change Orders Applied</h2>';
       neg.approved_cos.forEach(function(co) {
-        bodyContent += '<div style="padding:10px 12px;border:1px solid #e5e7eb;border-radius:6px;margin-bottom:8px"><div style="font-weight:700;font-size:13px">' + co.coNumber + ' — ' + co.title + ' <span style="color:#10b981;font-size:11px">✅ Approved</span></div>' +
-          (co.requestedBy ? '<div style="font-size:12px;color:#666">Requested by: ' + co.requestedBy + '</div>' : '') +
+        bodyContent += '<div style="padding:10px 12px;border:1px solid #e5e7eb;border-radius:6px;margin-bottom:8px"><div style="font-weight:700;font-size:13px">' + escHtml(co.coNumber) + ' — ' + escHtml(co.title) + ' <span style="color:#10b981;font-size:11px">✅ Approved</span></div>' +
+          (co.requestedBy ? '<div style="font-size:12px;color:#666">Requested by: ' + escHtml(co.requestedBy) + '</div>' : '') +
           '<div style="font-size:12px">Impact: <strong style="color:' + (co.amount < 0 ? '#ef4444' : '#10b981') + '">' + (co.amount >= 0 ? '+' : '') + '$' + co.amount.toLocaleString() + '</strong></div></div>';
       });
       bodyContent += '</div>';
@@ -2261,7 +2249,7 @@ function buildPDF(template, hidePrices, docStyle) {
     var cats = Object.keys(neg.by_category);
     if (cats.length > 0) {
       bodyContent += '<div class="section"><h2>Cost by Category</h2><table class="items-table"><thead><tr><th>Category</th><th class="right">Original</th><th class="right">Negotiated</th><th class="right">Change</th></tr></thead><tbody>';
-      cats.forEach(function(cat) { var c = neg.by_category[cat]; bodyContent += '<tr><td>' + cat + '</td><td class="right">$' + c.original.toLocaleString() + '</td><td class="right">$' + c.negotiated.toLocaleString() + '</td><td class="right" style="color:' + (c.diff < 0 ? '#ef4444' : c.diff > 0 ? '#10b981' : '#666') + '">' + (c.diff >= 0 ? '+' : '') + '$' + c.diff.toLocaleString() + '</td></tr>'; });
+      cats.forEach(function(cat) { var c = neg.by_category[cat]; bodyContent += '<tr><td>' + escHtml(cat) + '</td><td class="right">$' + c.original.toLocaleString() + '</td><td class="right">$' + c.negotiated.toLocaleString() + '</td><td class="right" style="color:' + (c.diff < 0 ? '#ef4444' : c.diff > 0 ? '#10b981' : '#666') + '">' + (c.diff >= 0 ? '+' : '') + '$' + c.diff.toLocaleString() + '</td></tr>'; });
       bodyContent += '</tbody></table></div>';
     }
     bodyContent += '<div class="section" style="margin-top:24px"><div style="display:flex;gap:40px;margin-bottom:20px"><div style="flex:1"><div style="border-bottom:1px solid #333;height:40px"></div><div style="font-size:11px;color:#888;margin-top:4px">Contractor Signature / Date</div></div><div style="flex:1"><div style="border-bottom:1px solid #333;height:40px"></div><div style="font-size:11px;color:#888;margin-top:4px">Client Signature / Date</div></div></div><p style="font-size:11px;color:#888;margin:0">This negotiation summary is for discussion purposes. Final pricing subject to signed agreement.</p></div>';
