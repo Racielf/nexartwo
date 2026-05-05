@@ -709,6 +709,7 @@ function openWorkOrderDetail(woId) {
     document.getElementById('wo-tab-items-count').textContent = `(${currentLineItems.length})`;
     document.getElementById('wo-tab-photos-count').textContent = `(${photos.length})`;
     document.getElementById('photo-count').textContent = `${photos.length} photos`;
+    renderEmailStatus();
     lucide.createIcons();
   });
 
@@ -2292,7 +2293,65 @@ function sendEmailNow() {
 
   window.location.href = mailto;
   closeModal('modal-email');
-  showToast('Email opened in your mail client');
+
+  // Track email status — internal tracking only
+  // mailto cannot confirm actual delivery; this status means email was prepared/opened in mail client.
+  if (currentWO) {
+    var emailState = {
+      status: 'sent',
+      sentAt: new Date().toISOString(),
+      sentTo: to,
+      viewedAt: null,
+      subject: subject
+    };
+    try { localStorage.setItem('wo_email_' + currentWO.id, JSON.stringify(emailState)); } catch(e) {}
+    renderEmailStatus();
+  }
+  showToast('📧 Email opened in your mail client');
+}
+
+// ============ EMAIL STATUS TRACKING ============
+// Internal/manual tracking only. mailto: cannot confirm delivery or open.
+// Status: 'draft' (default/no record), 'sent', 'viewed'
+// Stored per WO: localStorage key wo_email_${woId}
+
+function loadEmailStatus(woId) {
+  try {
+    var raw = localStorage.getItem('wo_email_' + woId);
+    return raw ? JSON.parse(raw) : null;
+  } catch(e) { return null; }
+}
+
+function renderEmailStatus() {
+  var el = document.getElementById('wo-email-status');
+  if (!el || !currentWO) { if (el) el.innerHTML = ''; return; }
+
+  var es = loadEmailStatus(currentWO.id);
+  if (!es) { el.innerHTML = ''; return; }
+
+  var dateStr = '';
+  if (es.status === 'viewed' && es.viewedAt) {
+    dateStr = new Date(es.viewedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    el.innerHTML = '<span style="font-size:11px;padding:3px 8px;border-radius:10px;background:#10b98122;color:#10b981;font-weight:600" title="Viewed by recipient · ' + dateStr + '\nSent to: ' + escHtml(es.sentTo || '') + '">👁 Viewed · ' + dateStr + '</span>';
+  } else if (es.status === 'sent' && es.sentAt) {
+    dateStr = new Date(es.sentAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    el.innerHTML = '<span style="font-size:11px;padding:3px 8px;border-radius:10px;background:#3b82f622;color:#3b82f6;font-weight:600" title="Sent via mail client · ' + dateStr + '\nTo: ' + escHtml(es.sentTo || '') + '">📧 Sent · ' + dateStr + '</span>';
+  } else {
+    el.innerHTML = '';
+  }
+}
+
+// Dev/admin-only: mark email as viewed (mock — no real open tracking)
+// Usage from browser console: markEmailViewed()
+function markEmailViewed() {
+  if (!currentWO) { console.warn('No current WO'); return; }
+  var es = loadEmailStatus(currentWO.id);
+  if (!es || es.status !== 'sent') { console.warn('Email not in sent state'); return; }
+  es.status = 'viewed';
+  es.viewedAt = new Date().toISOString();
+  try { localStorage.setItem('wo_email_' + currentWO.id, JSON.stringify(es)); } catch(e) {}
+  renderEmailStatus();
+  showToast('👁 Email marked as viewed');
 }
 
 // ============ TOAST NOTIFICATIONS ============
