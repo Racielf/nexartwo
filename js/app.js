@@ -29,39 +29,39 @@ const _DEFAULT_SERVICES = [
   { id: 6, name: "Repair Leak Under Sink", nameEs: "Reparar Fuga Bajo Lavamanos", category: "Plumbing", sub: "Pipes", price: 120, unit: "each", desc: "Diagnose and repair leak under kitchen or bathroom sink", negotiable: "yes", laborHrs: 1.5 },
   { id: 7, name: "Replace P-Trap", nameEs: "Reemplazar Trampa P", category: "Plumbing", sub: "Pipes", price: 85, unit: "each", desc: "Replace P-trap assembly under sink", negotiable: "yes", laborHrs: 1 },
   { id: 8, name: "Unclog Main Drain", nameEs: "Destapar Drenaje Principal", category: "Plumbing", sub: "Drains", price: 250, unit: "each", desc: "Professional drain cleaning with snake or hydro jet", negotiable: "no", laborHrs: 2 },
-  { id: 9, name: "Roof Repair â€” Shingles", nameEs: "ReparaciÃ³n de Techo â€” Tejas", category: "Roofing", sub: "Shingle Repair", price: 800, unit: "per square", desc: "Replace damaged or missing shingles, includes flashing", negotiable: "yes", laborHrs: 4 },
-  { id: 10, name: "Roof Inspection", nameEs: "InspecciÃ³n de Techo", category: "Roofing", sub: "Inspection", price: 350, unit: "each", desc: "Complete roof inspection with photo documentation", negotiable: "no", laborHrs: 2 },
-  { id: 11, name: "HVAC Inspection + Service", nameEs: "InspecciÃ³n y Servicio HVAC", category: "HVAC", sub: "Maintenance", price: 150, unit: "each", desc: "Full HVAC system inspection, filter replacement, and tune-up", negotiable: "yes", laborHrs: 2 },
+  { id: 9, name: "Roof Repair Ã¢â‚¬â€ Shingles", nameEs: "ReparaciÃƒÂ³n de Techo Ã¢â‚¬â€ Tejas", category: "Roofing", sub: "Shingle Repair", price: 800, unit: "per square", desc: "Replace damaged or missing shingles, includes flashing", negotiable: "yes", laborHrs: 4 },
+  { id: 10, name: "Roof Inspection", nameEs: "InspecciÃƒÂ³n de Techo", category: "Roofing", sub: "Inspection", price: 350, unit: "each", desc: "Complete roof inspection with photo documentation", negotiable: "no", laborHrs: 2 },
+  { id: 11, name: "HVAC Inspection + Service", nameEs: "InspecciÃƒÂ³n y Servicio HVAC", category: "HVAC", sub: "Maintenance", price: 150, unit: "each", desc: "Full HVAC system inspection, filter replacement, and tune-up", negotiable: "yes", laborHrs: 2 },
   { id: 12, name: "Replace Thermostat", nameEs: "Reemplazar Termostato", category: "HVAC", sub: "Controls", price: 195, unit: "each", desc: "Install new programmable or smart thermostat", negotiable: "yes", laborHrs: 1 },
   { id: 13, name: "Install Laminate Flooring", nameEs: "Instalar Piso Laminado", category: "Flooring", sub: "Laminate", price: 4.50, unit: "sq ft", desc: "Install laminate flooring including underlayment", negotiable: "yes", laborHrs: 0.1 },
-  { id: 14, name: "Interior Paint â€” Room", nameEs: "Pintura Interior â€” Cuarto", category: "Painting", sub: "Interior", price: 450, unit: "per room", desc: "Prep, prime, and paint room (walls + ceiling), includes paint", negotiable: "yes", laborHrs: 6 },
-  { id: 15, name: "Exterior Paint â€” Full House", nameEs: "Pintura Exterior â€” Casa Completa", category: "Painting", sub: "Exterior", price: 3800, unit: "each", desc: "Full exterior paint including pressure wash, prep, and 2 coats", negotiable: "ask", laborHrs: 40 },
-  { id: 16, name: "Drywall Patch Repair", nameEs: "ReparaciÃ³n de Parche Drywall", category: "Drywall / Framing", sub: "Repair", price: 150, unit: "each", desc: "Patch and texture drywall hole up to 12 inches", negotiable: "yes", laborHrs: 2 },
-  { id: 17, name: "Replace Window â€” Standard", nameEs: "Reemplazar Ventana â€” EstÃ¡ndar", category: "Windows & Doors", sub: "Windows", price: 450, unit: "each", desc: "Remove and replace standard size window, includes trim", negotiable: "yes", laborHrs: 3 },
+  { id: 14, name: "Interior Paint Ã¢â‚¬â€ Room", nameEs: "Pintura Interior Ã¢â‚¬â€ Cuarto", category: "Painting", sub: "Interior", price: 450, unit: "per room", desc: "Prep, prime, and paint room (walls + ceiling), includes paint", negotiable: "yes", laborHrs: 6 },
+  { id: 15, name: "Exterior Paint Ã¢â‚¬â€ Full House", nameEs: "Pintura Exterior Ã¢â‚¬â€ Casa Completa", category: "Painting", sub: "Exterior", price: 3800, unit: "each", desc: "Full exterior paint including pressure wash, prep, and 2 coats", negotiable: "ask", laborHrs: 40 },
+  { id: 16, name: "Drywall Patch Repair", nameEs: "ReparaciÃƒÂ³n de Parche Drywall", category: "Drywall / Framing", sub: "Repair", price: 150, unit: "each", desc: "Patch and texture drywall hole up to 12 inches", negotiable: "yes", laborHrs: 2 },
+  { id: 17, name: "Replace Window Ã¢â‚¬â€ Standard", nameEs: "Reemplazar Ventana Ã¢â‚¬â€ EstÃƒÂ¡ndar", category: "Windows & Doors", sub: "Windows", price: 450, unit: "each", desc: "Remove and replace standard size window, includes trim", negotiable: "yes", laborHrs: 3 },
   { id: 18, name: "Replace Entry Door", nameEs: "Reemplazar Puerta de Entrada", category: "Windows & Doors", sub: "Doors", price: 850, unit: "each", desc: "Remove and install new entry door with hardware", negotiable: "ask", laborHrs: 4 },
-  { id: 19, name: "Junk Removal â€” Truckload", nameEs: "RemociÃ³n de Basura â€” Carga", category: "Cleaning", sub: "Junk Removal", price: 400, unit: "per load", desc: "Full truckload junk removal and dump fees included", negotiable: "no", laborHrs: 3 },
-  { id: 20, name: "General Handyman â€” Hourly", nameEs: "Trabajo General â€” Por Hora", category: "General Repairs", sub: "Handyman", price: 75, unit: "hour", desc: "General repair work, minor fixes, and miscellaneous tasks", negotiable: "yes", laborHrs: 1 },
+  { id: 19, name: "Junk Removal Ã¢â‚¬â€ Truckload", nameEs: "RemociÃƒÂ³n de Basura Ã¢â‚¬â€ Carga", category: "Cleaning", sub: "Junk Removal", price: 400, unit: "per load", desc: "Full truckload junk removal and dump fees included", negotiable: "no", laborHrs: 3 },
+  { id: 20, name: "General Handyman Ã¢â‚¬â€ Hourly", nameEs: "Trabajo General Ã¢â‚¬â€ Por Hora", category: "General Repairs", sub: "Handyman", price: 75, unit: "hour", desc: "General repair work, minor fixes, and miscellaneous tasks", negotiable: "yes", laborHrs: 1 },
   // --- Plumbing: Water Heater & Drains ---
-  { id: 21, name: "Water Heater Main Valve Replacement", nameEs: "Cambiar VÃ¡lvula Principal del Calentador", category: "Plumbing", sub: "Water Heater", price: 185, unit: "each", desc: "Replace main shut-off valve on water heater supply line", negotiable: "yes", laborHrs: 1.5 },
+  { id: 21, name: "Water Heater Main Valve Replacement", nameEs: "Cambiar VÃƒÂ¡lvula Principal del Calentador", category: "Plumbing", sub: "Water Heater", price: 185, unit: "each", desc: "Replace main shut-off valve on water heater supply line", negotiable: "yes", laborHrs: 1.5 },
   { id: 22, name: "Kitchen Faucet Low Pressure Repair", nameEs: "Reparar Flujo Deficiente del Fregadero", category: "Plumbing", sub: "Faucets", price: 120, unit: "each", desc: "Diagnose and repair low water pressure at kitchen faucet, clean aerator and supply lines", negotiable: "yes", laborHrs: 1 },
-  { id: 23, name: "Shower Drain Inspection & Cleaning", nameEs: "InspecciÃ³n y Limpieza de Drenaje de Ducha", category: "Plumbing", sub: "Drains", price: 95, unit: "each", desc: "Inspect shower drain for clogs, clean and verify proper drainage flow", negotiable: "yes", laborHrs: 1 },
-  { id: 24, name: "Sink Drain Vent Inspection", nameEs: "InspecciÃ³n de VentilaciÃ³n de Drenaje del Lavamanos", category: "Plumbing", sub: "Drains", price: 85, unit: "each", desc: "Inspect drain vent pipe under sink for proper air flow and code compliance", negotiable: "yes", laborHrs: 0.5 },
+  { id: 23, name: "Shower Drain Inspection & Cleaning", nameEs: "InspecciÃƒÂ³n y Limpieza de Drenaje de Ducha", category: "Plumbing", sub: "Drains", price: 95, unit: "each", desc: "Inspect shower drain for clogs, clean and verify proper drainage flow", negotiable: "yes", laborHrs: 1 },
+  { id: 24, name: "Sink Drain Vent Inspection", nameEs: "InspecciÃƒÂ³n de VentilaciÃƒÂ³n de Drenaje del Lavamanos", category: "Plumbing", sub: "Drains", price: 85, unit: "each", desc: "Inspect drain vent pipe under sink for proper air flow and code compliance", negotiable: "yes", laborHrs: 0.5 },
   // --- HVAC: Dryer Vent & Heating ---
-  { id: 25, name: "Dryer Vent Inspection & Cleaning", nameEs: "InspecciÃ³n y Limpieza del Ducto de Secadora", category: "HVAC", sub: "Vents", price: 135, unit: "each", desc: "Inspect dryer exhaust vent for lint buildup, clean duct from dryer to exterior wall", negotiable: "yes", laborHrs: 1.5 },
-  { id: 26, name: "Dryer Drain Connection Inspection", nameEs: "InspecciÃ³n de ConexiÃ³n de Drenaje de Secadora", category: "HVAC", sub: "Vents", price: 75, unit: "each", desc: "Verify dryer drain is properly connected to duct, check for leaks and disconnections", negotiable: "yes", laborHrs: 0.5 },
-  { id: 27, name: "Heating System Inspection", nameEs: "InspecciÃ³n del Sistema de CalefacciÃ³n", category: "HVAC", sub: "Heating", price: 195, unit: "each", desc: "Full furnace/heating system inspection including heat exchanger, burners, blower, and safety controls", negotiable: "no", laborHrs: 2 },
+  { id: 25, name: "Dryer Vent Inspection & Cleaning", nameEs: "InspecciÃƒÂ³n y Limpieza del Ducto de Secadora", category: "HVAC", sub: "Vents", price: 135, unit: "each", desc: "Inspect dryer exhaust vent for lint buildup, clean duct from dryer to exterior wall", negotiable: "yes", laborHrs: 1.5 },
+  { id: 26, name: "Dryer Drain Connection Inspection", nameEs: "InspecciÃƒÂ³n de ConexiÃƒÂ³n de Drenaje de Secadora", category: "HVAC", sub: "Vents", price: 75, unit: "each", desc: "Verify dryer drain is properly connected to duct, check for leaks and disconnections", negotiable: "yes", laborHrs: 0.5 },
+  { id: 27, name: "Heating System Inspection", nameEs: "InspecciÃƒÂ³n del Sistema de CalefacciÃƒÂ³n", category: "HVAC", sub: "Heating", price: 195, unit: "each", desc: "Full furnace/heating system inspection including heat exchanger, burners, blower, and safety controls", negotiable: "no", laborHrs: 2 },
   // --- Roofing: Vents & Attic ---
-  { id: 28, name: "Roof Attic Vent Inspection", nameEs: "InspecciÃ³n de VentilaciÃ³n del Ãtico", category: "Roofing", sub: "Ventilation", price: 150, unit: "each", desc: "Inspect roof vents to attic for blockage, damage, and proper airflow", negotiable: "yes", laborHrs: 1.5 },
-  { id: 29, name: "Roof-to-Attic Crossover Vent Cleaning", nameEs: "Limpieza de Ductos de VentilaciÃ³n Techo-Ãtico", category: "Roofing", sub: "Ventilation", price: 225, unit: "each", desc: "Inspect and clear crossover ventilation ducts between roof and attic space", negotiable: "yes", laborHrs: 2 },
-  { id: 30, name: "Soffit Vent Inspection â€” 2nd Floor", nameEs: "InspecciÃ³n de VentilaciÃ³n del Soffit 2do Piso", category: "Roofing", sub: "Ventilation", price: 120, unit: "each", desc: "Inspect second floor soffit vents for blockage, ensure proper attic ventilation", negotiable: "yes", laborHrs: 1 },
+  { id: 28, name: "Roof Attic Vent Inspection", nameEs: "InspecciÃƒÂ³n de VentilaciÃƒÂ³n del ÃƒÂtico", category: "Roofing", sub: "Ventilation", price: 150, unit: "each", desc: "Inspect roof vents to attic for blockage, damage, and proper airflow", negotiable: "yes", laborHrs: 1.5 },
+  { id: 29, name: "Roof-to-Attic Crossover Vent Cleaning", nameEs: "Limpieza de Ductos de VentilaciÃƒÂ³n Techo-ÃƒÂtico", category: "Roofing", sub: "Ventilation", price: 225, unit: "each", desc: "Inspect and clear crossover ventilation ducts between roof and attic space", negotiable: "yes", laborHrs: 2 },
+  { id: 30, name: "Soffit Vent Inspection Ã¢â‚¬â€ 2nd Floor", nameEs: "InspecciÃƒÂ³n de VentilaciÃƒÂ³n del Soffit 2do Piso", category: "Roofing", sub: "Ventilation", price: 120, unit: "each", desc: "Inspect second floor soffit vents for blockage, ensure proper attic ventilation", negotiable: "yes", laborHrs: 1 },
   // --- Foundation: Crawl Space ---
-  { id: 31, name: "Crawl Space Insulation & Vapor Barrier Inspection", nameEs: "InspecciÃ³n de Aislamiento y PlÃ¡stico del Crawl Space", category: "Foundation", sub: "Insulation", price: 175, unit: "each", desc: "Inspect crawl space for insulation condition, vapor barrier integrity, and moisture damage", negotiable: "yes", laborHrs: 1.5 },
-  { id: 32, name: "Crawl Space Vapor Barrier Replacement", nameEs: "Reemplazo de PlÃ¡stico del Crawl Space", category: "Foundation", sub: "Insulation", price: 1200, unit: "each", desc: "Remove old vapor barrier, install new 6mil polyethylene sheeting in crawl space", negotiable: "ask", laborHrs: 6 },
+  { id: 31, name: "Crawl Space Insulation & Vapor Barrier Inspection", nameEs: "InspecciÃƒÂ³n de Aislamiento y PlÃƒÂ¡stico del Crawl Space", category: "Foundation", sub: "Insulation", price: 175, unit: "each", desc: "Inspect crawl space for insulation condition, vapor barrier integrity, and moisture damage", negotiable: "yes", laborHrs: 1.5 },
+  { id: 32, name: "Crawl Space Vapor Barrier Replacement", nameEs: "Reemplazo de PlÃƒÂ¡stico del Crawl Space", category: "Foundation", sub: "Insulation", price: 1200, unit: "each", desc: "Remove old vapor barrier, install new 6mil polyethylene sheeting in crawl space", negotiable: "ask", laborHrs: 6 },
   // --- Electrical: Inspections ---
-  { id: 33, name: "Breaker Panel Inspection", nameEs: "InspecciÃ³n de Panel de Breakers", category: "Electrical", sub: "Panels & Breakers", price: 125, unit: "each", desc: "Full inspection of electrical breaker panel, check for double-tapped breakers, corrosion, and labeling", negotiable: "no", laborHrs: 1 },
-  { id: 34, name: "Outlet & Receptacle Testing â€” Full House", nameEs: "Prueba de Enchufes y Tomacorrientes â€” Casa Completa", category: "Electrical", sub: "Outlets & Switches", price: 150, unit: "each", desc: "Test all outlets for proper wiring, grounding, polarity, and GFCI function throughout the home", negotiable: "yes", laborHrs: 2 },
-  { id: 35, name: "Light Fixture Inspection & Repair", nameEs: "InspecciÃ³n y ReparaciÃ³n de Luminarias", category: "Electrical", sub: "Fixtures", price: 85, unit: "each", desc: "Inspect and repair light fixtures, check wiring connections and switch operation", negotiable: "yes", laborHrs: 1 },
-  { id: 36, name: "Main Ground Wire Inspection â€” Breaker Panel", nameEs: "InspecciÃ³n del Cable a Tierra Principal â€” Panel ElÃ©ctrico", category: "Electrical", sub: "Panels & Breakers", price: 95, unit: "each", desc: "Inspect main grounding conductor at breaker panel, verify proper connection to ground rod", negotiable: "no", laborHrs: 0.5 },
+  { id: 33, name: "Breaker Panel Inspection", nameEs: "InspecciÃƒÂ³n de Panel de Breakers", category: "Electrical", sub: "Panels & Breakers", price: 125, unit: "each", desc: "Full inspection of electrical breaker panel, check for double-tapped breakers, corrosion, and labeling", negotiable: "no", laborHrs: 1 },
+  { id: 34, name: "Outlet & Receptacle Testing Ã¢â‚¬â€ Full House", nameEs: "Prueba de Enchufes y Tomacorrientes Ã¢â‚¬â€ Casa Completa", category: "Electrical", sub: "Outlets & Switches", price: 150, unit: "each", desc: "Test all outlets for proper wiring, grounding, polarity, and GFCI function throughout the home", negotiable: "yes", laborHrs: 2 },
+  { id: 35, name: "Light Fixture Inspection & Repair", nameEs: "InspecciÃƒÂ³n y ReparaciÃƒÂ³n de Luminarias", category: "Electrical", sub: "Fixtures", price: 85, unit: "each", desc: "Inspect and repair light fixtures, check wiring connections and switch operation", negotiable: "yes", laborHrs: 1 },
+  { id: 36, name: "Main Ground Wire Inspection Ã¢â‚¬â€ Breaker Panel", nameEs: "InspecciÃƒÂ³n del Cable a Tierra Principal Ã¢â‚¬â€ Panel ElÃƒÂ©ctrico", category: "Electrical", sub: "Panels & Breakers", price: 95, unit: "each", desc: "Inspect main grounding conductor at breaker panel, verify proper connection to ground rod", negotiable: "no", laborHrs: 0.5 },
 ];
 
 const _DEFAULT_CLIENTS = [
@@ -75,7 +75,7 @@ const _DEFAULT_CLIENTS = [
 const _DEFAULT_WORK_ORDERS = [
   { id: "WO-2025-0041", title: "Kitchen & Bathroom Renovation", client: "Sarah Johnson", clientId: 1, property: "4521 NE Glisan St, Portland, OR", type: "A", status: "progress", priority: "high", created: "2025-04-15", target: "2025-06-01", items: 12, total: 18500, completed: 7 },
   { id: "WO-2025-0042", title: "Post-Inspection Repairs", client: "Mike Chen", clientId: 3, property: "789 SW Oak Ave, Beaverton, OR", type: "B", status: "open", priority: "medium", created: "2025-04-20", target: "2025-05-15", items: 8, total: 6200, completed: 0 },
-  { id: "WO-2025-0043", title: "Commercial Buildout â€” Phase 1", client: "Maria Rodriguez", clientId: 4, property: "1200 Commercial St, Salem, OR", type: "C", status: "progress", priority: "high", created: "2025-04-10", target: "2025-07-01", items: 23, total: 34800, completed: 15 },
+  { id: "WO-2025-0043", title: "Commercial Buildout Ã¢â‚¬â€ Phase 1", client: "Maria Rodriguez", clientId: 4, property: "1200 Commercial St, Salem, OR", type: "C", status: "progress", priority: "high", created: "2025-04-10", target: "2025-07-01", items: 23, total: 34800, completed: 15 },
   { id: "WO-2025-0044", title: "Pre-Listing Property Prep", client: "Dave Thompson", clientId: 5, property: "3456 SE Division, Portland, OR", type: "A", status: "review", priority: "medium", created: "2025-03-28", target: "2025-05-10", items: 15, total: 12400, completed: 15 },
   { id: "WO-2025-0045", title: "Water Heater + Plumbing Emergency", client: "Sarah Johnson", clientId: 1, property: "8901 N Williams Ave, Portland, OR", type: "C", status: "completed", priority: "emergency", created: "2025-04-25", target: "2025-04-26", items: 3, total: 1850, completed: 3 },
   { id: "WO-2025-0046", title: "Full Property Inspection", client: "Pacific NW Properties LLC", clientId: 2, property: "567 Burnside Rd, Gresham, OR", type: "A", status: "draft", priority: "low", created: "2025-05-01", target: "2025-05-20", items: 0, total: 0, completed: 0 },
@@ -83,14 +83,14 @@ const _DEFAULT_WORK_ORDERS = [
 ];
 
 const _DEFAULT_ACTIVITIES = [
-  { text: '<strong>WO-2025-0041</strong> â€” Item "Replace GFCI Outlet" marked complete', time: '12 min ago', color: 'var(--success)' },
+  { text: '<strong>WO-2025-0041</strong> Ã¢â‚¬â€ Item "Replace GFCI Outlet" marked complete', time: '12 min ago', color: 'var(--success)' },
   { text: 'Email opened by <strong>Sarah Johnson</strong>', time: '34 min ago', color: 'var(--info)' },
   { text: 'New photo added to <strong>WO-2025-0043</strong>', time: '1 hr ago', color: 'var(--accent)' },
   { text: '<strong>WO-2025-0044</strong> moved to Pending Review', time: '2 hrs ago', color: 'var(--purple)' },
   { text: 'Change Order <strong>CO-2025-0012</strong> approved by client', time: '3 hrs ago', color: 'var(--success)' },
   { text: 'New client <strong>Pacific NW Properties</strong> added', time: '5 hrs ago', color: 'var(--info)' },
   { text: '<strong>WO-2025-0045</strong> marked as Completed', time: 'Yesterday', color: 'var(--success)' },
-  { text: 'CCB insurance renewal reminder â€” <strong>60 days</strong>', time: 'Yesterday', color: 'var(--danger)' },
+  { text: 'CCB insurance renewal reminder Ã¢â‚¬â€ <strong>60 days</strong>', time: 'Yesterday', color: 'var(--danger)' },
 ];
 
 // ============ DATA PERSISTENCE (Supabase + localStorage fallback) ============
@@ -120,7 +120,7 @@ async function loadData() {
       if (cli) CLIENTS = cli;
       if (wo) WORK_ORDERS = wo;
       ACTIVITIES = JSON.parse(JSON.stringify(_DEFAULT_ACTIVITIES));
-      console.log('âœ“ Data loaded from Supabase');
+      console.log('Ã¢Å“â€œ Data loaded from Supabase');
       return;
     } catch(e) {
       console.warn('Supabase load failed, falling back to localStorage:', e);
@@ -128,7 +128,7 @@ async function loadData() {
   }
   // Fallback: localStorage
   loadDataFromLocalStorage();
-  console.log('âœ“ Data loaded from localStorage');
+  console.log('Ã¢Å“â€œ Data loaded from localStorage');
 }
 
 // Save to localStorage (always) + Supabase (if available)
@@ -216,7 +216,7 @@ function globalSaveAll() {
     setTimeout(function() { btn.style.transform = ''; }, 120);
   }
   _performGlobalSave();
-  showToast('ðŸ’¾ All changes saved');
+  showToast('Ã°Å¸â€™Â¾ All changes saved');
 }
 
 
@@ -241,7 +241,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   lucide.createIcons();
   // Show connection status
   if (typeof isSupabaseReady === 'function' && isSupabaseReady()) {
-    showToast('â˜ï¸ Connected to cloud database');
+    showToast('Ã¢ËœÂÃ¯Â¸Â Connected to cloud database');
   }
 });
 
@@ -366,14 +366,14 @@ function renderServiceLibrary() {
         <span class="service-category">${s.category}</span>
         <div style="display:flex;align-items:center;gap:6px">
           <div class="service-price">$${s.price.toLocaleString()}<span>/${s.unit}</span></div>
-          <button class="doc-remove-btn" onclick="event.stopPropagation();deleteService(${s.id})" title="Delete service" style="opacity:0.3;font-size:13px;padding:2px 4px">âœ•</button>
+          <button class="doc-remove-btn" onclick="event.stopPropagation();deleteService(${s.id})" title="Delete service" style="opacity:0.3;font-size:13px;padding:2px 4px">Ã¢Å“â€¢</button>
         </div>
       </div>
       <div class="service-name">${s.name}</div>
       <div class="service-desc">${s.desc}</div>
       <div class="service-meta">
-        <span class="service-tag">ðŸ·ï¸ ${s.sub}</span>
-        <span class="service-tag">â±ï¸ ${s.laborHrs}h</span>
+        <span class="service-tag">Ã°Å¸ÂÂ·Ã¯Â¸Â ${s.sub}</span>
+        <span class="service-tag">Ã¢ÂÂ±Ã¯Â¸Â ${s.laborHrs}h</span>
         <span class="negotiable-badge negotiable-${s.negotiable}">${s.negotiable === 'yes' ? '<i data-lucide="check" style="width:12px;height:12px"></i> Negotiable' : s.negotiable === 'no' ? '<i data-lucide="x" style="width:12px;height:12px"></i> Fixed' : '<i data-lucide="help-circle" style="width:12px;height:12px"></i> Ask'}</span>
       </div>
     </div>
@@ -411,7 +411,7 @@ function renderWorkOrders() {
       <td><strong class="text-accent">${wo.id}</strong></td>
       <td>
         <div style="font-weight:600;color:var(--text-primary)">${wo.title}</div>
-        <div style="font-size:11px;color:var(--text-muted);margin-top:2px">Type ${wo.type} â€¢ ${wo.property}</div>
+        <div style="font-size:11px;color:var(--text-muted);margin-top:2px">Type ${wo.type} Ã¢â‚¬Â¢ ${wo.property}</div>
       </td>
       <td>${wo.client}</td>
       <td><span class="badge badge-${wo.status}">${statusLabel(wo.status)}</span></td>
@@ -426,7 +426,7 @@ function renderWorkOrders() {
       </td>
       <td class="fw-700">$${wo.total.toLocaleString()}</td>
       <td onclick="event.stopPropagation()" style="position:relative">
-        <button class="btn btn-sm btn-ghost" onclick="toggleWOMenu('${wo.id}', event)" style="padding:4px 8px;font-size:16px">â‹¯</button>
+        <button class="btn btn-sm btn-ghost" onclick="toggleWOMenu('${wo.id}', event)" style="padding:4px 8px;font-size:16px">Ã¢â€¹Â¯</button>
         <div class="action-dropdown" id="wo-menu-${wo.id}">
           <div class="action-dropdown-item" onclick="openWorkOrderDetail('${wo.id}');closeAllWOMenus()">
             <i data-lucide="eye" style="width:14px;height:14px"></i> View Detail
@@ -524,7 +524,7 @@ async function woDeleteSelected() {
           if (r.ok) { deletedIds.push(r.id); } else { failedIds.push(r.id); }
         });
       } else {
-        // No Supabase â€” all succeed locally
+        // No Supabase Ã¢â‚¬â€ all succeed locally
         deletedIds = ids.slice();
       }
 
@@ -546,9 +546,9 @@ async function woDeleteSelected() {
 
       // Toast feedback
       if (failedIds.length > 0) {
-        showToast('âš ï¸ ' + deletedIds.length + ' deleted, ' + failedIds.length + ' failed â€” check connection');
+        showToast('Ã¢Å¡Â Ã¯Â¸Â ' + deletedIds.length + ' deleted, ' + failedIds.length + ' failed Ã¢â‚¬â€ check connection');
       } else {
-        showToast('âœ… ' + deletedIds.length + ' Work Order' + (deletedIds.length > 1 ? 's' : '') + ' deleted');
+        showToast('Ã¢Å“â€¦ ' + deletedIds.length + ' Work Order' + (deletedIds.length > 1 ? 's' : '') + ' deleted');
       }
     }
   );
@@ -588,11 +588,13 @@ document.addEventListener('click', function(e) {
 });
 
 // ============ CONFIRMATION MODAL ============
-function showConfirmModal(title, msg, onConfirm) {
+function showConfirmModal(title, msg, onConfirm, btnText, btnClass) {
   var overlay = document.getElementById('confirm-modal-overlay');
   document.getElementById('confirm-modal-title').textContent = title;
   document.getElementById('confirm-modal-msg').textContent = msg;
   var btn = document.getElementById('confirm-modal-btn');
+  btn.textContent = btnText || 'Delete';
+  btn.className = 'btn ' + (btnClass || 'btn-danger');
   btn.onclick = function() { closeConfirmModal(); onConfirm(); };
   overlay.style.display = 'flex';
 }
@@ -648,7 +650,7 @@ var _liEditSnapshot = [];      // snapshot of {name, desc} before editing (for C
 const WO_PHOTOS = {
   'WO-2025-0041': [
     { id: 1, type: 'before', label: 'Existing electrical panel', area: 'Basement', date: 'Apr 15, 2025', icon: 'camera' },
-    { id: 2, type: 'after', label: 'Kitchen sink â€” repair complete', area: 'Kitchen', date: 'Apr 22, 2025', icon: 'check-circle' },
+    { id: 2, type: 'after', label: 'Kitchen sink Ã¢â‚¬â€ repair complete', area: 'Kitchen', date: 'Apr 22, 2025', icon: 'check-circle' },
     { id: 3, type: 'before', label: 'Leaking pipe under sink', area: 'Kitchen', date: 'Apr 16, 2025', icon: 'camera' },
     { id: 4, type: 'before', label: 'Old water heater', area: 'Utility Room', date: 'Apr 16, 2025', icon: 'camera' },
     { id: 5, type: 'progress', label: 'Drywall patch in progress', area: 'Kitchen', date: 'Apr 20, 2025', icon: 'hammer' },
@@ -665,16 +667,16 @@ const WO_PHOTOS = {
 
 const WO_ACTIVITY = {
   'WO-2025-0041': [
-    { action: 'Item marked complete', detail: '"Replace GFCI Outlet" â€” Bathroom', user: 'Rodolfo F.', time: '12 min ago', color: 'var(--success)', icon: 'check-circle' },
+    { action: 'Item marked complete', detail: '"Replace GFCI Outlet" Ã¢â‚¬â€ Bathroom', user: 'Rodolfo F.', time: '12 min ago', color: 'var(--success)', icon: 'check-circle' },
     { action: 'Photo uploaded', detail: 'Completion photo for GFCI outlet', user: 'Rodolfo F.', time: '14 min ago', color: 'var(--info)', icon: 'camera' },
     { action: 'Email opened', detail: 'Sarah Johnson viewed Completion Report', user: 'Sarah Johnson', time: '34 min ago', color: 'var(--info)', icon: 'eye' },
-    { action: 'Item marked complete', detail: '"Repair Leak Under Sink" â€” Kitchen', user: 'Rodolfo F.', time: '3 hrs ago', color: 'var(--success)', icon: 'check-circle' },
+    { action: 'Item marked complete', detail: '"Repair Leak Under Sink" Ã¢â‚¬â€ Kitchen', user: 'Rodolfo F.', time: '3 hrs ago', color: 'var(--success)', icon: 'check-circle' },
     { action: 'Change Order sent', detail: 'CO-2025-0012: Add matching kitchen faucet ($280)', user: 'Rodolfo F.', time: 'Yesterday', color: 'var(--warning)', icon: 'file-plus' },
     { action: 'Change Order approved', detail: 'CO-2025-0012 approved by Sarah Johnson via email', user: 'Sarah Johnson', time: 'Yesterday', color: 'var(--success)', icon: 'check-square' },
     { action: 'Email sent', detail: 'Progress Report sent to sarah@remax.com', user: 'System', time: '2 days ago', color: 'var(--info)', icon: 'send' },
-    { action: 'Item marked complete', detail: '"Add Circuit Breaker" â€” Basement', user: 'Mike T. (Sub)', time: '3 days ago', color: 'var(--success)', icon: 'check-circle' },
+    { action: 'Item marked complete', detail: '"Add Circuit Breaker" Ã¢â‚¬â€ Basement', user: 'Mike T. (Sub)', time: '3 days ago', color: 'var(--success)', icon: 'check-circle' },
     { action: 'Work Order assigned', detail: 'Assigned to Mike T. (Electrical Subcontractor)', user: 'Rodolfo F.', time: 'Apr 16, 2025', color: 'var(--purple)', icon: 'user-check' },
-    { action: 'Work Order created', detail: 'Type A â€” Field Inspection | 12 items | $18,500', user: 'Rodolfo F.', time: 'Apr 15, 2025', color: 'var(--accent)', icon: 'clipboard-list' },
+    { action: 'Work Order created', detail: 'Type A Ã¢â‚¬â€ Field Inspection | 12 items | $18,500', user: 'Rodolfo F.', time: 'Apr 15, 2025', color: 'var(--accent)', icon: 'clipboard-list' },
   ]
 };
 
@@ -808,20 +810,20 @@ function renderLineItems() {
           ondragover="${_liEditMode ? '' : 'liDragOver(event)'}"
           ondrop="${_liEditMode ? '' : `liDrop(event,${i})`}"
           ondragend="${_liEditMode ? '' : 'liDragEnd(event)'}">
-          <div class="drag-handle" style="${_liEditMode ? 'opacity:0.2;cursor:default' : ''}" title="${_liEditMode ? '' : 'Drag to reorder'}">â ¿</div>
+          <div class="drag-handle" style="${_liEditMode ? 'opacity:0.2;cursor:default' : ''}" title="${_liEditMode ? '' : 'Drag to reorder'}">Ã¢Â Â¿</div>
           <div class="line-item-number" style="${isCompleted ? 'background:var(--success-bg);color:var(--success)' : isProgress ? 'background:var(--accent-bg);color:var(--accent)' : ''}">${isCompleted ? '<i data-lucide="check" style="width:16px;height:16px"></i>' : i + 1}</div>
           <div class="line-item-info">
             ${nameField}
             ${descField}
           </div>
           <select class="line-item-status-select" onchange="changeLineItemStatus(${i}, this.value)" title="Change status" ${_liEditMode ? 'disabled' : ''}>
-            <option value="pending"   ${item.status === 'pending'   ? 'selected' : ''}>â³ Pending</option>
-            <option value="progress"  ${item.status === 'progress'  ? 'selected' : ''}>ðŸ”§ In Progress</option>
-            <option value="completed" ${item.status === 'completed' ? 'selected' : ''}>âœ… Completed</option>
+            <option value="pending"   ${item.status === 'pending'   ? 'selected' : ''}>Ã¢ÂÂ³ Pending</option>
+            <option value="progress"  ${item.status === 'progress'  ? 'selected' : ''}>Ã°Å¸â€Â§ In Progress</option>
+            <option value="completed" ${item.status === 'completed' ? 'selected' : ''}>Ã¢Å“â€¦ Completed</option>
           </select>
 
           <button class="doc-remove-btn" onclick="deleteLineItem(${i})" title="Delete line item"
-            style="opacity:0.4;font-size:15px;padding:4px 6px;${_liEditMode ? 'display:none' : ''}">âœ•</button>
+            style="opacity:0.4;font-size:15px;padding:4px 6px;${_liEditMode ? 'display:none' : ''}">Ã¢Å“â€¢</button>
         </div>`;
       }).join('');
 
@@ -889,10 +891,10 @@ function liSave() {
   _liEditMode = false;
   _liEditSnapshot = [];
   renderLineItems();
-  showToast('âœ… Line Items saved');
+  showToast('Ã¢Å“â€¦ Line Items saved');
 }
 
-// ============ DRAG & DROP â€” LINE ITEMS ============
+// ============ DRAG & DROP Ã¢â‚¬â€ LINE ITEMS ============
 var _liDragIdx = null;
 function liDragStart(e, idx) {
   _liDragIdx = idx;
@@ -924,7 +926,7 @@ function liDragEnd(e) {
   document.querySelectorAll('.line-item').forEach(function(el) { el.style.borderTop = ''; });
 }
 
-// ============ DRAG & DROP â€” DOCUMENT LINES ============
+// ============ DRAG & DROP Ã¢â‚¬â€ DOCUMENT LINES ============
 var _docDragIdx = null;
 function docDragStart(e, idx) {
   _docDragIdx = idx;
@@ -990,7 +992,7 @@ function changeLineItemStatus(index, newStatus) {
   renderDashboard();
   renderWorkOrders();
   saveWorkOrders();
-  showToast('âœ… Status: ' + item.name + ' â†’ ' + capitalize(newStatus));
+  showToast('Ã¢Å“â€¦ Status: ' + item.name + ' Ã¢â€ â€™ ' + capitalize(newStatus));
 }
 
 function deleteLineItem(index) {
@@ -1034,7 +1036,7 @@ function markItemComplete(index) {
       completedAt: item.completedAt,
       completedBy: item.completedBy
     }).then(function() {
-      console.log('âœ“ Line item marked complete in DB:', item.name);
+      console.log('Ã¢Å“â€œ Line item marked complete in DB:', item.name);
     }).catch(function(e) { console.warn('Failed to sync line item completion:', e); });
   }
 
@@ -1052,7 +1054,7 @@ function markItemComplete(index) {
   renderLineItems();
   renderDashboard();
   renderWorkOrders();
-  showToast('âœ“ Item completed: ' + item.name);
+  showToast('Ã¢Å“â€œ Item completed: ' + item.name);
 }
 
 function renderWOPhotos() {
@@ -1074,7 +1076,7 @@ function renderWOPhotos() {
       </div>
       <div class="photo-card-body">
         <h4>${p.label}</h4>
-        <p>ðŸ“ ${p.area} â€¢ ${p.date}</p>
+        <p>Ã°Å¸â€œÂ ${p.area} Ã¢â‚¬Â¢ ${p.date}</p>
       </div>
     </div>
   `).join('');
@@ -1103,7 +1105,7 @@ function renderWOActivityLog() {
 
 function generateDefaultActivity() {
   return [
-    { action: 'Work Order created', detail: `Type ${currentWO.type} â€” ${currentWO.items} items â€” $${currentWO.total.toLocaleString()}`, user: 'Rodolfo F.', time: formatDate(currentWO.created), color: 'var(--accent)', icon: 'clipboard-list' },
+    { action: 'Work Order created', detail: `Type ${currentWO.type} Ã¢â‚¬â€ ${currentWO.items} items Ã¢â‚¬â€ $${currentWO.total.toLocaleString()}`, user: 'Rodolfo F.', time: formatDate(currentWO.created), color: 'var(--accent)', icon: 'clipboard-list' },
   ];
 }
 
@@ -1112,7 +1114,7 @@ function generateDefaultActivity() {
 // TODO: Migrate to Supabase when wo_communications schema adds:
 //   - person (string)
 //   - date (timestamp as dedicated column)
-// Current: localStorage only â€” key: wo_comms_${woId}
+// Current: localStorage only Ã¢â‚¬â€ key: wo_comms_${woId}
 // ============================================================
 
 var _currentComms = [];
@@ -1176,13 +1178,13 @@ function renderComms() {
             <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;flex-wrap:wrap">
               <span style="font-size:11px;font-weight:600;color:${t.color};background:${t.color}18;padding:2px 8px;border-radius:10px">${t.label}</span>
               <span style="font-size:11px;color:var(--text-muted)">${c.date || ''}</span>
-              ${c.person ? `<span style="font-size:11px;color:var(--text-secondary)">Â· ${escHtml(c.person)}</span>` : ''}
+              ${c.person ? `<span style="font-size:11px;color:var(--text-secondary)">Ã‚Â· ${escHtml(c.person)}</span>` : ''}
             </div>
             <div style="font-weight:600;font-size:13px;color:var(--text-primary);margin-bottom:4px">${escHtml(c.subject)}</div>
             ${c.body ? `<div style="font-size:12px;color:var(--text-secondary);white-space:pre-wrap">${escHtml(c.body)}</div>` : ''}
-            <div style="font-size:11px;color:var(--text-muted);margin-top:6px">By ${escHtml(c.createdBy)} Â· ${new Date(c.createdAt).toLocaleString()}</div>
+            <div style="font-size:11px;color:var(--text-muted);margin-top:6px">By ${escHtml(c.createdBy)} Ã‚Â· ${new Date(c.createdAt).toLocaleString()}</div>
           </div>
-          <button onclick="deleteComm(${idx})" title="Delete" style="background:none;border:none;cursor:pointer;opacity:0.35;font-size:16px;padding:2px 4px;color:var(--text-primary)" onmouseover="this.style.opacity='0.8'" onmouseout="this.style.opacity='0.35'">âœ•</button>
+          <button onclick="deleteComm(${idx})" title="Delete" style="background:none;border:none;cursor:pointer;opacity:0.35;font-size:16px;padding:2px 4px;color:var(--text-primary)" onmouseover="this.style.opacity='0.8'" onmouseout="this.style.opacity='0.35'">Ã¢Å“â€¢</button>
         </div>
       </div>
     </div>`;
@@ -1267,7 +1269,7 @@ function saveComm(editIdx) {
   saveComms(currentWO.id);
   closeConfirmModal();
   renderComms();
-  showToast('âœ… Communication saved');
+  showToast('Ã¢Å“â€¦ Communication saved');
 }
 
 function deleteComm(idx) {
@@ -1284,7 +1286,7 @@ function deleteComm(idx) {
 // TODO: Migrate to Supabase when change_orders schema adds:
 //   - title (string, separate from description)
 //   - requested_by (string)
-// Current: localStorage only â€” key: wo_changes_${woId}
+// Current: localStorage only Ã¢â‚¬â€ key: wo_changes_${woId}
 // ============================================================
 
 var _currentCOs = [];
@@ -1393,7 +1395,8 @@ function createNewCO() {
       _currentCOs.unshift(co);
       saveCOs(currentWO.id);
       openCOEditor(0);
-    }
+    },
+    'Create', 'btn-primary'
   );
 }
 
@@ -1617,7 +1620,7 @@ function buildNegotiationSummary() {
         return it.id === coItem.line_item_id || it.name === coItem.name;
       });
 
-      // 'add' action is not yet supported in the UI â€” skip gracefully
+      // 'add' action is not yet supported in the UI Ã¢â‚¬â€ skip gracefully
       if (!match) return;
 
       if (coItem.action === 'remove') {
@@ -1631,7 +1634,7 @@ function buildNegotiationSummary() {
         match.negotiated_qty = coItem.new_qty;
         match.status = 'modified';
       } else if (coItem.action === 'modify_scope') {
-        // Scope change â€” no financial impact, but mark as modified
+        // Scope change Ã¢â‚¬â€ no financial impact, but mark as modified
         match.status = 'modified';
       }
       match.negotiated_total = match.negotiated_price * match.negotiated_qty;
@@ -1718,7 +1721,7 @@ function docAutoSave() {
   clearTimeout(_docSaveTimer);
   _docSaveTimer = setTimeout(function() {
     docSaveState();
-    showToast('ðŸ’¾ Document saved', 1200);
+    showToast('Ã°Å¸â€™Â¾ Document saved', 1200);
   }, 800);
 }
 
@@ -1753,8 +1756,8 @@ function initWODocument() {
   }
 
   // Client info
-  document.getElementById('doc-client-name').textContent = client.name || wo.client || 'â€”';
-  document.getElementById('doc-client-addr').textContent = client.address || wo.property || 'â€”';
+  document.getElementById('doc-client-name').textContent = client.name || wo.client || 'Ã¢â‚¬â€';
+  document.getElementById('doc-client-addr').textContent = client.address || wo.property || 'Ã¢â‚¬â€';
 
   // Doc meta
   var today = new Date().toLocaleDateString('en-US', {month:'2-digit', day:'2-digit', year:'numeric'});
@@ -1833,7 +1836,7 @@ function renderDocLines() {
           ondragend="docDragEnd(event)">
         <td class="doc-td-desc">
           <div style="display:flex;align-items:flex-start;gap:6px">
-            <span class="drag-handle-doc" title="Drag to reorder">â ¿</span>
+            <span class="drag-handle-doc" title="Drag to reorder">Ã¢Â Â¿</span>
             <div style="flex:1">
           <input class="doc-line-name-input"
             value="${escHtml(line.name)}"
@@ -1875,7 +1878,7 @@ function escHtml(str) {
   return String(str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
-// ============ BIDIRECTIONAL SYNC â€” Document â†” Line Items ============
+// ============ BIDIRECTIONAL SYNC Ã¢â‚¬â€ Document Ã¢â€ â€ Line Items ============
 
 // Called when user edits a field in the Document tab
 function syncFromDoc(idx, field, value) {
@@ -1883,7 +1886,7 @@ function syncFromDoc(idx, field, value) {
   // 1. Update _docLines (Document owns all its own fields)
   _docLines[idx][field] = value;
 
-  // 2. Sync only name/desc to currentLineItems â€” price/qty stay Doc-only
+  // 2. Sync only name/desc to currentLineItems Ã¢â‚¬â€ price/qty stay Doc-only
   if (field === 'name' || field === 'desc') {
     var liId = _docLines[idx].liId;
     var li = currentLineItems.find(function(i) { return i.id == liId; });
@@ -1904,7 +1907,7 @@ function syncFromDoc(idx, field, value) {
     }
   }
 
-  // 3. Doc handles its own totals for rate/qty â€” no propagation
+  // 3. Doc handles its own totals for rate/qty Ã¢â‚¬â€ no propagation
   if (field === 'rate' || field === 'qty') {
     docUpdateLineTotal(idx);
     updateDocTotals();
@@ -1917,13 +1920,13 @@ function syncFromLineItem(idx, field, value) {
   var li = currentLineItems[idx];
   if (!li) return;
 
-  // 1. Only sync name/desc â€” price/qty are Line Items informational only
+  // 1. Only sync name/desc Ã¢â‚¬â€ price/qty are Line Items informational only
   if (field !== 'name' && field !== 'desc') return;
 
   li.name = field === 'name' ? value : li.name;
   li.desc = field === 'desc' ? value : li.desc;
 
-  // 2. Mirror to _docLines by liId â€” only if doc was already initialized
+  // 2. Mirror to _docLines by liId Ã¢â‚¬â€ only if doc was already initialized
   if (_docLines && _docLines.length > 0) {
     var dl = _docLines.find(function(d) { return d.liId == li.id; });
     if (dl) {
@@ -2025,7 +2028,7 @@ function docAddLine() {
   var name = document.getElementById('docline-name').value.trim();
   if (!name) {
     document.getElementById('docline-name').style.borderColor = 'var(--danger)';
-    showToast('âš ï¸ Item name is required');
+    showToast('Ã¢Å¡Â Ã¯Â¸Â Item name is required');
     return;
   }
   _docLines.push({
@@ -2038,7 +2041,7 @@ function docAddLine() {
   renderDocLines();
   updateDocTotals();
   closeModal('modal-doc-addline');
-  showToast('âœ… Line added to document');
+  showToast('Ã¢Å“â€¦ Line added to document');
   docAutoSave();
   lucide.createIcons();
 }
@@ -2082,7 +2085,7 @@ function startEditWOTitle(el) {
       }
 
       if (val !== current) {
-        showToast('âœ… Title updated to "' + val + '"');
+        showToast('Ã¢Å“â€¦ Title updated to "' + val + '"');
       }
     }
   }
@@ -2236,24 +2239,24 @@ function buildPDF(template, hidePrices, docStyle) {
     var neg = buildNegotiationSummary();
     if (!neg) { showToast('No data to generate negotiation summary'); return; }
     if (neg.change_orders_applied === 0) {
-      showToast(neg.change_orders_pending > 0 ? 'â³ ' + neg.change_orders_pending + ' CO(s) pending â€” none approved yet' : 'â„¹ï¸ No change orders â€” WO is unchanged');
+      showToast(neg.change_orders_pending > 0 ? 'Ã¢ÂÂ³ ' + neg.change_orders_pending + ' CO(s) pending Ã¢â‚¬â€ none approved yet' : 'Ã¢â€žÂ¹Ã¯Â¸Â No change orders Ã¢â‚¬â€ WO is unchanged');
       return;
     }
-    var sIcons = { unchanged: 'âœ“', modified: 'â†“', removed: 'âœ—', added: '+' };
+    var sIcons = { unchanged: 'Ã¢Å“â€œ', modified: 'Ã¢â€ â€œ', removed: 'Ã¢Å“â€”', added: '+' };
     var dClr = neg.total_difference < 0 ? '#ef4444' : '#10b981';
     bodyContent = '<div class="section"><h2>Executive Summary</h2><table class="info-table"><tr><td class="label">Work Order</td><td>' + escHtml(wo.id) + '</td><td class="label">Client</td><td>' + escHtml(wo.client) + '</td></tr><tr><td class="label">Project</td><td>' + escHtml(wo.title) + '</td><td class="label">Property</td><td>' + escHtml(wo.property) + '</td></tr></table>' +
       '<table class="items-table" style="margin-top:16px"><thead><tr><th>Original</th><th>Negotiated</th><th>Difference</th></tr></thead><tbody><tr style="font-size:18px;font-weight:700"><td>$' + neg.original_total.toLocaleString() + '</td><td style="color:#10b981">$' + neg.negotiated_total.toLocaleString() + '</td><td style="color:' + dClr + '">' + (neg.total_difference >= 0 ? '+' : '') + '$' + neg.total_difference.toLocaleString() + ' (' + neg.total_difference_pct + '%)</td></tr></tbody></table>' +
-      '<div style="font-size:12px;color:#666;margin-top:10px">' + neg.items_unchanged + ' unchanged Â· ' + neg.items_modified + ' modified Â· ' + neg.items_removed + ' removed Â· ' + neg.items_added + ' added Â· ' + neg.change_orders_applied + ' CO(s)</div></div>';
+      '<div style="font-size:12px;color:#666;margin-top:10px">' + neg.items_unchanged + ' unchanged Ã‚Â· ' + neg.items_modified + ' modified Ã‚Â· ' + neg.items_removed + ' removed Ã‚Â· ' + neg.items_added + ' added Ã‚Â· ' + neg.change_orders_applied + ' CO(s)</div></div>';
     bodyContent += '<div class="section"><h2>Detailed Comparison</h2><table class="items-table"><thead><tr><th>#</th><th>Item</th><th class="right">Original</th><th class="right">Negotiated</th><th>Status</th></tr></thead><tbody>';
     neg.items.forEach(function(it, i) {
       var rs = it.status === 'removed' ? 'text-decoration:line-through;color:#999' : '';
       bodyContent += '<tr style="' + rs + '"><td>' + (i+1) + '</td><td><strong>' + escHtml(it.name) + '</strong>' + (it.reason ? '<br><small style="color:#888">' + escHtml(it.reason) + '</small>' : '') + '</td><td class="right">$' + it.original_total.toLocaleString() + '</td><td class="right" style="font-weight:600">$' + it.negotiated_total.toLocaleString() + '</td><td style="text-align:center;font-size:16px">' + (sIcons[it.status] || '') + '</td></tr>';
     });
-    bodyContent += '</tbody></table><div style="font-size:11px;color:#888;margin-top:8px">âœ“ Unchanged Â· â†“ Modified Â· âœ— Removed Â· + Added</div></div>';
+    bodyContent += '</tbody></table><div style="font-size:11px;color:#888;margin-top:8px">Ã¢Å“â€œ Unchanged Ã‚Â· Ã¢â€ â€œ Modified Ã‚Â· Ã¢Å“â€” Removed Ã‚Â· + Added</div></div>';
     if (neg.approved_cos && neg.approved_cos.length > 0) {
       bodyContent += '<div class="section"><h2>Change Orders Applied</h2>';
       neg.approved_cos.forEach(function(co) {
-        bodyContent += '<div style="padding:10px 12px;border:1px solid #e5e7eb;border-radius:6px;margin-bottom:8px"><div style="font-weight:700;font-size:13px">' + escHtml(co.coNumber) + ' â€” ' + escHtml(co.title) + ' <span style="color:#10b981;font-size:11px">âœ… Approved</span></div>' +
+        bodyContent += '<div style="padding:10px 12px;border:1px solid #e5e7eb;border-radius:6px;margin-bottom:8px"><div style="font-weight:700;font-size:13px">' + escHtml(co.coNumber) + ' Ã¢â‚¬â€ ' + escHtml(co.title) + ' <span style="color:#10b981;font-size:11px">Ã¢Å“â€¦ Approved</span></div>' +
           (co.requestedBy ? '<div style="font-size:12px;color:#666">Requested by: ' + escHtml(co.requestedBy) + '</div>' : '') +
           '<div style="font-size:12px">Impact: <strong style="color:' + (co.amount < 0 ? '#ef4444' : '#10b981') + '">' + (co.amount >= 0 ? '+' : '') + '$' + co.amount.toLocaleString() + '</strong></div></div>';
       });
@@ -2291,7 +2294,7 @@ function getPDFHTML(title, body, wo, docStyle) {
 
   var headerHTML = '';
   if (docStyle === 'classic') {
-    // CLASSIC: Like user's real estimate â€” logo left, meta table right
+    // CLASSIC: Like user's real estimate Ã¢â‚¬â€ logo left, meta table right
     headerHTML =
       '<div class="report-header">' +
         '<div class="header-top">' +
@@ -2307,10 +2310,10 @@ function getPDFHTML(title, body, wo, docStyle) {
           '<h1>' + COMPANY.name + '</h1>' +
           '<p>' + addressLine + '</p>' +
           '<div class="header-contact">' +
-            '<p>â˜Ž ' + COMPANY.phone + '</p>' +
-            '<p>âœ‰ ' + COMPANY.email + '</p>' +
+            '<p>Ã¢ËœÅ½ ' + COMPANY.phone + '</p>' +
+            '<p>Ã¢Å“â€° ' + COMPANY.email + '</p>' +
           '</div>' +
-          '<div class="ccb-tag">Oregon CCB License #' + COMPANY.ccb + ' â€” Active</div>' +
+          '<div class="ccb-tag">Oregon CCB License #' + COMPANY.ccb + ' Ã¢â‚¬â€ Active</div>' +
         '</div>' +
       '</div>';
   } else if (docStyle === 'modern') {
@@ -2331,7 +2334,7 @@ function getPDFHTML(title, body, wo, docStyle) {
         '</div>' +
         '<div class="header-company">' +
           '<h1>' + COMPANY.name + '</h1>' +
-          '<p>' + addressLine + ' Â· ' + COMPANY.phone + ' Â· ' + COMPANY.email + '</p>' +
+          '<p>' + addressLine + ' Ã‚Â· ' + COMPANY.phone + ' Ã‚Â· ' + COMPANY.email + '</p>' +
         '</div>' +
       '</div>';
   } else {
@@ -2349,7 +2352,7 @@ function getPDFHTML(title, body, wo, docStyle) {
         '</div>' +
         '<div class="header-company">' +
           '<h1>' + COMPANY.name + '</h1>' +
-          '<p>' + COMPANY.phone + '  Â·  ' + COMPANY.email + '  Â·  ' + addressLine + '</p>' +
+          '<p>' + COMPANY.phone + '  Ã‚Â·  ' + COMPANY.email + '  Ã‚Â·  ' + addressLine + '</p>' +
         '</div>' +
       '</div>';
   }
@@ -2358,8 +2361,8 @@ function getPDFHTML(title, body, wo, docStyle) {
   '<style>' + getPDFStylesheet(docStyle) + '</style></head><body>' +
   '<button class="print-btn no-print" onclick="window.print()">Print / Save as PDF</button>' +
   headerHTML + body +
-  '<div class="footer"><p>' + COMPANY.name + ' â€” Oregon CCB #' + COMPANY.ccb + ' â€” ' + COMPANY.phone + ' â€” ' + COMPANY.email + '</p>' +
-  '<p>Generated by WOIMS Â· Work Order & Inspection Management System</p>' +
+  '<div class="footer"><p>' + COMPANY.name + ' Ã¢â‚¬â€ Oregon CCB #' + COMPANY.ccb + ' Ã¢â‚¬â€ ' + COMPANY.phone + ' Ã¢â‚¬â€ ' + COMPANY.email + '</p>' +
+  '<p>Generated by WOIMS Ã‚Â· Work Order & Inspection Management System</p>' +
   '<p class="legal">Oregon law requires contractors to be licensed with the Construction Contractors Board (CCB).</p></div>' +
   '</body></html>';
 }
@@ -2591,7 +2594,7 @@ async function sendEmailNow() {
     // Do NOT save as sent unless success is explicitly true
     if (!data || data.success !== true) throw new Error(data && data.error ? data.error : 'Unexpected response');
 
-    // âœ… SUCCESS â€” Track email status
+    // Ã¢Å“â€¦ SUCCESS Ã¢â‚¬â€ Track email status
     if (currentWO) {
       var woId = currentWO.id;
 
@@ -2628,11 +2631,11 @@ async function sendEmailNow() {
     }
 
     closeModal('modal-email');
-    showToast('âœ… Email sent successfully to ' + to);
+    showToast('Ã¢Å“â€¦ Email sent successfully to ' + to);
 
   } catch (err) {
     console.error('Email send failed:', err);
-    showToast('âŒ Email failed: ' + (err.message || 'Unknown error'));
+    showToast('Ã¢ÂÅ’ Email failed: ' + (err.message || 'Unknown error'));
     // Do NOT fallback to mailto
     // Do NOT mark as sent
     // Modal stays open so user can retry
@@ -2665,19 +2668,19 @@ function renderEmailStatus() {
   var dateStr = '';
   if (es.status === 'viewed' && es.viewedAt) {
     dateStr = new Date(es.viewedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-    el.innerHTML = '<span style="font-size:11px;padding:3px 8px;border-radius:10px;background:#10b98122;color:#10b981;font-weight:600" title="Viewed by recipient Â· ' + dateStr + '\nSent to: ' + escHtml(es.sentTo || '') + '">ðŸ‘ Viewed Â· ' + dateStr + '</span>';
+    el.innerHTML = '<span style="font-size:11px;padding:3px 8px;border-radius:10px;background:#10b98122;color:#10b981;font-weight:600" title="Viewed by recipient Ã‚Â· ' + dateStr + '\nSent to: ' + escHtml(es.sentTo || '') + '">Ã°Å¸â€˜Â Viewed Ã‚Â· ' + dateStr + '</span>';
   } else if (es.status === 'sent' && es.sentAt) {
     dateStr = new Date(es.sentAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-    el.innerHTML = '<span style="font-size:11px;padding:3px 8px;border-radius:10px;background:#10b98122;color:#10b981;font-weight:600" title="Delivered via Resend Â· ' + dateStr + '\nTo: ' + escHtml(es.sentTo || '') + '">âœ… Sent Â· ' + dateStr + '</span>';
+    el.innerHTML = '<span style="font-size:11px;padding:3px 8px;border-radius:10px;background:#10b98122;color:#10b981;font-weight:600" title="Delivered via Resend Ã‚Â· ' + dateStr + '\nTo: ' + escHtml(es.sentTo || '') + '">Ã¢Å“â€¦ Sent Ã‚Â· ' + dateStr + '</span>';
   } else if (es.status === 'prepared' && es.sentAt) {
     dateStr = new Date(es.sentAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-    el.innerHTML = '<span style="font-size:11px;padding:3px 8px;border-radius:10px;background:#3b82f622;color:#3b82f6;font-weight:600" title="Opened in mail client Â· ' + dateStr + '\nTo: ' + escHtml(es.sentTo || '') + '">ðŸ“§ Email Prepared Â· ' + dateStr + '</span>';
+    el.innerHTML = '<span style="font-size:11px;padding:3px 8px;border-radius:10px;background:#3b82f622;color:#3b82f6;font-weight:600" title="Opened in mail client Ã‚Â· ' + dateStr + '\nTo: ' + escHtml(es.sentTo || '') + '">Ã°Å¸â€œÂ§ Email Prepared Ã‚Â· ' + dateStr + '</span>';
   } else {
     el.innerHTML = '';
   }
 }
 
-// Dev/admin-only: mark email as viewed (mock â€” no real open tracking)
+// Dev/admin-only: mark email as viewed (mock Ã¢â‚¬â€ no real open tracking)
 // Usage from browser console: markEmailViewed()
 function markEmailViewed() {
   if (!currentWO) { console.warn('No current WO'); return; }
@@ -2687,7 +2690,7 @@ function markEmailViewed() {
   es.viewedAt = new Date().toISOString();
   try { localStorage.setItem('wo_email_' + currentWO.id, JSON.stringify(es)); } catch(e) {}
   renderEmailStatus();
-  showToast('ðŸ‘ Email marked as viewed');
+  showToast('Ã°Å¸â€˜Â Email marked as viewed');
 }
 
 // ============ TOAST NOTIFICATIONS ============
@@ -2748,7 +2751,7 @@ function addServiceToCurrentWO(serviceId) {
       if (created) {
         // Update local item with DB id
         newItem.id = created.id;
-        console.log('âœ“ Line item added to DB:', svc.name);
+        console.log('Ã¢Å“â€œ Line item added to DB:', svc.name);
       }
       // Also update WO totals
       DB.workOrders.update(currentWO.id, {
@@ -2758,7 +2761,7 @@ function addServiceToCurrentWO(serviceId) {
     }).catch(function(e) { console.warn('Failed to persist line item:', e); });
   }
 
-  showToast('âœ“ Added: ' + svc.name + ' to ' + currentWO.id);
+  showToast('Ã¢Å“â€œ Added: ' + svc.name + ' to ' + currentWO.id);
 }
 
 function returnToWODetail() {
@@ -2999,14 +3002,14 @@ function openNewWOModal(preselectedClient) {
   CLIENTS.forEach(function(c) {
     var opt = document.createElement('option');
     opt.value = c.name;
-    opt.textContent = c.name + (c.company ? ' â€” ' + c.company : '');
+    opt.textContent = c.name + (c.company ? ' Ã¢â‚¬â€ ' + c.company : '');
     sel.appendChild(opt);
   });
 
   // Add quick "New Client" shortcut at bottom
   var newOpt = document.createElement('option');
   newOpt.value = '__new__';
-  newOpt.textContent = 'ï¼‹ Agregar nuevo cliente...';
+  newOpt.textContent = 'Ã¯Â¼â€¹ Agregar nuevo cliente...';
   sel.appendChild(newOpt);
 
   // Pre-select client if coming from client page
@@ -3024,7 +3027,7 @@ function openNewWOModal(preselectedClient) {
   openModal('modal-new-wo');
 }
 
-// Called from Clients page â€” opens WO modal with client already selected
+// Called from Clients page Ã¢â‚¬â€ opens WO modal with client already selected
 function createWOForClient(clientId) {
   var client = CLIENTS.find(function(c) { return c.id === clientId; });
   if (!client) return;
@@ -3039,13 +3042,13 @@ function saveNewWO() {
   const title = titleEl.value.trim();
   const client = clientEl.value;
 
-  // Inline validation â€” highlight missing fields
+  // Inline validation Ã¢â‚¬â€ highlight missing fields
   var valid = true;
   if (!title) {
     titleEl.style.borderColor = 'var(--danger)';
     titleEl.style.boxShadow = '0 0 0 3px rgba(220,38,38,0.12)';
     titleEl.focus();
-    showToast('âš ï¸ Work Order Title is required');
+    showToast('Ã¢Å¡Â Ã¯Â¸Â Work Order Title is required');
     valid = false;
   } else {
     titleEl.style.borderColor = '';
@@ -3054,7 +3057,7 @@ function saveNewWO() {
   if (!client) {
     clientEl.style.borderColor = 'var(--danger)';
     clientEl.style.boxShadow = '0 0 0 3px rgba(220,38,38,0.12)';
-    if (valid) { clientEl.focus(); showToast('âš ï¸ Please select a Client'); }
+    if (valid) { clientEl.focus(); showToast('Ã¢Å¡Â Ã¯Â¸Â Please select a Client'); }
     valid = false;
   } else {
     clientEl.style.borderColor = '';
@@ -3085,7 +3088,7 @@ function saveNewWO() {
   // Reset form
   titleEl.value = '';
   clientEl.value = '';
-  showToast('âœ… Work Order ' + newWO.id + ' created');
+  showToast('Ã¢Å“â€¦ Work Order ' + newWO.id + ' created');
   navigateTo('workorders');
 }
 
@@ -3127,7 +3130,7 @@ function statusLabel(s) {
 function capitalize(s) { return s.charAt(0).toUpperCase() + s.slice(1); }
 
 function formatDate(d) {
-  if (!d) return 'â€”';
+  if (!d) return 'Ã¢â‚¬â€';
   return new Date(d + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 }
 
@@ -3152,13 +3155,13 @@ function showServiceDetail(id) {
   document.getElementById('svc-detail-labor').textContent = s.laborHrs + 'h labor';
   document.getElementById('svc-detail-desc').textContent = s.desc || '';
   document.getElementById('svc-detail-neg').textContent =
-    s.negotiable === 'yes' ? 'âœ“ Negotiable' : s.negotiable === 'no' ? 'âœ— Fixed Price' : '? Ask';
+    s.negotiable === 'yes' ? 'Ã¢Å“â€œ Negotiable' : s.negotiable === 'no' ? 'Ã¢Å“â€” Fixed Price' : '? Ask';
   
   // Populate WO dropdown
   var sel = document.getElementById('svc-assign-wo');
-  sel.innerHTML = '<option value="">â€” Select Work Order â€”</option>';
+  sel.innerHTML = '<option value="">Ã¢â‚¬â€ Select Work Order Ã¢â‚¬â€</option>';
   WORK_ORDERS.forEach(function(wo) {
-    sel.innerHTML += '<option value="' + wo.id + '">' + wo.id + ' â€” ' + escHtml(wo.title) + ' (' + escHtml(wo.client) + ')</option>';
+    sel.innerHTML += '<option value="' + wo.id + '">' + wo.id + ' Ã¢â‚¬â€ ' + escHtml(wo.title) + ' (' + escHtml(wo.client) + ')</option>';
   });
   
   // Auto-select if only 1 WO exists, or pre-select current WO
@@ -3177,7 +3180,7 @@ var _pendingServiceId = null;
 function assignServiceToWO() {
   var woId = document.getElementById('svc-assign-wo').value;
   if (!woId) {
-    showToast('âš ï¸ Please select a Work Order');
+    showToast('Ã¢Å¡Â Ã¯Â¸Â Please select a Work Order');
     document.getElementById('svc-assign-wo').style.borderColor = 'var(--danger)';
     return;
   }
@@ -3195,7 +3198,7 @@ function assignServiceToWO() {
   var needsLoad = !currentLineItems || (prevWO && prevWO.id !== wo.id);
   
   if (needsLoad) {
-    // Simple local add â€” create the item
+    // Simple local add Ã¢â‚¬â€ create the item
     var newItem = {
       workOrderId: wo.id,
       serviceId: svc.id,
@@ -3247,7 +3250,7 @@ function assignServiceToWO() {
   }
   
   closeModal('modal-svc-detail');
-  showToast('âœ… ' + svc.name + ' added to ' + wo.id);
+  showToast('Ã¢Å“â€¦ ' + svc.name + ' added to ' + wo.id);
   renderWorkOrders();
   renderDashboard();
 }
@@ -3314,7 +3317,7 @@ function renderClients() {
   lucide.createIcons();
 }
 
-// ====== BULK ACTIONS â€” CLIENTS ======
+// ====== BULK ACTIONS Ã¢â‚¬â€ CLIENTS ======
 function clientsGetSelected() {
   return Array.from(document.querySelectorAll('.client-chk:checked'))
     .map(function(chk) { return parseInt(chk.dataset.id); });
@@ -3394,10 +3397,10 @@ function clientsBulkCreateWO() {
   var ids = clientsGetSelected();
   if (ids.length === 0) return;
   if (ids.length === 1) {
-    // Single client â€” open WO modal pre-filled
+    // Single client Ã¢â‚¬â€ open WO modal pre-filled
     createWOForClient(ids[0]);
   } else {
-    // Multiple selected â€” just open blank WO modal
+    // Multiple selected Ã¢â‚¬â€ just open blank WO modal
     showToast('Select one client to pre-fill a Work Order');
     openNewWOModal();
   }
@@ -3505,20 +3508,20 @@ function saveNewClient() {
   };
 
   if (_editingClientId !== null) {
-    // Edit mode â€” update existing
+    // Edit mode Ã¢â‚¬â€ update existing
     var c = CLIENTS.find(function(x) { return x.id === _editingClientId; });
     if (c) {
       Object.assign(c, data);
-      showToast('âœ“ Client updated successfully');
+      showToast('Ã¢Å“â€œ Client updated successfully');
     }
   } else {
-    // Create mode â€” add new
+    // Create mode Ã¢â‚¬â€ add new
     data.id = CLIENTS.length ? Math.max(...CLIENTS.map(function(x) { return x.id; })) + 1 : 1;
     data.properties = 0;
     data.totalOrders = 0;
     data.totalValue = 0;
     CLIENTS.push(data);
-    showToast('âœ“ Client added successfully');
+    showToast('Ã¢Å“â€œ Client added successfully');
   }
 
   var wasEditing = _editingClientId !== null;
@@ -3639,13 +3642,13 @@ function applyLogo(dataUrl, type) {
     ? ['app-logo-preview','app-logo-preview-container','app-logo-placeholder','btn-remove-app-logo']
     : ['doc-logo-preview','doc-logo-preview-container','doc-logo-placeholder','btn-remove-doc-logo'];
   COMPANY[key] = dataUrl;
-  try { localStorage.setItem(sKey, dataUrl); } catch(e) { showToast('Storage full â€” logo saved in session only.'); }
+  try { localStorage.setItem(sKey, dataUrl); } catch(e) { showToast('Storage full Ã¢â‚¬â€ logo saved in session only.'); }
   document.getElementById(ids[0]).src = dataUrl;
   document.getElementById(ids[1]).style.display = 'block';
   document.getElementById(ids[2]).style.display = 'none';
   document.getElementById(ids[3]).style.display = '';
   updateSidebarLogo();
-  showToast('âœ“ ' + (type === 'app' ? 'App' : 'Document') + ' logo uploaded');
+  showToast('Ã¢Å“â€œ ' + (type === 'app' ? 'App' : 'Document') + ' logo uploaded');
 }
 
 function removeLogo(type) {
@@ -3981,7 +3984,7 @@ function selectFieldAgent(name) {
   _fmAgent = name;
   document.getElementById('fm-agent-selector').style.display = 'none';
   document.getElementById('fm-wo-selector').style.display = '';
-  document.getElementById('fm-current-agent-tag').textContent = 'ðŸ‘· ' + name;
+  document.getElementById('fm-current-agent-tag').textContent = 'Ã°Å¸â€˜Â· ' + name;
   renderFMWorkOrders();
   lucide.createIcons();
 }
@@ -4002,8 +4005,8 @@ function renderFMWorkOrders() {
     return '<div class="fm-wo-card" onclick="selectFieldWO(\'' + wo.id + '\')">' +
       '<div class="fm-wo-icon"><i data-lucide="clipboard-list" style="width:22px;height:22px"></i></div>' +
       '<div class="fm-wo-info">' +
-        '<h4>' + wo.id + ' â€” ' + wo.title + '</h4>' +
-        '<p>' + wo.client + ' â€¢ ' + wo.property + '</p>' +
+        '<h4>' + wo.id + ' Ã¢â‚¬â€ ' + wo.title + '</h4>' +
+        '<p>' + wo.client + ' Ã¢â‚¬Â¢ ' + wo.property + '</p>' +
       '</div>' +
       '<div class="fm-wo-progress">' +
         '<div class="fm-wo-progress-ring" style="background:conic-gradient(' + progressColor + ' ' + progress + '%, var(--bg-input) 0);">' +
@@ -4022,8 +4025,8 @@ async function selectFieldWO(woId) {
 
   document.getElementById('fm-wo-selector').style.display = 'none';
   document.getElementById('fm-tasks').style.display = '';
-  document.getElementById('fm-task-agent-tag').textContent = 'ðŸ‘· ' + _fmAgent;
-  document.getElementById('fm-task-wo-label').textContent = wo.id + ' â€” ' + wo.title;
+  document.getElementById('fm-task-agent-tag').textContent = 'Ã°Å¸â€˜Â· ' + _fmAgent;
+  document.getElementById('fm-task-wo-label').textContent = wo.id + ' Ã¢â‚¬â€ ' + wo.title;
 
   // Show loading
   document.getElementById('fm-task-list').innerHTML = '<div style="text-align:center;padding:40px;color:var(--text-muted)"><i data-lucide="loader" style="width:24px;height:24px;animation:spin 1s linear infinite"></i><p style="margin-top:8px">Loading tasks...</p></div>';
@@ -4084,7 +4087,7 @@ function renderFMTasks() {
       '<div class="fm-task-check">' + checkIcon + '</div>' +
       '<div class="fm-task-info">' +
         '<h4>' + item.name + '</h4>' +
-        '<p>' + (item.category || '') + (item.sub ? ' â€¢ ' + item.sub : '') + '</p>' +
+        '<p>' + (item.category || '') + (item.sub ? ' Ã¢â‚¬Â¢ ' + item.sub : '') + '</p>' +
       '</div>' +
       '<div class="fm-task-price">$' + ((item.price || 0) * (item.qty || 1)).toLocaleString() + '</div>' +
     '</div>';
@@ -4107,7 +4110,7 @@ function fmToggleTask(index) {
       completedAt: item.completedAt,
       completedBy: item.completedBy
     }).then(function() {
-      console.log('âœ“ FM: Line item completed in DB:', item.name);
+      console.log('Ã¢Å“â€œ FM: Line item completed in DB:', item.name);
     }).catch(function(e) { console.warn('FM: Failed to sync completion:', e); });
   }
 
@@ -4129,7 +4132,7 @@ function fmToggleTask(index) {
   renderFMTasks();
   renderDashboard();
   renderWorkOrders();
-  showToast('âœ… ' + item.name + ' â€” Completed by ' + _fmAgent);
+  showToast('Ã¢Å“â€¦ ' + item.name + ' Ã¢â‚¬â€ Completed by ' + _fmAgent);
 
   // Vibrate on mobile
   if (navigator.vibrate) navigator.vibrate(50);
@@ -4157,11 +4160,11 @@ function startGPSTracking() {
         _fmGPS.lat = pos.coords.latitude;
         _fmGPS.lng = pos.coords.longitude;
         var gpsText = document.getElementById('fm-gps-text');
-        if (gpsText) gpsText.textContent = 'ðŸ“ ' + _fmGPS.lat.toFixed(5) + ', ' + _fmGPS.lng.toFixed(5);
+        if (gpsText) gpsText.textContent = 'Ã°Å¸â€œÂ ' + _fmGPS.lat.toFixed(5) + ', ' + _fmGPS.lng.toFixed(5);
       },
       function(err) {
         var gpsText = document.getElementById('fm-gps-text');
-        if (gpsText) gpsText.textContent = 'GPS unavailable â€” ' + err.message;
+        if (gpsText) gpsText.textContent = 'GPS unavailable Ã¢â‚¬â€ ' + err.message;
       },
       { enableHighAccuracy: true, timeout: 10000 }
     );
@@ -4234,11 +4237,11 @@ async function fmSavePhoto() {
 
   if (typeof DB !== 'undefined' && isSupabaseReady()) {
     DB.photos.create(photoRecord).then(function() {
-      console.log('âœ“ Photo saved to DB');
+      console.log('Ã¢Å“â€œ Photo saved to DB');
     }).catch(function(e) { console.warn('Photo DB save failed:', e); });
   }
 
   fmClosePhotoModal();
-  showToast('ðŸ“· Photo saved: ' + label);
+  showToast('Ã°Å¸â€œÂ· Photo saved: ' + label);
   if (navigator.vibrate) navigator.vibrate([50, 50, 50]);
 }
