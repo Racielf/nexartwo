@@ -30,8 +30,8 @@ serve(async (req) => {
     }
 
     // Use verified domain or Resend sandbox
-    // TODO: Change from_email default to noreply@rcartconstruction.com once domain is verified
-    const fromAddress = from_email || "onboarding@resend.dev";
+    // Domain rcartconstruction.com verified in Resend (status: verified, sending: enabled)
+    const fromAddress = from_email || "info@rcartconstruction.com";
     const fromLabel = from_name || "R.C Art Construction LLC";
 
     const emailPayload: Record<string, unknown> = {
