@@ -2096,6 +2096,13 @@ body {
 .doc-template-field .drag-handle-doc { color: #c4ad7d; }
 .doc-template-field .drag-handle-doc:hover { color: #8b6914; }
 
+/* ---- CO DOCUMENT ALIAS — mirrors #wo-document-inner for Change Orders ---- */
+.doc-template-classic .co-doc-inner { background: #ffffff; color: #1a1a1a; }
+.doc-template-modern .co-doc-inner { background: #fff; color: #1e1e2e; position: relative; }
+.doc-template-modern .co-doc-inner::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 5px; background: linear-gradient(90deg, #4f46e5 0%, #7c3aed 40%, #a78bfa 100%); }
+.doc-template-field .co-doc-inner { background: #faf9f7; color: #2c2418; font-family: 'Inter', sans-serif; position: relative; }
+.doc-template-field .co-doc-inner::before { content: ''; position: absolute; top: 0; left: 0; bottom: 0; width: 5px; background: linear-gradient(180deg, #b8860b 0%, #8b6914 50%, #6b4f12 100%); border-radius: 4px 0 0 4px; }
+
 /* ---- SHARED DOC ELEMENTS ---- */
 .doc-logo-initials {
   width: 96px; height: 96px;

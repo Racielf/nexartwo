@@ -1401,7 +1401,9 @@ function createNewCO() {
 }
 
 // ---- CO Editor: renders EXACTLY like Document tab, inline in Changes tab ----
+// ---- CO Editor: OFFICIAL DOCUMENT exactly like Document tab ----
 var _coEditorIdx = -1;
+var _coTemplate = 'classic';
 
 function openCOEditor(idx) {
   _coEditorIdx = idx;
@@ -1410,46 +1412,99 @@ function openCOEditor(idx) {
   var container = document.getElementById('wo-changes-list');
   if (!container) return;
 
+  // Use saved template or default
+  _coTemplate = co.template || 'classic';
   var items = co.items || [];
+  var coName = (typeof COMPANY !== 'undefined' && COMPANY.name) ? COMPANY.name : 'R.C Art Construction LLC';
+  var coPhone = (typeof COMPANY !== 'undefined' && COMPANY.phone) ? COMPANY.phone : '';
+  var coCcb = (typeof COMPANY !== 'undefined' && COMPANY.ccb) ? 'CCB #' + COMPANY.ccb : '';
+  var coCity = (typeof COMPANY !== 'undefined') ? [COMPANY.city, COMPANY.state].filter(Boolean).join(', ') || 'Portland, OR' : 'Portland, OR';
+  var clientName = currentWO ? currentWO.client || '' : '';
+  var clientAddr = currentWO ? currentWO.property || '' : '';
+  var today = new Date().toLocaleDateString('en-US', {month:'2-digit', day:'2-digit', year:'numeric'});
+
+  // Logo
+  var logoHtml = '';
+  if (typeof COMPANY !== 'undefined' && COMPANY.logo_url) {
+    logoHtml = '<img src="' + COMPANY.logo_url + '" class="doc-logo-img">';
+  } else {
+    var initials = coName.split(' ').map(function(w){ return w[0]; }).join('').substring(0,3).toUpperCase();
+    logoHtml = '<div class="doc-logo-initials">' + initials + '</div>';
+  }
+
+  // Line item rows â€” same structure as renderDocLines()
   var rows = items.map(function(it, i) {
     var origTotal = it.original_price * it.original_qty;
-    var newTotal = it.new_price * it.new_qty;
+    var curPrice = it.action === 'remove' ? 0 : it.new_price;
+    var curQty = it.action === 'remove' ? 0 : it.new_qty;
+    var lineTotal = curPrice * curQty;
     var isRemoved = it.action === 'remove';
-    return '<tr id="co-row-' + i + '" style="' + (isRemoved ? 'opacity:0.35;' : '') + '">' +
+    var rowStyle = isRemoved ? 'opacity:0.35;' : '';
+
+    return '<tr id="co-row-' + i + '" style="' + rowStyle + '">' +
       '<td class="doc-td-desc"><div style="display:flex;align-items:flex-start;gap:6px"><div style="flex:1">' +
       '<input class="doc-line-name-input" id="co-name-' + i + '" value="' + escHtml(it.new_name || it.name) + '" oninput="coEditorCalc()" placeholder="Service name"' + (isRemoved ? ' disabled' : '') + '>' +
-      '<div style="font-size:10px;color:var(--text-muted);padding:2px 6px">Original: ' + escHtml(it.name) + ' &middot; $' + origTotal.toLocaleString() + '</div>' +
+      '<textarea class="doc-line-desc-input" placeholder="Description..." oninput="this.style.height=\'auto\';this.style.height=this.scrollHeight+\'px\'" rows="1"' + (isRemoved ? ' disabled' : '') + '>' + escHtml(it.original_desc || '') + '</textarea>' +
       '</div></div></td>' +
-      '<td class="doc-td-rate"><input type="number" class="doc-rate-input" id="co-rate-' + i + '" value="' + (isRemoved ? 0 : it.new_price).toFixed(2) + '" min="0" step="0.01" oninput="coEditorCalc()"' + (isRemoved ? ' disabled' : '') + '></td>' +
-      '<td class="doc-td-qty"><input type="number" class="doc-qty-input" id="co-qty-' + i + '" value="' + (isRemoved ? 0 : it.new_qty) + '" min="0" oninput="coEditorCalc()"' + (isRemoved ? ' disabled' : '') + '></td>' +
-      '<td class="doc-td-total" id="co-lt-' + i + '">$' + (isRemoved ? '0' : newTotal.toFixed(2)) + '</td>' +
-      '<td><button class="doc-remove-btn" onclick="coEditorToggleRemove(' + i + ')" title="' + (isRemoved ? 'Restore' : 'Remove') + '">' + (isRemoved ? '&#x21A9;' : '&#x2715;') + '</button></td></tr>';
-  }).join('');
-
-  var st = CO_STATUSES[co.status] || CO_STATUSES.draft;
-  var statusOpts = Object.keys(CO_STATUSES).map(function(k) {
-    return '<option value="' + k + '"' + (co.status === k ? ' selected' : '') + '>' + CO_STATUSES[k].label + '</option>';
+      '<td class="doc-td-rate"><input type="number" class="doc-rate-input" id="co-rate-' + i + '" value="' + curPrice.toFixed(2) + '" min="0" step="0.01" oninput="coEditorCalc()"' + (isRemoved ? ' disabled' : '') + '></td>' +
+      '<td class="doc-td-qty"><input type="number" class="doc-qty-input" id="co-qty-' + i + '" value="' + curQty + '" min="0" oninput="coEditorCalc()"' + (isRemoved ? ' disabled' : '') + '></td>' +
+      '<td class="doc-td-total" id="co-lt-' + i + '">$' + lineTotal.toFixed(2) + '</td>' +
+      '<td><button class="doc-remove-btn" onclick="coEditorToggleRemove(' + i + ')" title="' + (isRemoved ? 'Restore item' : 'Remove item') + '">' + (isRemoved ? '&#x21A9;' : '&#x2715;') + '</button></td></tr>';
   }).join('');
 
   container.innerHTML =
-    '<div style="display:flex;align-items:center;gap:10px;margin-bottom:16px">' +
+    // ---- Toolbar: Back + Title + Template Selector ----
+    '<div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;flex-wrap:wrap">' +
     '<button class="btn btn-sm btn-secondary" onclick="closeCOEditor()" style="gap:4px"><i data-lucide="arrow-left" style="width:13px;height:13px"></i> Back</button>' +
     '<span style="font-size:12px;font-weight:700;color:var(--accent)">' + escHtml(co.coNumber) + '</span>' +
-    '<input type="text" id="co-ed-title" class="form-control" value="' + escHtml(co.title) + '" style="flex:1;font-size:14px;font-weight:600" placeholder="Change Order title">' +
-    '<select id="co-ed-status" class="form-control" style="width:auto;font-size:12px">' + statusOpts + '</select>' +
-    '</div>' +
+    '<input type="text" id="co-ed-title" class="form-control" value="' + escHtml(co.title) + '" style="flex:1;font-size:14px;font-weight:600;min-width:160px" placeholder="Change Order title">' +
+    '<select id="co-ed-status" class="form-control" style="width:auto;font-size:12px">' +
+    Object.keys(CO_STATUSES).map(function(k) { return '<option value="' + k + '"' + (co.status === k ? ' selected' : '') + '>' + CO_STATUSES[k].label + '</option>'; }).join('') + '</select></div>' +
+
+    // ---- Metadata row ----
     '<div style="display:flex;gap:10px;margin-bottom:12px">' +
     '<div style="flex:1"><label style="font-size:11px;color:var(--text-secondary)">Requested By</label>' +
     '<input type="text" id="co-ed-reqby" class="form-control" value="' + escHtml(co.requestedBy || '') + '" placeholder="Client / realtor" style="width:100%"></div>' +
     '<div style="flex:1"><label style="font-size:11px;color:var(--text-secondary)">Description</label>' +
     '<input type="text" id="co-ed-desc" class="form-control" value="' + escHtml(co.description || '') + '" placeholder="What changed and why" style="width:100%"></div></div>' +
 
-    '<div id="wo-document-wrap" class="doc-template-classic">' +
-    '<div id="wo-document-inner">' +
-    '<div class="doc-header"><div class="doc-company-info">' +
-    '<div class="doc-company-name">CHANGE ORDER &mdash; ' + escHtml(co.coNumber) + '</div>' +
-    '<div class="doc-company-detail">Work Order: ' + escHtml(currentWO ? currentWO.id : '') + ' &middot; ' + escHtml(currentWO ? currentWO.client : '') + '</div></div></div>' +
+    // ---- Template Selector (same as Document tab) ----
+    '<div style="display:flex;align-items:center;gap:10px;margin-bottom:18px;flex-wrap:wrap">' +
+    '<span style="font-size:13px;font-weight:600;color:var(--text-secondary)">Template:</span>' +
+    '<div style="display:flex;gap:8px">' +
+    '<button class="doc-tpl-btn' + (_coTemplate === 'classic' ? ' active' : '') + '" id="co-tpl-btn-classic" onclick="setCOTemplate(\'classic\')">Classic</button>' +
+    '<button class="doc-tpl-btn' + (_coTemplate === 'modern' ? ' active' : '') + '" id="co-tpl-btn-modern" onclick="setCOTemplate(\'modern\')">Modern</button>' +
+    '<button class="doc-tpl-btn' + (_coTemplate === 'field' ? ' active' : '') + '" id="co-tpl-btn-field" onclick="setCOTemplate(\'field\')">Executive</button></div>' +
+    '<div style="flex:1"></div>' +
+    '<button class="btn btn-sm btn-primary" onclick="saveCOFromEditor()" style="gap:6px"><i data-lucide="save" style="width:13px;height:13px"></i> Save</button></div>' +
 
+    // ---- OFFICIAL DOCUMENT (identical structure to Document tab) ----
+    '<div id="co-document-wrap" class="doc-template-' + _coTemplate + '">' +
+    '<div class="co-doc-inner" style="padding:48px 56px;border-radius:10px;box-shadow:0 2px 12px rgba(0,0,0,0.08);margin-bottom:24px">' +
+
+    // Header
+    '<div class="doc-header">' +
+    '<div class="doc-logo-area">' + logoHtml + '</div>' +
+    '<div class="doc-company-info">' +
+    '<div class="doc-company-name">' + escHtml(coName) + '</div>' +
+    '<div class="doc-company-detail">' + escHtml(coPhone) + '</div>' +
+    '<div class="doc-company-detail">' + escHtml(coCcb) + '</div>' +
+    '<div class="doc-company-detail">' + escHtml(coCity) + '</div>' +
+    '</div></div>' +
+
+    // Meta row
+    '<div class="doc-meta-row">' +
+    '<div class="doc-meta-col"><div class="doc-meta-label">Prepared For</div>' +
+    '<div class="doc-meta-value">' + escHtml(clientName || '\u2014') + '</div>' +
+    '<div class="doc-meta-sub">' + escHtml(clientAddr || '\u2014') + '</div></div>' +
+    '<div class="doc-meta-col"><div class="doc-meta-label">Date</div>' +
+    '<div class="doc-meta-value">' + today + '</div></div>' +
+    '<div class="doc-meta-col"><div class="doc-meta-label">Change Order #</div>' +
+    '<div class="doc-meta-value">' + escHtml(co.coNumber) + '</div></div>' +
+    '<div class="doc-meta-col"><div class="doc-meta-label">Work Order</div>' +
+    '<div class="doc-meta-value">' + escHtml(currentWO ? currentWO.id : '') + '</div></div></div>' +
+
+    // Line Items Table
     '<table class="doc-table"><thead><tr>' +
     '<th class="doc-th-desc">Description</th>' +
     '<th class="doc-th-rate">Rate</th>' +
@@ -1458,21 +1513,30 @@ function openCOEditor(idx) {
     '<th class="doc-th-action"></th></tr></thead>' +
     '<tbody id="co-editor-tbody">' + rows + '</tbody></table>' +
 
+    // Totals
     '<div class="doc-totals">' +
-    '<div class="doc-total-row"><span>Original Total</span><span id="co-ed-orig">$0</span></div>' +
-    '<div class="doc-total-row"><span>Proposed Total</span><span id="co-ed-proposed">$0</span></div>' +
-    '<div class="doc-total-row doc-grand-total"><span>NET IMPACT</span><span id="co-ed-impact">$0</span></div></div>' +
+    '<div class="doc-total-row"><span>Original Scope Total</span><span id="co-ed-orig">$0.00</span></div>' +
+    '<div class="doc-total-row"><span>Proposed Total</span><span id="co-ed-proposed">$0.00</span></div>' +
+    '<div class="doc-total-row doc-grand-total"><span>NET IMPACT</span><span id="co-ed-impact" style="color:inherit">$0.00</span></div></div>' +
 
-    '<div class="doc-signature-block"><div class="doc-sig-col"><div class="doc-sig-line"></div><div class="doc-sig-label">Client Signature &amp; Date</div></div>' +
+    // Signature block
+    '<div class="doc-signature-block">' +
+    '<div class="doc-sig-col"><div class="doc-sig-line"></div><div class="doc-sig-label">Client Signature &amp; Date</div></div>' +
     '<div class="doc-sig-col"><div class="doc-sig-line"></div><div class="doc-sig-label">Contractor Signature &amp; Date</div></div></div>' +
-    '</div></div>' +
 
-    '<div style="display:flex;justify-content:flex-end;gap:10px;margin-top:16px">' +
-    '<button class="btn btn-secondary" onclick="closeCOEditor()">Cancel</button>' +
-    '<button class="btn btn-primary" onclick="saveCOFromEditor()">Save Change Order</button></div>';
+    '</div></div>';
 
   lucide.createIcons();
   coEditorCalc();
+}
+
+function setCOTemplate(tpl) {
+  _coTemplate = tpl;
+  var wrap = document.getElementById('co-document-wrap');
+  if (wrap) wrap.className = 'doc-template-' + tpl;
+  document.querySelectorAll('[id^="co-tpl-btn-"]').forEach(function(btn) {
+    btn.classList.toggle('active', btn.id === 'co-tpl-btn-' + tpl);
+  });
 }
 
 function closeCOEditor() {
@@ -1489,7 +1553,7 @@ function coEditorToggleRemove(i) {
   var row = document.getElementById('co-row-' + i);
   if (row) row.style.opacity = isR ? '0.35' : '1';
   var nEl = document.getElementById('co-name-' + i); if (nEl) nEl.disabled = isR;
-  var rEl = document.getElementById('co-rate-' + i); if (rEl) { rEl.disabled = isR; if (isR) rEl.value = '0'; }
+  var rEl = document.getElementById('co-rate-' + i); if (rEl) { rEl.disabled = isR; if (isR) rEl.value = '0.00'; }
   var qEl = document.getElementById('co-qty-' + i); if (qEl) { qEl.disabled = isR; if (isR) qEl.value = '0'; }
   var btn = row ? row.querySelector('.doc-remove-btn') : null;
   if (btn) btn.innerHTML = isR ? '&#x21A9;' : '&#x2715;';
@@ -1526,6 +1590,7 @@ function saveCOFromEditor() {
   co.description = (document.getElementById('co-ed-desc')?.value || '').trim();
   co.requestedBy = (document.getElementById('co-ed-reqby')?.value || '').trim();
   co.status = document.getElementById('co-ed-status')?.value || co.status;
+  co.template = _coTemplate;
   if (co.status === 'approved' && !co.approvedAt) co.approvedAt = new Date().toISOString();
 
   // Read edited values from inputs
@@ -1549,9 +1614,9 @@ function saveCOFromEditor() {
     });
   });
 
-  // Filter: only keep changed items for the CO
-  co.items = coItems.filter(function(it) { return it.action !== 'unchanged'; });
-  co.amount = Math.round(co.items.reduce(function(s, it) {
+  // Keep ALL items (including unchanged) for the CO document
+  co.items = coItems;
+  co.amount = Math.round(coItems.filter(function(it) { return it.action !== 'unchanged'; }).reduce(function(s, it) {
     return s + ((it.new_price * it.new_qty) - (it.original_price * it.original_qty));
   }, 0) * 100) / 100;
 
@@ -1559,6 +1624,7 @@ function saveCOFromEditor() {
   closeCOEditor();
   showToast('Change Order ' + co.coNumber + ' saved');
 }
+
 
 function updateCOStatus(idx, status) {
   if (!_currentCOs[idx]) return;
