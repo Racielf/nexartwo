@@ -2277,7 +2277,10 @@ function previewEmailPDF() {
   buildPDF(attach);
 }
 
-function sendEmailNow() {
+// Edge Function endpoint for real email delivery via Resend
+var SEND_EMAIL_EDGE_URL = 'https://udaeifoibydcokefcmbg.supabase.co/functions/v1/send-email';
+
+async function sendEmailNow() {
   var to = document.getElementById('email-to').value;
   var cc = document.getElementById('email-cc').value;
   var subject = document.getElementById('email-subject').value;
@@ -2286,19 +2289,49 @@ function sendEmailNow() {
 
   if (!to || !subject) { alert('Please fill in To and Subject fields'); return; }
 
+  // Build mailto as fallback
   var mailto = 'mailto:' + encodeURIComponent(to) + '?subject=' + encodeURIComponent(subject) + '&body=' + encodeURIComponent(body);
   if (cc) mailto += '&cc=' + encodeURIComponent(cc);
 
   if (attach && attach !== 'none') { buildPDF(attach); }
 
-  window.location.href = mailto;
   closeModal('modal-email');
 
-  // Track email status — internal tracking only
-  // mailto cannot confirm actual delivery; this status means email was prepared/opened in mail client.
+  // Try real email delivery via Edge Function first
+  var emailStatus = 'prepared';
+  try {
+    var res = await fetch(SEND_EMAIL_EDGE_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        to: to,
+        cc: cc || '',
+        subject: subject,
+        body: body,
+        woId: currentWO ? currentWO.id : ''
+      })
+    });
+    var result = await res.json();
+    if (result.success) {
+      emailStatus = 'sent';
+      showToast('✅ Email sent successfully to ' + to);
+    } else {
+      // Edge Function returned error — fallback to mailto
+      console.warn('Edge Function error:', result.error);
+      window.location.href = mailto;
+      showToast('📧 Email opened in mail client (direct send unavailable)');
+    }
+  } catch(e) {
+    // Edge Function unreachable — fallback to mailto
+    console.warn('Email Edge Function unreachable, using mailto fallback:', e.message);
+    window.location.href = mailto;
+    showToast('📧 Email opened in mail client');
+  }
+
+  // Track email status per Work Order
   if (currentWO) {
     var emailState = {
-      status: 'prepared',
+      status: emailStatus,
       sentAt: new Date().toISOString(),
       sentTo: to,
       viewedAt: null,
@@ -2307,12 +2340,10 @@ function sendEmailNow() {
     try { localStorage.setItem('wo_email_' + currentWO.id, JSON.stringify(emailState)); } catch(e) {}
     renderEmailStatus();
   }
-  showToast('📧 Email opened in your mail client');
 }
 
 // ============ EMAIL STATUS TRACKING ============
-// Internal/manual tracking only. mailto: cannot confirm delivery or open.
-// Status: 'draft' (default/no record), 'prepared', 'viewed'
+// Status: 'draft' (default/no record), 'prepared' (mailto), 'sent' (Resend confirmed), 'viewed'
 // Stored per WO: localStorage key wo_email_${woId}
 
 function loadEmailStatus(woId) {
@@ -2333,6 +2364,9 @@ function renderEmailStatus() {
   if (es.status === 'viewed' && es.viewedAt) {
     dateStr = new Date(es.viewedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
     el.innerHTML = '<span style="font-size:11px;padding:3px 8px;border-radius:10px;background:#10b98122;color:#10b981;font-weight:600" title="Viewed by recipient · ' + dateStr + '\nSent to: ' + escHtml(es.sentTo || '') + '">👁 Viewed · ' + dateStr + '</span>';
+  } else if (es.status === 'sent' && es.sentAt) {
+    dateStr = new Date(es.sentAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    el.innerHTML = '<span style="font-size:11px;padding:3px 8px;border-radius:10px;background:#10b98122;color:#10b981;font-weight:600" title="Delivered via Resend · ' + dateStr + '\nTo: ' + escHtml(es.sentTo || '') + '">✅ Sent · ' + dateStr + '</span>';
   } else if (es.status === 'prepared' && es.sentAt) {
     dateStr = new Date(es.sentAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
     el.innerHTML = '<span style="font-size:11px;padding:3px 8px;border-radius:10px;background:#3b82f622;color:#3b82f6;font-weight:600" title="Opened in mail client · ' + dateStr + '\nTo: ' + escHtml(es.sentTo || '') + '">📧 Email Prepared · ' + dateStr + '</span>';
@@ -2346,7 +2380,7 @@ function renderEmailStatus() {
 function markEmailViewed() {
   if (!currentWO) { console.warn('No current WO'); return; }
   var es = loadEmailStatus(currentWO.id);
-  if (!es || es.status !== 'prepared') { console.warn('Email not in prepared state'); return; }
+  if (!es || (es.status !== 'prepared' && es.status !== 'sent')) { console.warn('Email not in prepared/sent state'); return; }
   es.status = 'viewed';
   es.viewedAt = new Date().toISOString();
   try { localStorage.setItem('wo_email_' + currentWO.id, JSON.stringify(es)); } catch(e) {}
