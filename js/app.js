@@ -1,4 +1,4 @@
-﻿// ============ MOCK DATA ============
+// ============ MOCK DATA ============
 
 let COMPANY = {
   name: "R.C Art Construction LLC",
@@ -1316,7 +1316,13 @@ function initChangesTab() {
 }
 
 function genCONumber() {
-  var num = (_currentCOs.length + 1).toString().padStart(3, '0');
+  // Use max existing CO number + 1 to avoid duplicates after deletions
+  var maxNum = 0;
+  _currentCOs.forEach(function(co) {
+    var m = (co.coNumber || '').match(/CO-(\d+)/);
+    if (m) { var n = parseInt(m[1]); if (n > maxNum) maxNum = n; }
+  });
+  var num = (maxNum + 1).toString().padStart(3, '0');
   return 'CO-' + num;
 }
 
@@ -1380,7 +1386,8 @@ function createNewCO() {
     function() {
       var coItems = eligible.map(function(li, i) {
         return {
-          line_item_id: li.id || ('li-' + i), name: li.name, original_desc: li.desc || '',
+          line_item_id: li.id || ('li-' + i), name: li.name, original_name: li.name,
+          original_desc: li.desc || li.description || li.details || '',
           original_category: li.category || '', action: 'unchanged',
           original_price: li.price, original_qty: li.qty || 1,
           new_price: li.price, new_qty: li.qty || 1, new_name: '', new_desc: '', reason: ''
@@ -1404,17 +1411,20 @@ function createNewCO() {
 // ---- CO Editor: OFFICIAL DOCUMENT exactly like Document tab ----
 var _coEditorIdx = -1;
 var _coTemplate = 'classic';
+var _coEditorDraft = null;  // Deep copy — all edits go here, never to _currentCOs directly
 
 function openCOEditor(idx) {
   _coEditorIdx = idx;
   var co = _currentCOs[idx];
   if (!co) return;
+  // Phase 2: Create draft buffer — all edits go here, real CO untouched until Save
+  _coEditorDraft = JSON.parse(JSON.stringify(co));
   var container = document.getElementById('wo-changes-list');
   if (!container) return;
 
   // Use saved template or default
   _coTemplate = co.template || 'classic';
-  var items = co.items || [];
+  var items = _coEditorDraft.items || [];
   var coName = (typeof COMPANY !== 'undefined' && COMPANY.name) ? COMPANY.name : 'R.C Art Construction LLC';
   var coPhone = (typeof COMPANY !== 'undefined' && COMPANY.phone) ? COMPANY.phone : '';
   var coCcb = (typeof COMPANY !== 'undefined' && COMPANY.ccb) ? 'CCB #' + COMPANY.ccb : '';
@@ -1444,7 +1454,7 @@ function openCOEditor(idx) {
     return '<tr id="co-row-' + i + '" style="' + rowStyle + '">' +
       '<td class="doc-td-desc"><div style="display:flex;align-items:flex-start;gap:6px"><div style="flex:1">' +
       '<input class="doc-line-name-input" id="co-name-' + i + '" value="' + escHtml(it.new_name || it.name) + '" oninput="coEditorCalc()" placeholder="Service name"' + (isRemoved ? ' disabled' : '') + '>' +
-      '<textarea class="doc-line-desc-input" placeholder="Description..." oninput="this.style.height=\'auto\';this.style.height=this.scrollHeight+\'px\'" rows="1"' + (isRemoved ? ' disabled' : '') + '>' + escHtml(it.original_desc || '') + '</textarea>' +
+      '<textarea class="doc-line-desc-input" id="co-desc-' + i + '" placeholder="Description..." oninput="this.style.height=\'auto\';this.style.height=this.scrollHeight+\'px\'" rows="1"' + (isRemoved ? ' disabled' : '') + '>' + escHtml(it.new_desc || it.original_desc || '') + '</textarea>' +
       '</div></div></td>' +
       '<td class="doc-td-rate"><input type="number" class="doc-rate-input" id="co-rate-' + i + '" value="' + curPrice.toFixed(2) + '" min="0" step="0.01" oninput="coEditorCalc()"' + (isRemoved ? ' disabled' : '') + '></td>' +
       '<td class="doc-td-qty"><input type="number" class="doc-qty-input" id="co-qty-' + i + '" value="' + curQty + '" min="0" oninput="coEditorCalc()"' + (isRemoved ? ' disabled' : '') + '></td>' +
@@ -1540,14 +1550,75 @@ function setCOTemplate(tpl) {
 }
 
 function closeCOEditor() {
-  _coEditorIdx = -1;
-  renderChangeOrders();
+  if (hasCOEditorChanges()) {
+    showConfirmModal('Discard Changes?',
+      'You have unsaved changes. Discard them and return to the list?',
+      function() {
+        _coEditorDraft = null;
+        _coEditorIdx = -1;
+        renderChangeOrders();
+      }
+    );
+  } else {
+    _coEditorDraft = null;
+    _coEditorIdx = -1;
+    renderChangeOrders();
+  }
+}
+
+// Phase 3: Detect unsaved changes by comparing editor state vs original CO
+function hasCOEditorChanges() {
+  if (!_coEditorDraft || _coEditorIdx < 0) return false;
+  var co = _currentCOs[_coEditorIdx];
+  if (!co) return false;
+
+  // --- Metadata comparisons (trimmed strings) ---
+  var domTitle = (document.getElementById('co-ed-title')?.value || '').trim();
+  var domDesc = (document.getElementById('co-ed-desc')?.value || '').trim();
+  var domReqBy = (document.getElementById('co-ed-reqby')?.value || '').trim();
+  var domStatus = (document.getElementById('co-ed-status')?.value || '').trim();
+
+  if (domTitle !== (co.title || '').trim()) return true;
+  if (domDesc !== (co.description || '').trim()) return true;
+  if (domReqBy !== (co.requestedBy || '').trim()) return true;
+  if (domStatus !== (co.status || '').trim()) return true;
+  if (_coTemplate !== (co.template || 'classic')) return true;
+
+  // --- Item-level comparisons ---
+  var items = co.items || [];
+  for (var i = 0; i < items.length; i++) {
+    var orig = items[i];
+    var draft = _coEditorDraft.items[i];
+    if (!draft) return true;
+
+    // Action changed (remove toggle lives in draft)
+    if (draft.action !== orig.action) return true;
+
+    // Skip DOM comparison for removed items (inputs are disabled)
+    if (draft.action === 'remove') continue;
+
+    // Rate: parseFloat(DOM) vs Number(stored)
+    var domRate = parseFloat(document.getElementById('co-rate-' + i)?.value) || 0;
+    var origRate = Number(orig.new_price) || 0;
+    if (domRate !== origRate) return true;
+
+    // Qty: parseFloat(DOM) vs Number(stored)
+    var domQty = parseFloat(document.getElementById('co-qty-' + i)?.value) || 0;
+    var origQty = Number(orig.new_qty) || 0;
+    if (domQty !== origQty) return true;
+
+    // Name: trimmed DOM vs (new_name || name), trimmed
+    var domName = (document.getElementById('co-name-' + i)?.value || '').trim();
+    var origName = (orig.new_name || orig.original_name || '').trim();
+    if (domName !== origName) return true;
+  }
+
+  return false;  // No changes detected
 }
 
 function coEditorToggleRemove(i) {
-  var co = _currentCOs[_coEditorIdx];
-  if (!co || !co.items[i]) return;
-  var it = co.items[i];
+  if (!_coEditorDraft || !_coEditorDraft.items[i]) return;
+  var it = _coEditorDraft.items[i];
   it.action = it.action === 'remove' ? 'unchanged' : 'remove';
   var isR = it.action === 'remove';
   var row = document.getElementById('co-row-' + i);
@@ -1561,10 +1632,9 @@ function coEditorToggleRemove(i) {
 }
 
 function coEditorCalc() {
-  var co = _currentCOs[_coEditorIdx];
-  if (!co) return;
+  if (!_coEditorDraft) return;
   var origT = 0, newT = 0;
-  (co.items || []).forEach(function(it, i) {
+  (_coEditorDraft.items || []).forEach(function(it, i) {
     origT += it.original_price * it.original_qty;
     if (it.action === 'remove') {
       var lt = document.getElementById('co-lt-' + i); if (lt) lt.textContent = '$0.00';
@@ -1584,44 +1654,58 @@ function coEditorCalc() {
 }
 
 function saveCOFromEditor() {
+  if (!_coEditorDraft || _coEditorIdx < 0) return;
   var co = _currentCOs[_coEditorIdx];
   if (!co) return;
-  co.title = (document.getElementById('co-ed-title')?.value || '').trim() || co.title;
-  co.description = (document.getElementById('co-ed-desc')?.value || '').trim();
-  co.requestedBy = (document.getElementById('co-ed-reqby')?.value || '').trim();
-  co.status = document.getElementById('co-ed-status')?.value || co.status;
-  co.template = _coTemplate;
-  if (co.status === 'approved' && !co.approvedAt) co.approvedAt = new Date().toISOString();
 
-  // Read edited values from inputs
+  // Read metadata from DOM into draft
+  _coEditorDraft.title = (document.getElementById('co-ed-title')?.value || '').trim() || _coEditorDraft.title;
+  _coEditorDraft.description = (document.getElementById('co-ed-desc')?.value || '').trim();
+  _coEditorDraft.requestedBy = (document.getElementById('co-ed-reqby')?.value || '').trim();
+  _coEditorDraft.status = document.getElementById('co-ed-status')?.value || _coEditorDraft.status;
+  _coEditorDraft.template = _coTemplate;
+  if (_coEditorDraft.status === 'approved' && !_coEditorDraft.approvedAt) _coEditorDraft.approvedAt = new Date().toISOString();
+
+  // Read edited values from inputs into draft items
   var coItems = [];
-  (co.items || []).forEach(function(it, i) {
+  (_coEditorDraft.items || []).forEach(function(it, i) {
     var np = it.action === 'remove' ? 0 : (parseFloat(document.getElementById('co-rate-' + i)?.value) || 0);
     var nq = it.action === 'remove' ? 0 : (parseInt(document.getElementById('co-qty-' + i)?.value) || 0);
     var nn = (document.getElementById('co-name-' + i)?.value || '').trim();
+    var nd = (document.getElementById('co-desc-' + i)?.value || '').trim();
     var action = it.action;
     if (action !== 'remove') {
-      if (np !== it.original_price) action = 'modify_price';
-      else if (nq !== it.original_qty) action = 'modify_qty';
-      else if (nn !== it.name) action = 'modify_scope';
+      var priceChanged = np !== it.original_price;
+      var qtyChanged = nq !== it.original_qty;
+      var nameChanged = nn !== it.name;
+      if (priceChanged && qtyChanged) action = 'modify_both';
+      else if (priceChanged) action = 'modify_price';
+      else if (qtyChanged) action = 'modify_qty';
+      else if (nameChanged) action = 'modify_scope';
       else action = 'unchanged';
     }
     coItems.push({
-      line_item_id: it.line_item_id, name: it.name, original_desc: it.original_desc,
-      original_category: it.original_category, action: action,
+      line_item_id: it.line_item_id, name: it.name, original_name: it.original_name || it.name,
+      original_desc: it.original_desc, original_category: it.original_category, action: action,
       original_price: it.original_price, original_qty: it.original_qty,
-      new_price: np, new_qty: nq, new_name: nn !== it.name ? nn : '', new_desc: '', reason: ''
+      new_price: np, new_qty: nq, new_name: nn !== it.name ? nn : '',
+      new_desc: nd !== (it.original_desc || '').trim() ? nd : '', reason: ''
     });
   });
 
-  // Keep ALL items (including unchanged) for the CO document
-  co.items = coItems;
-  co.amount = Math.round(coItems.filter(function(it) { return it.action !== 'unchanged'; }).reduce(function(s, it) {
+  // Calculate net amount
+  _coEditorDraft.items = coItems;
+  _coEditorDraft.amount = Math.round(coItems.filter(function(it) { return it.action !== 'unchanged'; }).reduce(function(s, it) {
     return s + ((it.new_price * it.new_qty) - (it.original_price * it.original_qty));
   }, 0) * 100) / 100;
 
+  // Phase 2: NOW apply draft to real CO — this is the only mutation point
+  Object.assign(co, _coEditorDraft);
+
   saveCOs(currentWO.id);
-  closeCOEditor();
+  _coEditorDraft = null;
+  _coEditorIdx = -1;
+  renderChangeOrders();
   showToast('Change Order ' + co.coNumber + ' saved');
 }
 
@@ -1693,6 +1777,10 @@ function buildNegotiationSummary() {
         match.negotiated_price = 0;
         match.negotiated_qty = 0;
         match.status = 'removed';
+      } else if (coItem.action === 'modify_both') {
+        match.negotiated_price = coItem.new_price;
+        match.negotiated_qty = coItem.new_qty;
+        match.status = 'modified';
       } else if (coItem.action === 'modify_price') {
         match.negotiated_price = coItem.new_price;
         match.status = 'modified';
@@ -1700,7 +1788,7 @@ function buildNegotiationSummary() {
         match.negotiated_qty = coItem.new_qty;
         match.status = 'modified';
       } else if (coItem.action === 'modify_scope') {
-        // Scope change Ã¢â‚¬â€ no financial impact, but mark as modified
+        // Scope change — no financial impact, but mark as modified
         match.status = 'modified';
       }
       match.negotiated_total = match.negotiated_price * match.negotiated_qty;
