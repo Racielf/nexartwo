@@ -1385,9 +1385,9 @@ var _coEditIdx = -1; // -1 = new, >= 0 = editing existing CO
 function openCOModal(editIdx) {
   _coEditIdx = (typeof editIdx === 'number') ? editIdx : -1;
   var editCo = _coEditIdx >= 0 ? _currentCOs[_coEditIdx] : null;
-  showConfirmModal(editCo ? 'Edit Change Order' : 'New Change Order', '', null);
 
-  var box = document.querySelector('.confirm-box');
+  var box = document.getElementById('modal-change-order-body');
+  document.getElementById('modal-change-order').style.display = 'flex';
   // Build line items checklist from currentLineItems
   var itemRows = (currentLineItems || []).map(function(li, i) {
     var isCompleted = li.status === 'completed';
@@ -1449,7 +1449,7 @@ function openCOModal(editIdx) {
       </div>
     </div>
     <div class="confirm-actions" style="margin-top:16px">
-      <button type="button" class="btn btn-secondary" onclick="closeConfirmModal()">Cancel</button>
+      <button type="button" class="btn btn-secondary" onclick="closeChangeOrderModal()">Cancel</button>
       <button type="button" class="btn btn-primary" onclick="saveCO()">${editCo ? 'Update Change Order' : 'Create Change Order'}</button>
     </div>`;
 
@@ -1494,6 +1494,11 @@ function openCOModal(editIdx) {
       coUpdateNetImpact();
     }
   }
+}
+
+function closeChangeOrderModal() {
+  document.getElementById('modal-change-order').style.display = 'none';
+  _coEditIdx = -1;
 }
 
 // CO modal helpers
@@ -1549,7 +1554,7 @@ function coUpdateNetImpact() {
 
 function saveCO() {
   var title = (document.getElementById('co-title')?.value || '').trim();
-  if (!title) { alert('Title is required.'); return; }
+  if (!title) { showToast('⚠️ Title is required'); return; }
 
   // Collect affected items
   var coItems = [];
@@ -1601,8 +1606,7 @@ function saveCO() {
     existing.status = newStatus;
     if (newStatus === 'approved' && !existing.approvedAt) existing.approvedAt = new Date().toISOString();
     saveCOs(currentWO.id);
-    closeConfirmModal();
-    _coEditIdx = -1;
+    closeChangeOrderModal();
     renderChangeOrders();
     showToast('✅ ' + existing.coNumber + ' updated');
   } else {
@@ -1622,8 +1626,7 @@ function saveCO() {
     };
     _currentCOs.unshift(co);
     saveCOs(currentWO.id);
-    closeConfirmModal();
-    _coEditIdx = -1;
+    closeChangeOrderModal();
     renderChangeOrders();
     showToast('✅ Change Order ' + co.coNumber + ' created');
   }
