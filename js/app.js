@@ -1338,6 +1338,7 @@ function deleteCO(idx) {
 }
 
 
+function switchWOTab(tab) {
   document.querySelectorAll('#wo-detail-tabs .wo-tab').forEach(t => t.classList.remove('active'));
   document.querySelector(`#wo-detail-tabs .wo-tab[data-tab="${tab}"]`)?.classList.add('active');
 
