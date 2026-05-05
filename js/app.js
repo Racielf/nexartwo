@@ -1894,7 +1894,36 @@ function pdfConfirmPricing(hidePrices) {
 
 function pdfBackToTemplates() {
   document.getElementById('pdf-pricing-step').style.display = 'none';
+  document.getElementById('pdf-negotiation-step').style.display = 'none';
   document.getElementById('pdf-template-list').style.display = '';
+}
+
+// ============ NEGOTIATION SUMMARY ============
+function openNegotiationInput() {
+  document.getElementById('pdf-template-list').style.display = 'none';
+  document.getElementById('pdf-pricing-step').style.display = 'none';
+  document.getElementById('pdf-negotiation-step').style.display = 'block';
+  // Clear fields
+  document.getElementById('neg-original').value = '';
+  document.getElementById('neg-negotiated').value = '';
+  document.getElementById('neg-scope').value = '';
+  document.getElementById('neg-notes').value = '';
+  // Pre-fill original total from current line items
+  if (currentLineItems && currentLineItems.length > 0) {
+    var woTotal = currentLineItems.reduce(function(s, i) { return s + (i.price * (i.qty || 1)); }, 0);
+    document.getElementById('neg-original').value = woTotal;
+  }
+  lucide.createIcons();
+}
+
+function generateNegotiationPDF() {
+  var negData = {
+    originalTotal: parseFloat(document.getElementById('neg-original').value) || 0,
+    negotiatedTotal: parseFloat(document.getElementById('neg-negotiated').value) || 0,
+    scopeChanges: document.getElementById('neg-scope').value.trim(),
+    notes: document.getElementById('neg-notes').value.trim()
+  };
+  buildPDF('negotiation', false, 'classic', negData);
 }
 
 function buildPDF(template, hidePrices, docStyle) {
@@ -1916,7 +1945,8 @@ function buildPDF(template, hidePrices, docStyle) {
     inspection: 'Property Inspection Report',
     progress: 'Progress Report',
     invoice: 'Invoice / Estimate',
-    informative: 'Informative Property Report'
+    informative: 'Informative Property Report',
+    negotiation: 'Negotiation Summary'
   };
 
   let bodyContent = '';
@@ -1997,6 +2027,49 @@ function buildPDF(template, hidePrices, docStyle) {
       '<div class="section" style="margin-top:24px;padding:16px;background:#f8f8f8;border-radius:8px"><h3 style="font-size:12px;color:#888;text-transform:uppercase;margin-bottom:8px">Payment Information</h3>' +
       '<p style="font-size:13px">Please make checks payable to <strong>R.C Art Construction LLC</strong></p>' +
       '<p style="font-size:13px">Payment Terms: <strong>Net 30</strong> from invoice date</p></div>';
+  }
+
+  // ---- NEGOTIATION SUMMARY ----
+  if (template === 'negotiation') {
+    var neg = docStyle; // negData passed as 4th param, received via docStyle override
+    if (arguments.length >= 4) neg = arguments[3];
+    if (!neg || typeof neg !== 'object') neg = { originalTotal: 0, negotiatedTotal: 0, scopeChanges: '', notes: '' };
+    var savings = neg.originalTotal - neg.negotiatedTotal;
+    var savingsPct = neg.originalTotal > 0 ? Math.round((savings / neg.originalTotal) * 100) : 0;
+
+    bodyContent =
+      '<div class="section"><h2>Project Information</h2>' +
+      '<table class="info-table">' +
+      '<tr><td class="label">Work Order</td><td>' + wo.id + '</td><td class="label">Status</td><td><span class="status-tag">' + statusLabel(wo.status) + '</span></td></tr>' +
+      '<tr><td class="label">Project</td><td>' + wo.title + '</td><td class="label">Type</td><td>Type ' + wo.type + '</td></tr>' +
+      '<tr><td class="label">Client</td><td>' + wo.client + '</td><td class="label">Priority</td><td>' + capitalize(wo.priority) + '</td></tr>' +
+      '<tr><td class="label">Property</td><td colspan="3">' + wo.property + '</td></tr>' +
+      '</table></div>' +
+
+      '<div class="section"><h2>Pricing Comparison</h2>' +
+      '<table class="items-table">' +
+      '<thead><tr><th></th><th class="right">Amount</th></tr></thead>' +
+      '<tbody>' +
+      '<tr><td><strong>Original Estimate</strong></td><td class="right" style="font-size:16px">$' + neg.originalTotal.toLocaleString() + '</td></tr>' +
+      '<tr><td><strong>Negotiated Total</strong></td><td class="right" style="font-size:16px;color:#10b981;font-weight:700">$' + neg.negotiatedTotal.toLocaleString() + '</td></tr>' +
+      '</tbody>' +
+      '<tfoot><tr><td><strong>Client Savings</strong></td><td class="right" style="font-size:15px;color:#10b981;font-weight:700">$' + savings.toLocaleString() + ' (' + savingsPct + '%)</td></tr></tfoot>' +
+      '</table></div>';
+
+    if (neg.scopeChanges) {
+      bodyContent += '<div class="section"><h2>Scope Changes</h2>' +
+        '<div style="font-size:13px;line-height:1.7;white-space:pre-wrap">' + neg.scopeChanges.replace(/</g,'&lt;') + '</div></div>';
+    }
+
+    if (neg.notes) {
+      bodyContent += '<div class="section"><h2>Notes</h2>' +
+        '<div style="font-size:13px;line-height:1.7;white-space:pre-wrap">' + neg.notes.replace(/</g,'&lt;') + '</div></div>';
+    }
+
+    bodyContent += '<div class="section" style="margin-top:24px;padding:16px;background:#f8f8f8;border-radius:8px">' +
+      '<p style="font-size:12px;color:#888;margin:0">This negotiation summary is for discussion purposes. Final pricing subject to signed agreement.</p></div>';
+
+    docStyle = 'classic'; // force classic style for negotiation
   }
 
   var printWindow = window.open('', '_blank');
