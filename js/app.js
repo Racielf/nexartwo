@@ -2277,68 +2277,102 @@ function previewEmailPDF() {
   buildPDF(attach);
 }
 
-// Edge Function endpoint for real email delivery via Resend
-var SEND_EMAIL_EDGE_URL = 'https://udaeifoibydcokefcmbg.supabase.co/functions/v1/send-email';
-
 async function sendEmailNow() {
-  var to = document.getElementById('email-to').value;
-  var cc = document.getElementById('email-cc').value;
-  var subject = document.getElementById('email-subject').value;
-  var body = document.getElementById('email-body').value;
-  var attach = document.getElementById('email-attach').value;
+  var to = document.getElementById('email-to').value.trim();
+  var cc = document.getElementById('email-cc').value.trim();
+  var subject = document.getElementById('email-subject').value.trim();
+  var body = document.getElementById('email-body').value.trim();
 
-  if (!to || !subject) { alert('Please fill in To and Subject fields'); return; }
-
-  // Build mailto as fallback
-  var mailto = 'mailto:' + encodeURIComponent(to) + '?subject=' + encodeURIComponent(subject) + '&body=' + encodeURIComponent(body);
-  if (cc) mailto += '&cc=' + encodeURIComponent(cc);
-
-  if (attach && attach !== 'none') { buildPDF(attach); }
-
-  closeModal('modal-email');
-
-  // Try real email delivery via Edge Function first
-  var emailStatus = 'prepared';
-  try {
-    var res = await fetch(SEND_EMAIL_EDGE_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        to: to,
-        cc: cc || '',
-        subject: subject,
-        body: body,
-        woId: currentWO ? currentWO.id : ''
-      })
-    });
-    var result = await res.json();
-    if (result.success) {
-      emailStatus = 'sent';
-      showToast('✅ Email sent successfully to ' + to);
-    } else {
-      // Edge Function returned error — fallback to mailto
-      console.warn('Edge Function error:', result.error);
-      window.location.href = mailto;
-      showToast('📧 Email opened in mail client (direct send unavailable)');
-    }
-  } catch(e) {
-    // Edge Function unreachable — fallback to mailto
-    console.warn('Email Edge Function unreachable, using mailto fallback:', e.message);
-    window.location.href = mailto;
-    showToast('📧 Email opened in mail client');
+  if (!to || !subject) {
+    showToast('Please fill in To and Subject fields');
+    return;
   }
 
-  // Track email status per Work Order
-  if (currentWO) {
-    var emailState = {
-      status: emailStatus,
-      sentAt: new Date().toISOString(),
-      sentTo: to,
-      viewedAt: null,
-      subject: subject
-    };
-    try { localStorage.setItem('wo_email_' + currentWO.id, JSON.stringify(emailState)); } catch(e) {}
-    renderEmailStatus();
+  // Find and disable the send button with spinner
+  var sendBtn = document.querySelector('#modal-email .btn-primary') ||
+                document.querySelector('#modal-email button[onclick*="sendEmailNow"]');
+  var originalText = '';
+  if (sendBtn) {
+    originalText = sendBtn.innerHTML;
+    sendBtn.disabled = true;
+    sendBtn.innerHTML = '<svg class="spin" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v4m0 12v4m-7.07-2.93l2.83-2.83m8.48-8.48l2.83-2.83M2 12h4m12 0h4M4.93 4.93l2.83 2.83m8.48 8.48l2.83 2.83"/></svg> Sending...';
+  }
+
+  try {
+    var sb = getSupabase();
+    if (!sb) throw new Error('Database connection not available');
+
+    var result = await sb.functions.invoke('send-email', {
+      body: {
+        to: to,
+        cc: cc || undefined,
+        subject: subject,
+        body: body,
+        from_name: COMPANY.name || 'R.C Art Construction LLC',
+        reply_to: COMPANY.email || 'info@rcartconstruction.com',
+      }
+    });
+
+    // Supabase functions.invoke returns { data, error }
+    if (result.error) {
+      var errMsg = result.error.message || result.error;
+      throw new Error(typeof errMsg === 'string' ? errMsg : JSON.stringify(errMsg));
+    }
+
+    var data = result.data;
+    // Do NOT save as sent unless success is explicitly true
+    if (!data || data.success !== true) throw new Error(data && data.error ? data.error : 'Unexpected response');
+
+    // ✅ SUCCESS — Track email status
+    if (currentWO) {
+      var woId = currentWO.id;
+
+      // Save email status
+      var emailState = {
+        status: 'sent',
+        sentAt: new Date().toISOString(),
+        sentTo: to,
+        viewedAt: null,
+        subject: subject,
+        resendId: (data && data.resend_id) || ''
+      };
+      try { localStorage.setItem('wo_email_' + woId, JSON.stringify(emailState)); } catch(e) {}
+
+      // Log to Communications tab
+      var comms = [];
+      try { comms = JSON.parse(localStorage.getItem('wo_comms_' + woId) || '[]'); } catch(e) {}
+      comms.unshift({
+        id: Date.now(),
+        type: 'email',
+        person: to,
+        date: new Date().toLocaleDateString(),
+        note: 'Email sent: ' + subject,
+        status: 'sent',
+        sentAt: new Date().toISOString(),
+        sentTo: to,
+        sentCc: cc || '',
+        resendId: (data && data.resend_id) || '',
+        createdAt: new Date().toISOString(),
+      });
+      try { localStorage.setItem('wo_comms_' + woId, JSON.stringify(comms)); } catch(e) {}
+
+      renderEmailStatus();
+    }
+
+    closeModal('modal-email');
+    showToast('✅ Email sent successfully to ' + to);
+
+  } catch (err) {
+    console.error('Email send failed:', err);
+    showToast('❌ Email failed: ' + (err.message || 'Unknown error'));
+    // Do NOT fallback to mailto
+    // Do NOT mark as sent
+    // Modal stays open so user can retry
+  } finally {
+    if (sendBtn) {
+      sendBtn.disabled = false;
+      sendBtn.innerHTML = originalText || 'Send Email';
+    }
   }
 }
 
