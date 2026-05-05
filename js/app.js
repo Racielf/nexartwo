@@ -2298,7 +2298,7 @@ function sendEmailNow() {
   // mailto cannot confirm actual delivery; this status means email was prepared/opened in mail client.
   if (currentWO) {
     var emailState = {
-      status: 'sent',
+      status: 'prepared',
       sentAt: new Date().toISOString(),
       sentTo: to,
       viewedAt: null,
@@ -2312,7 +2312,7 @@ function sendEmailNow() {
 
 // ============ EMAIL STATUS TRACKING ============
 // Internal/manual tracking only. mailto: cannot confirm delivery or open.
-// Status: 'draft' (default/no record), 'sent', 'viewed'
+// Status: 'draft' (default/no record), 'prepared', 'viewed'
 // Stored per WO: localStorage key wo_email_${woId}
 
 function loadEmailStatus(woId) {
@@ -2333,9 +2333,9 @@ function renderEmailStatus() {
   if (es.status === 'viewed' && es.viewedAt) {
     dateStr = new Date(es.viewedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
     el.innerHTML = '<span style="font-size:11px;padding:3px 8px;border-radius:10px;background:#10b98122;color:#10b981;font-weight:600" title="Viewed by recipient · ' + dateStr + '\nSent to: ' + escHtml(es.sentTo || '') + '">👁 Viewed · ' + dateStr + '</span>';
-  } else if (es.status === 'sent' && es.sentAt) {
+  } else if (es.status === 'prepared' && es.sentAt) {
     dateStr = new Date(es.sentAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-    el.innerHTML = '<span style="font-size:11px;padding:3px 8px;border-radius:10px;background:#3b82f622;color:#3b82f6;font-weight:600" title="Sent via mail client · ' + dateStr + '\nTo: ' + escHtml(es.sentTo || '') + '">📧 Sent · ' + dateStr + '</span>';
+    el.innerHTML = '<span style="font-size:11px;padding:3px 8px;border-radius:10px;background:#3b82f622;color:#3b82f6;font-weight:600" title="Opened in mail client · ' + dateStr + '\nTo: ' + escHtml(es.sentTo || '') + '">📧 Email Prepared · ' + dateStr + '</span>';
   } else {
     el.innerHTML = '';
   }
@@ -2346,7 +2346,7 @@ function renderEmailStatus() {
 function markEmailViewed() {
   if (!currentWO) { console.warn('No current WO'); return; }
   var es = loadEmailStatus(currentWO.id);
-  if (!es || es.status !== 'sent') { console.warn('Email not in sent state'); return; }
+  if (!es || es.status !== 'prepared') { console.warn('Email not in prepared state'); return; }
   es.status = 'viewed';
   es.viewedAt = new Date().toISOString();
   try { localStorage.setItem('wo_email_' + currentWO.id, JSON.stringify(es)); } catch(e) {}
