@@ -991,16 +991,364 @@ function generateDefaultActivity() {
   ];
 }
 
-function switchWOTab(tab) {
+// ============================================================
+// COMMUNICATIONS
+// TODO: Migrate to Supabase when wo_communications schema adds:
+//   - person (string)
+//   - date (timestamp as dedicated column)
+// Current: localStorage only — key: wo_comms_${woId}
+// ============================================================
+
+var _currentComms = [];
+
+var COMM_TYPES = {
+  call:        { label: 'Phone Call',       icon: 'phone',         color: '#3b82f6' },
+  email:       { label: 'Email',            icon: 'mail',          color: '#8b5cf6' },
+  text:        { label: 'Text Message',     icon: 'message-circle',color: '#06b6d4' },
+  note:        { label: 'Internal Note',    icon: 'file-text',     color: '#64748b' },
+  agreement:   { label: 'Agreement',        icon: 'handshake',     color: '#10b981' },
+  instruction: { label: 'Instruction',      icon: 'clipboard',     color: '#f59e0b' }
+};
+
+function loadComms(woId) {
+  try {
+    var raw = localStorage.getItem('wo_comms_' + woId);
+    return raw ? JSON.parse(raw) : [];
+  } catch(e) { return []; }
+}
+
+function saveComms(woId) {
+  try { localStorage.setItem('wo_comms_' + woId, JSON.stringify(_currentComms)); } catch(e) {}
+}
+
+function initCommsTab() {
+  if (!currentWO) return;
+  _currentComms = loadComms(currentWO.id);
+  renderComms();
+}
+
+function renderComms() {
+  var container = document.getElementById('wo-comms-list');
+  if (!container) return;
+
+  var toolbar = `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+    <div style="font-size:13px;color:var(--text-secondary)">${_currentComms.length} record${_currentComms.length !== 1 ? 's' : ''}</div>
+    <button class="btn btn-sm btn-primary" onclick="openCommModal()" style="gap:6px">
+      <i data-lucide="plus" style="width:13px;height:13px"></i> Add Communication
+    </button>
+  </div>`;
+
+  if (_currentComms.length === 0) {
+    container.innerHTML = toolbar + `<div style="text-align:center;padding:48px 0;color:var(--text-muted)">
+      <i data-lucide="message-square" style="width:36px;height:36px;margin-bottom:12px;opacity:0.4"></i>
+      <p style="margin:0;font-size:14px">No communications logged yet.</p>
+      <p style="margin:4px 0 0;font-size:12px">Track calls, emails, agreements, and notes.</p>
+    </div>`;
+    lucide.createIcons();
+    return;
+  }
+
+  var items = _currentComms.map(function(c, idx) {
+    var t = COMM_TYPES[c.type] || COMM_TYPES.note;
+    return `<div class="card" style="margin-bottom:10px">
+      <div class="card-body" style="padding:14px 16px">
+        <div style="display:flex;align-items:flex-start;gap:12px">
+          <div style="width:36px;height:36px;border-radius:50%;background:${t.color}22;display:flex;align-items:center;justify-content:center;flex-shrink:0">
+            <i data-lucide="${t.icon}" style="width:16px;height:16px;color:${t.color}"></i>
+          </div>
+          <div style="flex:1;min-width:0">
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;flex-wrap:wrap">
+              <span style="font-size:11px;font-weight:600;color:${t.color};background:${t.color}18;padding:2px 8px;border-radius:10px">${t.label}</span>
+              <span style="font-size:11px;color:var(--text-muted)">${c.date || ''}</span>
+              ${c.person ? `<span style="font-size:11px;color:var(--text-secondary)">· ${escHtml(c.person)}</span>` : ''}
+            </div>
+            <div style="font-weight:600;font-size:13px;color:var(--text-primary);margin-bottom:4px">${escHtml(c.subject)}</div>
+            ${c.body ? `<div style="font-size:12px;color:var(--text-secondary);white-space:pre-wrap">${escHtml(c.body)}</div>` : ''}
+            <div style="font-size:11px;color:var(--text-muted);margin-top:6px">By ${escHtml(c.createdBy)} · ${new Date(c.createdAt).toLocaleString()}</div>
+          </div>
+          <button onclick="deleteComm(${idx})" title="Delete" style="background:none;border:none;cursor:pointer;opacity:0.35;font-size:16px;padding:2px 4px;color:var(--text-primary)" onmouseover="this.style.opacity='0.8'" onmouseout="this.style.opacity='0.35'">✕</button>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+
+  container.innerHTML = toolbar + items;
+  lucide.createIcons();
+}
+
+function openCommModal(editIdx) {
+  var c = editIdx != null ? _currentComms[editIdx] : null;
+  var today = new Date().toISOString().split('T')[0];
+
+  var typeOptions = Object.keys(COMM_TYPES).map(function(k) {
+    return `<option value="${k}" ${c && c.type === k ? 'selected' : ''}>${COMM_TYPES[k].label}</option>`;
+  }).join('');
+
+  showConfirmModal(
+    c ? 'Edit Communication' : 'Add Communication',
+    '', // override below
+    null
+  );
+
+  // Override modal content for the form
+  var box = document.querySelector('.confirm-box');
+  box.innerHTML = `
+    <h3 style="margin:0 0 16px;font-size:16px">${c ? 'Edit' : 'Add'} Communication</h3>
+    <div style="display:flex;flex-direction:column;gap:10px;text-align:left">
+      <div>
+        <label style="font-size:12px;color:var(--text-secondary);display:block;margin-bottom:4px">Type</label>
+        <select id="cm-type" class="form-control" style="width:100%">${typeOptions}</select>
+      </div>
+      <div style="display:flex;gap:10px">
+        <div style="flex:1">
+          <label style="font-size:12px;color:var(--text-secondary);display:block;margin-bottom:4px">Date</label>
+          <input type="date" id="cm-date" class="form-control" value="${c ? c.date : today}" style="width:100%">
+        </div>
+        <div style="flex:1">
+          <label style="font-size:12px;color:var(--text-secondary);display:block;margin-bottom:4px">Person / Contact</label>
+          <input type="text" id="cm-person" class="form-control" value="${c ? escHtml(c.person||'') : ''}" placeholder="Name or company" style="width:100%">
+        </div>
+      </div>
+      <div>
+        <label style="font-size:12px;color:var(--text-secondary);display:block;margin-bottom:4px">Subject / Title *</label>
+        <input type="text" id="cm-subject" class="form-control" value="${c ? escHtml(c.subject) : ''}" placeholder="Brief summary" style="width:100%">
+      </div>
+      <div>
+        <label style="font-size:12px;color:var(--text-secondary);display:block;margin-bottom:4px">Details / Notes</label>
+        <textarea id="cm-body" class="form-control" rows="3" placeholder="Full notes, agreements, instructions..." style="width:100%;resize:vertical">${c ? escHtml(c.body||'') : ''}</textarea>
+      </div>
+    </div>
+    <div class="confirm-actions" style="margin-top:16px">
+      <button type="button" class="btn btn-secondary" onclick="closeConfirmModal()">Cancel</button>
+      <button type="button" class="btn btn-primary" onclick="saveComm(${editIdx != null ? editIdx : 'null'})">Save</button>
+    </div>`;
+}
+
+function saveComm(editIdx) {
+  var subject = (document.getElementById('cm-subject')?.value || '').trim();
+  if (!subject) { alert('Subject is required.'); return; }
+
+  var record = {
+    id:        'cm-' + Date.now(),
+    woId:      currentWO.id,
+    type:      document.getElementById('cm-type')?.value || 'note',
+    date:      document.getElementById('cm-date')?.value || '',
+    person:    (document.getElementById('cm-person')?.value || '').trim(),
+    subject:   subject,
+    body:      (document.getElementById('cm-body')?.value || '').trim(),
+    createdBy: (typeof COMPANY !== 'undefined' && COMPANY.owner) ? COMPANY.owner : 'User',
+    createdAt: new Date().toISOString()
+  };
+
+  if (editIdx != null && editIdx !== 'null') {
+    record.id = _currentComms[editIdx].id;
+    record.createdAt = _currentComms[editIdx].createdAt;
+    _currentComms[editIdx] = record;
+  } else {
+    _currentComms.unshift(record); // newest first
+  }
+
+  saveComms(currentWO.id);
+  closeConfirmModal();
+  renderComms();
+  showToast('✅ Communication saved');
+}
+
+function deleteComm(idx) {
+  showConfirmModal('Delete Record', '"' + _currentComms[idx].subject + '" will be removed.', function() {
+    _currentComms.splice(idx, 1);
+    saveComms(currentWO.id);
+    renderComms();
+    showToast('Record deleted');
+  });
+}
+
+// ============================================================
+// CHANGE ORDERS
+// TODO: Migrate to Supabase when change_orders schema adds:
+//   - title (string, separate from description)
+//   - requested_by (string)
+// Current: localStorage only — key: wo_changes_${woId}
+// ============================================================
+
+var _currentCOs = [];
+
+var CO_STATUSES = {
+  draft:    { label: 'Draft',            color: '#64748b' },
+  pending:  { label: 'Pending Approval', color: '#f59e0b' },
+  approved: { label: 'Approved',         color: '#10b981' },
+  rejected: { label: 'Rejected',         color: '#ef4444' }
+};
+
+function loadCOs(woId) {
+  try {
+    var raw = localStorage.getItem('wo_changes_' + woId);
+    return raw ? JSON.parse(raw) : [];
+  } catch(e) { return []; }
+}
+
+function saveCOs(woId) {
+  try { localStorage.setItem('wo_changes_' + woId, JSON.stringify(_currentCOs)); } catch(e) {}
+}
+
+function initChangesTab() {
+  if (!currentWO) return;
+  _currentCOs = loadCOs(currentWO.id);
+  renderChangeOrders();
+}
+
+function genCONumber() {
+  var num = (_currentCOs.length + 1).toString().padStart(3, '0');
+  return 'CO-' + num;
+}
+
+function renderChangeOrders() {
+  var container = document.getElementById('wo-changes-list');
+  if (!container) return;
+
+  var toolbar = `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+    <div style="font-size:13px;color:var(--text-secondary)">${_currentCOs.length} change order${_currentCOs.length !== 1 ? 's' : ''}</div>
+    <button class="btn btn-sm btn-primary" onclick="openCOModal()" style="gap:6px">
+      <i data-lucide="plus" style="width:13px;height:13px"></i> New Change Order
+    </button>
+  </div>`;
+
+  if (_currentCOs.length === 0) {
+    container.innerHTML = toolbar + `<div style="text-align:center;padding:48px 0;color:var(--text-muted)">
+      <i data-lucide="edit-3" style="width:36px;height:36px;margin-bottom:12px;opacity:0.4"></i>
+      <p style="margin:0;font-size:14px">No change orders yet.</p>
+      <p style="margin:4px 0 0;font-size:12px">Track extra scope, additions, or modifications.</p>
+    </div>`;
+    lucide.createIcons();
+    return;
+  }
+
+  var items = _currentCOs.map(function(co, idx) {
+    var st = CO_STATUSES[co.status] || CO_STATUSES.draft;
+    var statusOptions = Object.keys(CO_STATUSES).map(function(k) {
+      return `<option value="${k}" ${co.status === k ? 'selected' : ''}>${CO_STATUSES[k].label}</option>`;
+    }).join('');
+
+    return `<div class="card" style="margin-bottom:10px">
+      <div class="card-body" style="padding:14px 16px">
+        <div style="display:flex;align-items:flex-start;gap:12px">
+          <div style="flex:1;min-width:0">
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;flex-wrap:wrap">
+              <span style="font-size:12px;font-weight:700;color:var(--accent)">${escHtml(co.coNumber)}</span>
+              <span style="font-size:11px;font-weight:600;color:${st.color};background:${st.color}18;padding:2px 8px;border-radius:10px">${st.label}</span>
+              ${co.amount ? `<span style="font-size:12px;font-weight:600;color:var(--text-primary)">$${parseFloat(co.amount).toLocaleString()}</span>` : ''}
+            </div>
+            <div style="font-weight:600;font-size:13px;color:var(--text-primary);margin-bottom:4px">${escHtml(co.title)}</div>
+            ${co.description ? `<div style="font-size:12px;color:var(--text-secondary);margin-bottom:8px;white-space:pre-wrap">${escHtml(co.description)}</div>` : ''}
+            <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+              ${co.requestedBy ? `<span style="font-size:11px;color:var(--text-muted)">Requested by: ${escHtml(co.requestedBy)}</span>` : ''}
+              <span style="font-size:11px;color:var(--text-muted)">${new Date(co.createdAt).toLocaleDateString()}</span>
+            </div>
+            <div style="margin-top:10px;display:flex;align-items:center;gap:8px">
+              <label style="font-size:11px;color:var(--text-secondary)">Status:</label>
+              <select class="form-control" style="font-size:12px;padding:3px 8px;width:auto"
+                onchange="updateCOStatus(${idx}, this.value)">${statusOptions}</select>
+            </div>
+          </div>
+          <button onclick="deleteCO(${idx})" title="Delete" style="background:none;border:none;cursor:pointer;opacity:0.35;font-size:16px;padding:2px 4px;color:var(--text-primary)" onmouseover="this.style.opacity='0.8'" onmouseout="this.style.opacity='0.35'">✕</button>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+
+  container.innerHTML = toolbar + items;
+  lucide.createIcons();
+}
+
+function openCOModal() {
+  showConfirmModal('New Change Order', '', null);
+
+  var box = document.querySelector('.confirm-box');
+  box.innerHTML = `
+    <h3 style="margin:0 0 16px;font-size:16px">New Change Order</h3>
+    <div style="display:flex;flex-direction:column;gap:10px;text-align:left">
+      <div>
+        <label style="font-size:12px;color:var(--text-secondary);display:block;margin-bottom:4px">Title *</label>
+        <input type="text" id="co-title" class="form-control" placeholder="Brief title of the change" style="width:100%">
+      </div>
+      <div>
+        <label style="font-size:12px;color:var(--text-secondary);display:block;margin-bottom:4px">Description / Scope</label>
+        <textarea id="co-desc" class="form-control" rows="3" placeholder="What is changing and why..." style="width:100%;resize:vertical"></textarea>
+      </div>
+      <div style="display:flex;gap:10px">
+        <div style="flex:1">
+          <label style="font-size:12px;color:var(--text-secondary);display:block;margin-bottom:4px">Amount (optional)</label>
+          <input type="number" id="co-amount" class="form-control" placeholder="0.00" min="0" step="0.01" style="width:100%">
+        </div>
+        <div style="flex:1">
+          <label style="font-size:12px;color:var(--text-secondary);display:block;margin-bottom:4px">Requested By</label>
+          <input type="text" id="co-requestedby" class="form-control" placeholder="Client / field agent" style="width:100%">
+        </div>
+      </div>
+      <div>
+        <label style="font-size:12px;color:var(--text-secondary);display:block;margin-bottom:4px">Status</label>
+        <select id="co-status" class="form-control" style="width:100%">
+          ${Object.keys(CO_STATUSES).map(k => `<option value="${k}">${CO_STATUSES[k].label}</option>`).join('')}
+        </select>
+      </div>
+    </div>
+    <div class="confirm-actions" style="margin-top:16px">
+      <button type="button" class="btn btn-secondary" onclick="closeConfirmModal()">Cancel</button>
+      <button type="button" class="btn btn-primary" onclick="saveCO()">Create Change Order</button>
+    </div>`;
+}
+
+function saveCO() {
+  var title = (document.getElementById('co-title')?.value || '').trim();
+  if (!title) { alert('Title is required.'); return; }
+
+  var co = {
+    id:          'co-' + Date.now(),
+    woId:        currentWO.id,
+    coNumber:    genCONumber(),
+    title:       title,
+    description: (document.getElementById('co-desc')?.value || '').trim(),
+    amount:      parseFloat(document.getElementById('co-amount')?.value) || 0,
+    requestedBy: (document.getElementById('co-requestedby')?.value || '').trim(),
+    status:      document.getElementById('co-status')?.value || 'draft',
+    createdAt:   new Date().toISOString()
+  };
+
+  _currentCOs.unshift(co); // newest first
+  saveCOs(currentWO.id);
+  closeConfirmModal();
+  renderChangeOrders();
+  showToast('✅ Change Order ' + co.coNumber + ' created');
+}
+
+function updateCOStatus(idx, status) {
+  if (!_currentCOs[idx]) return;
+  _currentCOs[idx].status = status;
+  saveCOs(currentWO.id);
+  showToast('Status updated');
+}
+
+function deleteCO(idx) {
+  showConfirmModal('Delete Change Order', '"' + _currentCOs[idx].title + '" will be permanently removed.', function() {
+    _currentCOs.splice(idx, 1);
+    saveCOs(currentWO.id);
+    renderChangeOrders();
+    showToast('Change Order deleted');
+  });
+}
+
+
   document.querySelectorAll('#wo-detail-tabs .wo-tab').forEach(t => t.classList.remove('active'));
   document.querySelector(`#wo-detail-tabs .wo-tab[data-tab="${tab}"]`)?.classList.add('active');
 
-  ['items', 'document', 'photos', 'log'].forEach(t => {
+  ['items', 'document', 'photos', 'log', 'comms', 'changes'].forEach(t => {
     const el = document.getElementById('wo-tab-content-' + t);
     if (el) el.style.display = t === tab ? 'block' : 'none';
   });
 
   if (tab === 'document') initWODocument();
+  if (tab === 'comms')    initCommsTab();
+  if (tab === 'changes')  initChangesTab();
 }
 
 // ============ DOCUMENT BUILDER ============

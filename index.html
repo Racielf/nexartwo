@@ -293,8 +293,8 @@
           <div class="wo-tab active" data-tab="items" onclick="switchWOTab('items')"><i data-lucide="list" style="width:14px;height:14px;margin-right:6px"></i> Line Items <span id="wo-tab-items-count" style="font-size:11px;opacity:0.6"></span></div>
           <div class="wo-tab" data-tab="document" onclick="switchWOTab('document')"><i data-lucide="file-text" style="width:14px;height:14px;margin-right:6px"></i> Document</div>
           <div class="wo-tab" data-tab="photos" onclick="switchWOTab('photos')"><i data-lucide="camera" style="width:14px;height:14px;margin-right:6px"></i> Photos <span id="wo-tab-photos-count" style="font-size:11px;opacity:0.6"></span></div>
-          <div class="wo-tab" data-tab="comms" style="opacity:0.5"><i data-lucide="message-square" style="width:14px;height:14px;margin-right:6px"></i> Communications</div>
-          <div class="wo-tab" data-tab="changes" style="opacity:0.5"><i data-lucide="edit-3" style="width:14px;height:14px;margin-right:6px"></i> Change Orders</div>
+          <div class="wo-tab" data-tab="comms" onclick="switchWOTab('comms')"><i data-lucide="message-square" style="width:14px;height:14px;margin-right:6px"></i> Communications</div>
+          <div class="wo-tab" data-tab="changes" onclick="switchWOTab('changes')"><i data-lucide="edit-3" style="width:14px;height:14px;margin-right:6px"></i> Change Orders</div>
           <div class="wo-tab" data-tab="log" onclick="switchWOTab('log')"><i data-lucide="activity" style="width:14px;height:14px;margin-right:6px"></i> Activity Log</div>
         </div>
 
@@ -423,6 +423,16 @@
           <div class="card">
             <div class="card-body" id="wo-activity-log"></div>
           </div>
+        </div>
+
+        <!-- TAB: COMMUNICATIONS -->
+        <div id="wo-tab-content-comms" class="wo-tab-content" style="display:none">
+          <div id="wo-comms-list"></div>
+        </div>
+
+        <!-- TAB: CHANGE ORDERS -->
+        <div id="wo-tab-content-changes" class="wo-tab-content" style="display:none">
+          <div id="wo-changes-list"></div>
         </div>
       </div>
 
