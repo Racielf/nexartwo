@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Projects — R.C Art Construction LLC</title>
+  <meta name="description" content="Project & Financial Control System for R.C Art Construction LLC">
+  <link rel="stylesheet" href="css/styles.css">
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#f5f6fa">
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <style>
+    /* Projects-specific styles */
+    .proj-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 16px; }
+    .proj-card { background: var(--bg-primary); border: 1px solid var(--border); border-radius: 12px; padding: 20px; cursor: pointer; transition: all 0.2s; position: relative; }
+    .proj-card:hover { border-color: var(--accent); box-shadow: 0 4px 16px rgba(0,0,0,0.08); transform: translateY(-2px); }
+    .proj-card-header { display: flex; align-items: flex-start; gap: 12px; margin-bottom: 14px; }
+    .proj-card-icon { width: 44px; height: 44px; border-radius: 10px; background: linear-gradient(135deg, var(--accent), #6366f1); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+    .proj-card-icon i { color: #fff; }
+    .proj-card-title { font-size: 15px; font-weight: 700; color: var(--text-primary); margin: 0 0 2px; }
+    .proj-card-addr { font-size: 12px; color: var(--text-muted); }
+    .proj-status-badge { font-size: 10px; font-weight: 600; padding: 2px 8px; border-radius: 10px; position: absolute; top: 16px; right: 16px; }
+    .proj-fin-row { display: flex; justify-content: space-between; align-items: center; padding: 6px 0; font-size: 12px; border-top: 1px solid var(--border-light, #f0f0f0); }
+    .proj-fin-row:first-child { border-top: none; }
+    .proj-fin-label { color: var(--text-secondary); }
+    .proj-fin-value { font-weight: 700; color: var(--text-primary); }
+    .proj-summary-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 12px; margin-bottom: 24px; }
+    .proj-stat-card { background: var(--bg-primary); border: 1px solid var(--border); border-radius: 10px; padding: 16px; text-align: center; }
+    .proj-stat-value { font-size: 24px; font-weight: 800; color: var(--text-primary); }
+    .proj-stat-label { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+    .proj-detail-tabs { display: flex; gap: 0; border-bottom: 2px solid var(--border); margin-bottom: 20px; overflow-x: auto; }
+    .proj-detail-tab { padding: 10px 18px; font-size: 13px; font-weight: 600; color: var(--text-muted); cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -2px; white-space: nowrap; transition: all 0.15s; }
+    .proj-detail-tab:hover { color: var(--text-primary); }
+    .proj-detail-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+    .proj-empty { text-align: center; padding: 60px 20px; color: var(--text-muted); }
+    .proj-empty i { margin-bottom: 16px; opacity: 0.3; }
+    .proj-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    .proj-table th { text-align: left; padding: 10px 12px; font-size: 11px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 2px solid var(--border); }
+    .proj-table td { padding: 10px 12px; border-bottom: 1px solid var(--border-light, #f0f0f0); color: var(--text-primary); }
+    .proj-table tr:hover { background: var(--bg-hover, rgba(0,0,0,0.02)); }
+    .proj-table .right { text-align: right; }
+
+    /* Detail view */
+    #proj-detail-view { display: none; }
+    #proj-list-view { display: block; }
+  </style>
+</head>
+<body>
+  <!-- Confirmation Modal -->
+  <div id="confirm-modal-overlay" class="confirm-overlay" style="display:none" onclick="closeConfirmModal()">
+    <div class="confirm-box" onclick="event.stopPropagation()">
+      <h3 id="confirm-modal-title">Confirm</h3>
+      <p id="confirm-modal-msg"></p>
+      <div class="confirm-actions">
+        <button class="btn btn-secondary" onclick="closeConfirmModal()">Cancel</button>
+        <button type="button" class="btn btn-danger" id="confirm-modal-btn">Confirm</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="app-container">
+
+    <!-- SIDEBAR -->
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-logo">
+        <div class="logo-icon">
+          <span>RC</span>
+        </div>
+        <div class="logo-text">
+          <h1>R.C Art Construction</h1>
+          <span>Project Control</span>
+        </div>
+      </div>
+
+      <nav class="sidebar-nav">
+        <div class="nav-section-title">Navigation</div>
+        <a href="index.html" class="nav-item" style="text-decoration:none;color:inherit">
+          <i data-lucide="clipboard-list" class="icon"></i> Work Orders
+        </a>
+        <div class="nav-item active" data-page="projects">
+          <i data-lucide="building-2" class="icon"></i> Projects
+          <span style="font-size:9px;color:var(--success);margin-left:auto;font-weight:700">NEW</span>
+        </div>
+
+        <div class="nav-section-title">Financial</div>
+        <div class="nav-item" style="opacity:0.5;pointer-events:none">
+          <i data-lucide="receipt" class="icon"></i> Expenses
+          <span style="font-size:9px;color:var(--text-muted);margin-left:auto">Sprint 2</span>
+        </div>
+        <div class="nav-item" style="opacity:0.5;pointer-events:none">
+          <i data-lucide="refresh-cw" class="icon"></i> Refunds
+          <span style="font-size:9px;color:var(--text-muted);margin-left:auto">Sprint 2</span>
+        </div>
+        <div class="nav-item" style="opacity:0.5;pointer-events:none">
+          <i data-lucide="banknote" class="icon"></i> Disbursements
+          <span style="font-size:9px;color:var(--text-muted);margin-left:auto">Sprint 3</span>
+        </div>
+
+        <div class="nav-section-title">System</div>
+        <a href="index.html" class="nav-item" style="text-decoration:none;color:inherit">
+          <i data-lucide="arrow-left" class="icon"></i> Back to WOIMS
+        </a>
+      </nav>
+    </aside>
+
+    <!-- MAIN -->
+    <main class="main-content">
+      <div class="topbar">
+        <button class="menu-toggle" onclick="document.getElementById('sidebar').classList.toggle('open')">
+          <i data-lucide="menu" style="width:20px;height:20px"></i>
+        </button>
+        <h2 id="topbar-title">Projects</h2>
+        <div class="topbar-actions">
+          <button class="btn btn-primary btn-sm" onclick="openProjectModal()" style="gap:6px">
+            <i data-lucide="plus" style="width:14px;height:14px"></i> New Project
+          </button>
+        </div>
+      </div>
+
+      <!-- LIST VIEW -->
+      <div id="proj-list-view" class="content-area">
+        <div id="proj-summary-stats" class="proj-summary-cards"></div>
+        <div id="proj-list" class="proj-grid"></div>
+      </div>
+
+      <!-- DETAIL VIEW -->
+      <div id="proj-detail-view" class="content-area">
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px">
+          <button class="btn btn-ghost btn-sm" onclick="showProjectList()" style="gap:4px">
+            <i data-lucide="arrow-left" style="width:14px;height:14px"></i> Back
+          </button>
+          <h3 id="proj-detail-title" style="margin:0;font-size:18px;color:var(--text-primary)"></h3>
+          <div style="margin-left:auto;display:flex;gap:8px">
+            <button class="btn btn-secondary btn-sm" onclick="editCurrentProject()" style="gap:4px">
+              <i data-lucide="edit-3" style="width:13px;height:13px"></i> Edit
+            </button>
+            <button class="btn btn-sm" style="gap:4px;background:var(--danger);color:#fff;border:none" onclick="deleteCurrentProject()">
+              <i data-lucide="trash-2" style="width:13px;height:13px"></i> Delete
+            </button>
+          </div>
+        </div>
+
+        <!-- Detail tabs -->
+        <div class="proj-detail-tabs" id="proj-detail-tabs">
+          <div class="proj-detail-tab active" data-tab="overview" onclick="switchProjTab('overview')">Overview</div>
+          <div class="proj-detail-tab" data-tab="financials" onclick="switchProjTab('financials')">Financials</div>
+          <div class="proj-detail-tab" data-tab="expenses" onclick="switchProjTab('expenses')">Expenses</div>
+          <div class="proj-detail-tab" data-tab="workorders" onclick="switchProjTab('workorders')">Work Orders</div>
+        </div>
+
+        <!-- Tab content -->
+        <div id="proj-tab-overview" class="proj-tab-content"></div>
+        <div id="proj-tab-financials" class="proj-tab-content" style="display:none"></div>
+        <div id="proj-tab-expenses" class="proj-tab-content" style="display:none"></div>
+        <div id="proj-tab-workorders" class="proj-tab-content" style="display:none"></div>
+      </div>
+
+    </main>
+  </div>
+
+  <div id="toast" class="toast"></div>
+
+  <script src="js/projects.js"></script>
+  <script>
+    lucide.createIcons();
+    initProjects();
+  </script>
+</body>
+</html>
