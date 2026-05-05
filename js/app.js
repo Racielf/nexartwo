@@ -1755,7 +1755,30 @@ function startEditWOTitle(el) {
 function generatePDF() {
   if (!currentWO) return;
   document.getElementById('pdf-wo-id').textContent = currentWO.id;
+  // Always reset to template list view when opening
+  document.getElementById('pdf-template-list').style.display = '';
+  document.getElementById('pdf-pricing-step').style.display = 'none';
   openModal('modal-pdf');
+  lucide.createIcons();
+}
+
+// ---- PDF Pricing Step ----
+var _pdfSelectedTemplate = '';
+
+function pdfAskPricing(template) {
+  _pdfSelectedTemplate = template;
+  document.getElementById('pdf-template-list').style.display = 'none';
+  document.getElementById('pdf-pricing-step').style.display = 'block';
+  lucide.createIcons();
+}
+
+function pdfConfirmPricing(hidePrices) {
+  buildPDF(_pdfSelectedTemplate, hidePrices);
+}
+
+function pdfBackToTemplates() {
+  document.getElementById('pdf-pricing-step').style.display = 'none';
+  document.getElementById('pdf-template-list').style.display = '';
 }
 
 function buildPDF(template, hidePrices, docStyle) {
