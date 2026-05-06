@@ -109,12 +109,15 @@ Ambos triggers están escritos como SQL ejecutable en sus respectivos drafts (no
 
 | # | Archivo | Dependencia | Contenido |
 |---|---|---|---|
-| 1 | `004_user_roles.sql` | Bootstrap manual primero | `user_roles` + `is_owner()` + `auth_role()` + policies |
-| 2 | `005_rls_projects.sql` | 004 | Policies granulares + trigger de columnas financieras |
-| 3 | `006_rls_expenses_refunds.sql` | 004 | `created_by`, policies con enforcement, refunds restringidos |
-| 4 | `007_rls_disbursements.sql` | 004 | Policies + trigger `paid` solo owner |
-| 5 | `008_rls_financial_summaries.sql` | 004-007 | REVOKE + RPCs `get_project_financial_summary` |
-| 6 | `009_project_status_summary_view.sql` | 008 | Vista pública segura (solo metadata operativa) |
+| 1a | `004a_user_roles_bootstrap.sql` | Bootstrap manual primero | `user_roles` + `is_owner()` + `auth_role()` |
+| 1b | `004b_user_roles_policies.sql` | 004a + owner verificado | Policies de `user_roles` (idempotentes) |
+| 2 | `005_rls_projects.sql` | 004a+b | Policies granulares + trigger de columnas financieras |
+| 3 | `006_rls_expenses_refunds.sql` | 004a+b | `created_by`, policies con enforcement, refunds restringidos |
+| 4 | `007_rls_disbursements.sql` | 004a+b | Policies + trigger `paid` solo owner |
+| 5 | `008_rls_financial_summaries.sql` | 004-007 | REVOKE total + RPCs `SECURITY DEFINER` |
+| 6 | `009_project_status_summary_view.sql` | 008 | Vista segura con REVOKE anon + GRANT authenticated |
+
+> **Todos los archivos 005-009 son idempotentes:** incluyen `DROP POLICY IF EXISTS` y `DROP TRIGGER IF EXISTS` antes de cada `CREATE`. Seguros para reintentos.
 
 ---
 

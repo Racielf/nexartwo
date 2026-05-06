@@ -4,21 +4,23 @@
 -- ============================================================
 -- ⚠️  DRAFT ONLY — DO NOT APPLY
 --     Gate: Workflow Supabase Financial QA debe retornar PASS.
---     Requiere migración 004 aplicada primero (is_owner, auth_role).
+--     Requiere 004a + 004b aplicados y owner verificado.
 -- ============================================================
 
--- Eliminar policies MVP actuales (nombres exactos del SQL activo 003)
+-- Eliminar policies MVP activas (nombres exactos del SQL 003)
 DROP POLICY IF EXISTS "Allow select projects" ON projects;
 DROP POLICY IF EXISTS "Allow insert projects" ON projects;
 DROP POLICY IF EXISTS "Allow update projects" ON projects;
 
--- ============================================================
+-- Idempotencia: eliminar policies nuevas si existen (seguro para reintentos)
+DROP POLICY IF EXISTS "projects_select" ON projects;
+DROP POLICY IF EXISTS "projects_insert" ON projects;
+DROP POLICY IF EXISTS "projects_update" ON projects;
+
 -- SELECT: SOLO owner y admin tienen SELECT directo en `projects`.
--- MOTIVO: RLS no oculta columnas. Si field_user/viewer pudieran
--- hacer SELECT en projects, verían purchase_price, down_payment
--- y otros campos financieros sensibles.
 -- field_user y viewer deben usar project_status_summary (migración 009).
--- ============================================================
+-- MOTIVO: RLS no oculta columnas. SELECT directo expondría
+-- purchase_price, down_payment y otros campos financieros sensibles.
 CREATE POLICY "projects_select" ON projects
   FOR SELECT USING (
     auth_role() IN ('owner', 'admin')
@@ -30,7 +32,7 @@ CREATE POLICY "projects_insert" ON projects
     auth_role() IN ('owner', 'admin')
   );
 
--- UPDATE: owner y admin pueden actualizar filas.
+-- UPDATE: permitido para owner y admin.
 -- La restricción de columnas financieras (solo owner) se implementa
 -- mediante el trigger a continuación — RLS no puede limitar columnas.
 CREATE POLICY "projects_update" ON projects
@@ -44,8 +46,11 @@ CREATE POLICY "projects_update" ON projects
 -- TRIGGER: Protección de campos financieros en `projects`
 -- Solo owner puede modificar campos financieros.
 -- Admin solo puede cambiar `status` y campos operativos.
--- Activar junto con esta migración.
 -- ============================================================
+
+-- Idempotencia: eliminar trigger previo si existe
+DROP TRIGGER IF EXISTS trg_protect_project_financials ON projects;
+
 CREATE OR REPLACE FUNCTION prevent_non_owner_project_financial_update()
 RETURNS TRIGGER
 LANGUAGE plpgsql

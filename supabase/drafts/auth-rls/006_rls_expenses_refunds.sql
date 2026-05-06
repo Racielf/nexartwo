@@ -4,12 +4,11 @@
 -- ============================================================
 -- ⚠️  DRAFT ONLY — DO NOT APPLY
 --     Gate: Workflow Supabase Financial QA debe retornar PASS.
---     Requiere migración 004 aplicada primero (is_owner, auth_role).
+--     Requiere 004a + 004b aplicados y owner verificado.
 -- ============================================================
 
 -- ============================================================
 -- PASO 1: Agregar columna created_by a project_expenses
--- Necesaria para que field_user filtre solo sus propios registros.
 -- ADD COLUMN IF NOT EXISTS = no destructivo en datos existentes.
 -- ============================================================
 ALTER TABLE project_expenses
@@ -19,10 +18,10 @@ ALTER TABLE project_expenses
   ALTER COLUMN created_by SET DEFAULT auth.uid();
 
 -- NOTA DE ALCANCE:
--- project_refunds: correcciones contables internas. Solo owner/admin crean y ven refunds.
---   No se agrega created_by — el concepto de "mi refund" no aplica para field_user.
--- project_disbursements: campo approved_by_user_id se considera para auditoría futura
---   (migración 010+). No incluir en esta fase.
+-- project_refunds: correcciones contables internas. Solo owner/admin.
+--   No requiere created_by.
+-- project_disbursements: campo approved_by_user_id para auditoría
+--   se considera en migración 010+. Fuera de scope aquí.
 
 -- ============================================================
 -- PASO 2: Eliminar policies MVP activas (nombres exactos del SQL 003)
@@ -35,23 +34,31 @@ DROP POLICY IF EXISTS "Allow select project_refunds" ON project_refunds;
 DROP POLICY IF EXISTS "Allow insert project_refunds"  ON project_refunds;
 DROP POLICY IF EXISTS "Allow update project_refunds"  ON project_refunds;
 
+-- Idempotencia: eliminar policies nuevas si existen
+DROP POLICY IF EXISTS "expenses_select" ON project_expenses;
+DROP POLICY IF EXISTS "expenses_insert" ON project_expenses;
+DROP POLICY IF EXISTS "expenses_update" ON project_expenses;
+
+DROP POLICY IF EXISTS "refunds_select" ON project_refunds;
+DROP POLICY IF EXISTS "refunds_insert" ON project_refunds;
+DROP POLICY IF EXISTS "refunds_update" ON project_refunds;
+
 -- ============================================================
 -- PASO 3: Nuevas policies — project_expenses
 -- ============================================================
 
 -- SELECT: owner y admin ven todos.
--- field_user ve SOLO los expenses que él mismo creó (via created_by).
--- viewer NO tiene acceso directo — los expenses contienen amount (dato financiero).
--- NOTA: Si se decide en el futuro dar acceso a viewer, agregar aquí.
+-- field_user ve SOLO sus propios expenses (created_by = auth.uid()).
+-- viewer NO tiene acceso — los expenses contienen amount (dato financiero).
 CREATE POLICY "expenses_select" ON project_expenses
   FOR SELECT USING (
     auth_role() IN ('owner', 'admin')
     OR (auth_role() = 'field_user' AND created_by = auth.uid())
   );
 
--- INSERT: owner y admin pueden insertar libremente.
--- field_user solo puede insertar si created_by = auth.uid() (enforced en policy).
--- DEFAULT auth.uid() ayuda, pero la policy lo garantiza explícitamente.
+-- INSERT: owner y admin insertan libremente.
+-- field_user solo puede insertar si created_by = auth.uid().
+-- La policy enforza esto explícitamente (no solo el DEFAULT).
 CREATE POLICY "expenses_insert" ON project_expenses
   FOR INSERT WITH CHECK (
     auth_role() IN ('owner', 'admin')
@@ -59,8 +66,7 @@ CREATE POLICY "expenses_insert" ON project_expenses
   );
 
 -- UPDATE: solo owner y admin pueden cambiar status.
--- Los triggers del SQL base (trg_no_update_expenses) bloquean cambios a
--- amount, tax, vendor, project_id, receipt_date.
+-- trg_no_update_expenses bloquea amount, tax, vendor, etc.
 CREATE POLICY "expenses_update" ON project_expenses
   FOR UPDATE USING (
     auth_role() IN ('owner', 'admin')
@@ -73,16 +79,14 @@ CREATE POLICY "expenses_update" ON project_expenses
 -- ============================================================
 
 -- SELECT: solo owner y admin.
--- Los refunds contienen `amount` (dato financiero interno).
--- field_user no tiene acceso directo. Usa project_status_summary para conteos.
--- viewer: si el viewer es un contador interno, el Owner puede decidir añadirlo aquí.
--- Por defecto: solo owner/admin para máxima protección.
+-- Los refunds contienen amount (dato financiero interno).
+-- field_user y viewer no tienen acceso directo.
 CREATE POLICY "refunds_select" ON project_refunds
   FOR SELECT USING (
     auth_role() IN ('owner', 'admin')
   );
 
--- INSERT: solo owner y admin crean refunds (son correcciones contables)
+-- INSERT: solo owner y admin crean refunds (correcciones contables)
 CREATE POLICY "refunds_insert" ON project_refunds
   FOR INSERT WITH CHECK (
     auth_role() IN ('owner', 'admin')
