@@ -127,7 +127,7 @@ function renderProjectList() {
     var downPayment = parseFloat(p.down_payment || p.downPayment) || 0;
     var loanAmount = parseFloat(p.loan_amount || p.loanAmount) || 0;
     var closingCosts = parseFloat(p.closing_costs || p.closingCosts) || 0;
-    var totalInvestment = p._financials ? parseFloat(p._financials.cost_basis) : (purchasePrice + closingCosts);
+    var totalInvestment = p._financials ? parseFloat(p._financials.cost_basis ?? 0) : 0;
 
     return '<div class="proj-card" onclick="openProjectDetail(\'' + p.id + '\')">' +
       '<span class="proj-status-badge" style="color:' + st.color + ';background:' + st.bg + '">' + st.label + '</span>' +
@@ -140,7 +140,7 @@ function renderProjectList() {
       '<div class="proj-fin-row"><span class="proj-fin-label">Down Payment</span><span class="proj-fin-value">' + fmtMoney(downPayment) + '</span></div>' +
       '<div class="proj-fin-row"><span class="proj-fin-label">Loan</span><span class="proj-fin-value">' + fmtMoney(loanAmount) + '</span></div>' +
       '<div class="proj-fin-row"><span class="proj-fin-label">Closing Costs</span><span class="proj-fin-value">' + fmtMoney(closingCosts) + '</span></div>' +
-      '<div class="proj-fin-row" style="border-top:2px solid var(--border)"><span class="proj-fin-label" style="font-weight:700">Cost Basis</span><span class="proj-fin-value" style="color:var(--accent)">' + fmtMoney(totalInvestment) + '</span></div>' +
+      '<div class="proj-fin-row" style="border-top:2px solid var(--border)"><span class="proj-fin-label" style="font-weight:700">Cost Basis</span><span class="proj-fin-value" style="color:var(--accent)">' + (p._financials ? fmtMoney(totalInvestment) : '<span style="color:var(--text-muted);font-weight:normal;font-size:10px">N/A</span>') + '</span></div>' +
       '</div>' +
       '<div style="margin-top:10px;font-size:11px;color:var(--text-muted)">' +
       (p.responsible ? '<span>👤 ' + escHtml(p.responsible) + '</span>' : '') +
@@ -160,7 +160,7 @@ function renderSummaryStats() {
   var activeProjects = PROJECTS.filter(function(p) { return p.status === 'active' || p.status === 'in_progress'; }).length;
   var totalPurchase = PROJECTS.reduce(function(s, p) { return s + (parseFloat(p.purchase_price || p.purchasePrice) || 0); }, 0);
   var totalInvestment = PROJECTS.reduce(function(s, p) {
-    return s + (p._financials ? parseFloat(p._financials.cost_basis) : ((parseFloat(p.purchase_price || p.purchasePrice) || 0) + (parseFloat(p.closing_costs || p.closingCosts) || 0)));
+    return s + (p._financials ? parseFloat(p._financials.cost_basis ?? 0) : 0);
   }, 0);
 
   container.innerHTML =
@@ -287,7 +287,7 @@ async function openProjectDetail(projId) {
 
   renderProjectDetail();
   if (typeof isSupabaseReady === 'function' && isSupabaseReady()) {
-    await fetchProjectExpenses();
+    await fetchProjectFinancials();
   }
 }
 
@@ -336,17 +336,6 @@ function renderProjectDetail() {
   document.getElementById('proj-detail-title').innerHTML = escHtml(p.name) +
     ' <span style="font-size:11px;font-weight:600;color:' + st.color + ';background:' + st.bg + ';padding:3px 10px;border-radius:10px;margin-left:8px">' + st.label + '</span>';
 
-  // Use dynamic summary if available, else fallback
-  var f = p._financials || {};
-  var purchasePrice = parseFloat(f.purchase_price ?? p.purchase_price ?? p.purchasePrice) || 0;
-  var costBasis = parseFloat(f.cost_basis) || ((parseFloat(p.purchase_price) || 0) + (parseFloat(p.closing_costs) || 0));
-  var cashInvested = parseFloat(f.cash_invested) || ((parseFloat(p.down_payment) || 0) + (parseFloat(p.closing_costs) || 0));
-  var totalExpenses = parseFloat(f.total_expenses) || 0;
-  var totalRefunds = parseFloat(f.total_refunds) || 0;
-  var netExpense = parseFloat(f.net_expense_cost) || 0;
-  var disbursements = parseFloat(f.total_disbursements) || 0;
-  var cashPosition = parseFloat(f.project_cash_position) || (-cashInvested - netExpense - disbursements);
-
   // Overview tab
   document.getElementById('proj-tab-overview').innerHTML =
     '<div style="display:grid;grid-template-columns:1fr 1fr;gap:20px">' +
@@ -357,15 +346,34 @@ function renderProjectDetail() {
     '<div class="proj-fin-row"><span class="proj-fin-label">Purchase Date</span><span class="proj-fin-value">' + fmtDate(p.purchase_date || p.purchaseDate) + '</span></div>' +
     '<div class="proj-fin-row"><span class="proj-fin-label">Responsible</span><span class="proj-fin-value">' + escHtml(p.responsible || '—') + '</span></div>' +
     '<div class="proj-fin-row"><span class="proj-fin-label">Created</span><span class="proj-fin-value">' + fmtDate(p.created_at || p.createdAt) + '</span></div>' +
-    '</div></div>' +
-    
+    '</div></div></div>';
+
+  var f = p._financials;
+  if (!f) {
+    var errHtml = '<div class="proj-empty" style="color:var(--danger)"><i data-lucide="alert-triangle" style="width:40px;height:40px"></i>' +
+      '<p style="font-size:14px;margin:12px 0 4px">Financial summary unavailable.</p>' +
+      '<p style="font-size:12px;margin:0">Confirm Supabase migration has been applied.</p></div>';
+    document.getElementById('proj-tab-financials').innerHTML = errHtml;
+    lucide.createIcons();
+    return;
+  }
+
+  var costBasis = parseFloat(f.cost_basis ?? 0);
+  var cashInvested = parseFloat(f.cash_invested ?? 0);
+  var netExpense = parseFloat(f.net_expense_cost ?? 0);
+  var disbursements = parseFloat(f.total_disbursements ?? 0);
+  var cashPosition = parseFloat(f.project_cash_position ?? 0);
+  var profit = parseFloat(f.profit ?? 0);
+
+  // Append Cash Position Snapshot to overview
+  document.getElementById('proj-tab-overview').firstChild.innerHTML +=
     '<div class="card"><div class="card-body" style="padding:16px">' +
     '<h4 style="font-size:13px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;margin:0 0 12px">Cash Position Snapshot</h4>' +
     '<div class="proj-fin-row"><span class="proj-fin-label">Cash Invested</span><span class="proj-fin-value">' + fmtMoney(cashInvested) + '</span></div>' +
     '<div class="proj-fin-row"><span class="proj-fin-label">Net Expenses</span><span class="proj-fin-value">' + fmtMoney(netExpense) + '</span></div>' +
     '<div class="proj-fin-row"><span class="proj-fin-label">Disbursements</span><span class="proj-fin-value">' + fmtMoney(disbursements) + '</span></div>' +
     '<div class="proj-fin-row" style="border-top:2px solid var(--border);margin-top:4px;padding-top:8px"><span class="proj-fin-label" style="font-weight:700">Project Cash Position</span><span class="proj-fin-value" style="font-size:16px;color:' + (cashPosition >= 0 ? 'var(--success)' : 'var(--danger)') + '">' + fmtMoney(cashPosition) + '</span></div>' +
-    '</div></div></div>';
+    '</div></div>';
 
   // Financials tab
   document.getElementById('proj-tab-financials').innerHTML =
@@ -380,21 +388,24 @@ function renderProjectDetail() {
     '<h4 style="margin:0 0 16px">Profit & Loss Metrics</h4>' +
     '<div class="proj-fin-row"><span class="proj-fin-label">Sale Price</span><span class="proj-fin-value">' + fmtMoney(f.sale_price) + '</span></div>' +
     '<div class="proj-fin-row"><span class="proj-fin-label">Net Proceeds</span><span class="proj-fin-value">' + fmtMoney(f.net_proceeds) + '</span></div>' +
-    '<div class="proj-fin-row" style="border-top:2px solid var(--border);margin-top:4px;padding-top:8px"><span class="proj-fin-label" style="font-weight:700">Profit</span><span class="proj-fin-value" style="font-size:18px;color:' + ((parseFloat(f.profit)||0) >= 0 ? 'var(--success)' : 'var(--danger)') + '">' + fmtMoney(f.profit) + '</span></div>' +
+    '<div class="proj-fin-row" style="border-top:2px solid var(--border);margin-top:4px;padding-top:8px"><span class="proj-fin-label" style="font-weight:700">Profit</span><span class="proj-fin-value" style="font-size:18px;color:' + (profit >= 0 ? 'var(--success)' : 'var(--danger)') + '">' + fmtMoney(profit) + '</span></div>' +
     '</div></div>';
 
   lucide.createIcons();
 }
 
-// ---- Expenses / Refunds Logic ----
+// ---- Expenses / Refunds / Disbursements Logic ----
 var _currentExpenses = [];
 var _currentRefunds = [];
+var _currentDisbursements = [];
 
-async function fetchProjectExpenses() {
+async function fetchProjectFinancials() {
   if (!_currentProject) return;
   _currentExpenses = await DB.projectExpenses.getByProject(_currentProject.id) || [];
   _currentRefunds = await DB.projectRefunds.getByProject(_currentProject.id) || [];
+  _currentDisbursements = await DB.projectDisbursements.getByProject(_currentProject.id) || [];
   renderExpensesTab();
+  renderDisbursementsTab();
 }
 
 function renderExpensesTab() {
@@ -413,7 +424,7 @@ function renderExpensesTab() {
   ).sort(function(a,b) { return new Date(b.created_at) - new Date(a.created_at); });
 
   if (combined.length === 0) {
-    html += '<tr><td colspan="7" class="proj-empty" style="padding:40px">No financial records found.</td></tr>';
+    html += '<tr><td colspan="7" class="proj-empty" style="padding:40px">No records found.</td></tr>';
   } else {
     combined.forEach(function(item) {
       var isExp = item._type === 'expense';
@@ -430,7 +441,7 @@ function renderExpensesTab() {
         '<td style="color:' + stColor + ';font-size:11px;font-weight:600">' + item.status.toUpperCase() + '</td>' +
         '<td>';
       if (item.status === 'pending') {
-         html += '<button class="btn btn-ghost btn-sm" onclick="approveRecord(\'' + item.id + '\',\'' + item._type + '\')">Approve</button> ';
+         html += '<button class="btn btn-ghost btn-sm" onclick="approveRecord(\'' + item.id + '\',\'' + item._type + '\', \'approved\')">Approve</button> ';
       }
       if (item.status !== 'cancelled') {
          html += '<button class="btn btn-ghost btn-sm" style="color:var(--danger)" onclick="cancelRecord(\'' + item.id + '\',\'' + item._type + '\')">Void</button>';
@@ -440,7 +451,51 @@ function renderExpensesTab() {
   }
 
   html += '</tbody></table>';
-  document.getElementById('proj-tab-expenses').innerHTML = html;
+  var t = document.getElementById('proj-tab-expenses');
+  if(t) t.innerHTML = html;
+}
+
+function renderDisbursementsTab() {
+  var html = '<div style="display:flex;justify-content:flex-end;gap:10px;margin-bottom:16px">' +
+    '<button class="btn btn-primary btn-sm" onclick="openDisbursementModal()">+ Add Disbursement</button>' +
+    '</div>';
+
+  html += '<table class="proj-table"><thead><tr>' +
+    '<th>Date</th><th>Type</th><th>Beneficiary</th><th>Ref/Desc</th><th>Amount</th><th>Status</th><th>Actions</th>' +
+    '</tr></thead><tbody>';
+
+  if (_currentDisbursements.length === 0) {
+    html += '<tr><td colspan="7" class="proj-empty" style="padding:40px">No disbursements found.</td></tr>';
+  } else {
+    _currentDisbursements.forEach(function(item) {
+      var col = 'var(--danger)';
+      var sign = '-';
+      var stColor = (item.status === 'approved' || item.status === 'paid') ? 'var(--success)' : (item.status === 'cancelled' || item.status === 'rejected' ? 'var(--danger)' : 'var(--text-muted)');
+      
+      html += '<tr>' +
+        '<td>' + fmtDate(item.payment_date) + '</td>' +
+        '<td><span style="font-size:10px;padding:2px 6px;border-radius:4px;background:var(--bg-secondary);border:1px solid var(--border)">' + (item.payment_type || 'check').toUpperCase() + '</span></td>' +
+        '<td>' + escHtml(item.beneficiary) + '</td>' +
+        '<td><div style="font-size:12px">' + escHtml(item.reference_number || '—') + '</div><div style="font-size:10px;color:var(--text-muted)">' + escHtml(item.description) + '</div></td>' +
+        '<td style="font-weight:700;color:' + col + '">' + sign + fmtMoney(item.amount) + '</td>' +
+        '<td style="color:' + stColor + ';font-size:11px;font-weight:600">' + item.status.toUpperCase() + '</td>' +
+        '<td>';
+      if (item.status === 'pending') {
+         html += '<button class="btn btn-ghost btn-sm" onclick="approveRecord(\'' + item.id + '\',\'disbursement\', \'approved\')">Approve</button> ';
+      }
+      if (item.status === 'approved') {
+         html += '<button class="btn btn-ghost btn-sm" style="color:var(--success)" onclick="approveRecord(\'' + item.id + '\',\'disbursement\', \'paid\')">Mark Paid</button> ';
+      }
+      if (item.status !== 'cancelled') {
+         html += '<button class="btn btn-ghost btn-sm" style="color:var(--danger)" onclick="cancelRecord(\'' + item.id + '\',\'disbursement\')">Void</button>';
+      }
+      html += '</td></tr>';
+    });
+  }
+
+  html += '</tbody></table>';
+  var t = document.getElementById('proj-tab-disbursements');
+  if(t) t.innerHTML = html;
 }
 
 function openExpenseModal(type) {
@@ -471,6 +526,62 @@ function openExpenseModal(type) {
     '<button type="button" class="btn btn-primary" onclick="saveFinRecord(\'' + type + '\')">Save</button></div>';
 }
 
+function openDisbursementModal() {
+  if (!_currentProject) return;
+  showConfirmModal('Add Disbursement', '', null);
+  var box = document.querySelector('.confirm-box');
+  box.innerHTML =
+    '<h3 style="margin:0 0 16px;font-size:16px">Add Disbursement</h3>' +
+    '<div style="display:flex;flex-direction:column;gap:10px;text-align:left">' +
+    '<div><label style="font-size:12px;color:var(--text-secondary)">Beneficiary</label>' +
+    '<input type="text" id="disb-ben" class="form-control" style="width:100%"></div>' +
+    '<div><label style="font-size:12px;color:var(--text-secondary)">Description</label>' +
+    '<input type="text" id="disb-desc" class="form-control" style="width:100%"></div>' +
+    '<div style="display:flex;gap:10px">' +
+    '<div style="flex:1"><label style="font-size:12px;color:var(--text-secondary)">Amount ($)</label>' +
+    '<input type="number" id="disb-amount" class="form-control" step="0.01" style="width:100%"></div>' +
+    '<div style="flex:1"><label style="font-size:12px;color:var(--text-secondary)">Payment Type</label>' +
+    '<select id="disb-type" class="form-control" style="width:100%"><option value="check">Check</option><option value="cash">Cash</option><option value="transfer">Transfer</option><option value="card">Card</option></select></div>' +
+    '</div>' +
+    '<div style="display:flex;gap:10px">' +
+    '<div style="flex:1"><label style="font-size:12px;color:var(--text-secondary)">Payment Date</label>' +
+    '<input type="date" id="disb-date" class="form-control" style="width:100%" value="' + new Date().toISOString().split('T')[0] + '"></div>' +
+    '<div style="flex:1"><label style="font-size:12px;color:var(--text-secondary)">Ref. Number</label>' +
+    '<input type="text" id="disb-ref" class="form-control" style="width:100%" placeholder="Check #, etc."></div>' +
+    '</div></div>' +
+    '<div class="confirm-actions" style="margin-top:16px">' +
+    '<button type="button" class="btn btn-secondary" onclick="closeConfirmModal()">Close</button>' +
+    '<button type="button" class="btn btn-primary" onclick="saveDisbursement()">Save</button></div>';
+}
+
+async function saveDisbursement() {
+  var amt = Math.abs(parseFloat(document.getElementById('disb-amount').value) || 0);
+  if (amt <= 0) { alert('Amount must be > 0'); return; }
+
+  var data = {
+    project_id: _currentProject.id,
+    beneficiary: (document.getElementById('disb-ben').value || '').trim(),
+    description: (document.getElementById('disb-desc').value || '').trim(),
+    amount: amt,
+    payment_type: document.getElementById('disb-type').value,
+    payment_date: document.getElementById('disb-date').value || null,
+    reference_number: (document.getElementById('disb-ref').value || '').trim(),
+    status: 'approved' // default auto-approve for internal
+  };
+
+  var res = await DB.projectDisbursements.create(data);
+  closeConfirmModal();
+  if (res) {
+    showToast('✅ Disbursement saved');
+    await fetchProjectFinancials();
+    await loadProjects();
+    _currentProject = PROJECTS.find(function(p) { return p.id === _currentProject.id; });
+    renderProjectDetail();
+  } else {
+    alert('Failed to save disbursement.');
+  }
+}
+
 async function saveFinRecord(type) {
   var amt = Math.abs(parseFloat(document.getElementById('fin-amount').value) || 0);
   if (amt <= 0) { alert('Amount must be > 0'); return; }
@@ -495,7 +606,7 @@ async function saveFinRecord(type) {
   closeConfirmModal();
   if (res) {
     showToast('✅ Saved');
-    await fetchProjectExpenses(); // refresh tab
+    await fetchProjectFinancials(); // refresh tab
     await loadProjects(); // refresh global financials
     _currentProject = PROJECTS.find(function(p) { return p.id === _currentProject.id; });
     renderProjectDetail(); // refresh cards
@@ -504,10 +615,15 @@ async function saveFinRecord(type) {
   }
 }
 
-async function approveRecord(id, type) {
-  var ok = type === 'expense' ? await DB.projectExpenses.updateStatus(id, 'approved') : await DB.projectRefunds.updateStatus(id, 'approved');
+async function approveRecord(id, type, targetStatus) {
+  var status = targetStatus || 'approved';
+  var ok = false;
+  if (type === 'expense') ok = await DB.projectExpenses.updateStatus(id, status);
+  else if (type === 'refund') ok = await DB.projectRefunds.updateStatus(id, status);
+  else if (type === 'disbursement') ok = await DB.projectDisbursements.updateStatus(id, status);
+
   if (ok) {
-    await fetchProjectExpenses();
+    await fetchProjectFinancials();
     await loadProjects();
     _currentProject = PROJECTS.find(function(p) { return p.id === _currentProject.id; });
     renderProjectDetail();
@@ -516,10 +632,14 @@ async function approveRecord(id, type) {
 
 async function cancelRecord(id, type) {
   showConfirmModal('Void Record', 'This will mark the record as cancelled to retain financial history (Rule 14).', async function() {
-    var ok = type === 'expense' ? await DB.projectExpenses.updateStatus(id, 'cancelled') : await DB.projectRefunds.updateStatus(id, 'cancelled');
+    var ok = false;
+    if (type === 'expense') ok = await DB.projectExpenses.updateStatus(id, 'cancelled');
+    else if (type === 'refund') ok = await DB.projectRefunds.updateStatus(id, 'cancelled');
+    else if (type === 'disbursement') ok = await DB.projectDisbursements.updateStatus(id, 'cancelled');
+
     if (ok) {
       showToast('Record voided');
-      await fetchProjectExpenses();
+      await fetchProjectFinancials();
       await loadProjects();
       _currentProject = PROJECTS.find(function(p) { return p.id === _currentProject.id; });
       renderProjectDetail();

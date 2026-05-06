@@ -30,7 +30,7 @@ function getSupabase() {
 }
 
 function isSupabaseReady() {
-  return _supabaseReady && _sb !== null;
+  return !!getSupabase();
 }
 
 // ============================================================
