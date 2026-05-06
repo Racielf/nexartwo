@@ -377,6 +377,7 @@ function renderProjectDetail() {
 
   // Financials tab
   document.getElementById('proj-tab-financials').innerHTML =
+    '<div style="background:var(--danger-bg, #fef2f2);color:var(--danger, #ef4444);padding:8px;border-radius:6px;font-size:11px;font-weight:600;margin-bottom:16px;display:flex;align-items:center;gap:6px"><i data-lucide="shield-alert" style="width:14px;height:14px"></i> INTERNAL & ADMIN USE ONLY</div>' +
     '<div class="proj-summary-cards">' +
     '<div class="proj-stat-card"><div class="proj-stat-value">' + fmtMoney(costBasis) + '</div><div class="proj-stat-label">Cost Basis (Asset Value)</div></div>' +
     '<div class="proj-stat-card"><div class="proj-stat-value">' + fmtMoney(cashInvested) + '</div><div class="proj-stat-label">Initial Cash Invested</div></div>' +
@@ -409,12 +410,13 @@ async function fetchProjectFinancials() {
 }
 
 function renderExpensesTab() {
-  var html = '<div style="display:flex;justify-content:flex-end;gap:10px;margin-bottom:16px">' +
+  var html = '<div style="background:var(--danger-bg, #fef2f2);color:var(--danger, #ef4444);padding:8px;border-radius:6px;font-size:11px;font-weight:600;margin-bottom:16px;display:flex;align-items:center;gap:6px"><i data-lucide="shield-alert" style="width:14px;height:14px"></i> INTERNAL & ADMIN USE ONLY</div>' +
+    '<div style="display:flex;justify-content:flex-end;gap:10px;margin-bottom:16px">' +
     '<button class="btn btn-sm" style="background:var(--success);color:#fff;border:none" onclick="openExpenseModal(\'refund\')">+ Add Refund</button>' +
     '<button class="btn btn-primary btn-sm" onclick="openExpenseModal(\'expense\')">+ Add Expense</button>' +
     '</div>';
 
-  html += '<table class="proj-table"><thead><tr>' +
+  html += '<div style="overflow-x:auto;width:100%"><table class="proj-table"><thead><tr>' +
     '<th>Date</th><th>Type</th><th>Vendor</th><th>Category</th><th>Amount</th><th>Status</th><th>Actions</th>' +
     '</tr></thead><tbody>';
 
@@ -450,17 +452,18 @@ function renderExpensesTab() {
     });
   }
 
-  html += '</tbody></table>';
+  html += '</tbody></table></div>';
   var t = document.getElementById('proj-tab-expenses');
   if(t) t.innerHTML = html;
 }
 
 function renderDisbursementsTab() {
-  var html = '<div style="display:flex;justify-content:flex-end;gap:10px;margin-bottom:16px">' +
+  var html = '<div style="background:var(--danger-bg, #fef2f2);color:var(--danger, #ef4444);padding:8px;border-radius:6px;font-size:11px;font-weight:600;margin-bottom:16px;display:flex;align-items:center;gap:6px"><i data-lucide="shield-alert" style="width:14px;height:14px"></i> INTERNAL & ADMIN USE ONLY</div>' +
+    '<div style="display:flex;justify-content:flex-end;gap:10px;margin-bottom:16px">' +
     '<button class="btn btn-primary btn-sm" onclick="openDisbursementModal()">+ Add Disbursement</button>' +
     '</div>';
 
-  html += '<table class="proj-table"><thead><tr>' +
+  html += '<div style="overflow-x:auto;width:100%"><table class="proj-table"><thead><tr>' +
     '<th>Date</th><th>Type</th><th>Beneficiary</th><th>Ref/Desc</th><th>Amount</th><th>Status</th><th>Actions</th>' +
     '</tr></thead><tbody>';
 
@@ -493,7 +496,7 @@ function renderDisbursementsTab() {
     });
   }
 
-  html += '</tbody></table>';
+  html += '</tbody></table></div>';
   var t = document.getElementById('proj-tab-disbursements');
   if(t) t.innerHTML = html;
 }
