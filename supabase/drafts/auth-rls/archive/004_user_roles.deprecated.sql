@@ -1,10 +1,13 @@
 -- ============================================================
--- DRAFT — Auth/RLS Hardening
--- Migración 004: Tabla de Roles y Función Helper
+-- ❌ DEPRECATED — DO NOT MOVE TO MIGRATIONS
 -- ============================================================
--- ⚠️  DRAFT ONLY — DO NOT APPLY
---     Gate obligatorio: Workflow Supabase Financial QA debe retornar PASS.
---     Requiere aprobación del Owner sobre DESIGN.md antes de mover a supabase/migrations/
+-- Este archivo fue reemplazado por:
+--   004a_user_roles_bootstrap.sql  (tabla + funciones helper)
+--   004b_user_roles_policies.sql   (policies idempotentes)
+--
+-- Motivo: el archivo original mezclaba bootstrap, funciones y
+-- policies en un solo bloque, lo cual no es migration-safe.
+-- Se mantiene aquí solo como referencia histórica.
 -- ============================================================
 
 -- Tabla de roles por usuario

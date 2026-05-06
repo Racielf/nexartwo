@@ -23,15 +23,16 @@
 | Objeto | `owner` | `admin` | `field_user` | `viewer` |
 |---|---|---|---|---|
 | `projects` (SELECT directo) | ✅ | ✅ | ❌ | ❌ |
-| `project_status_summary` (vista segura) | ✅ | ✅ | ✅ | ✅ |
+| `project_status_summary` via RPC | ✅ | ✅ | ❌ (hasta migración 010+) | ❌ (hasta migración 010+) |
 | `project_financial_summaries` (SELECT directo) | ❌ (REVOKE) | ❌ (REVOKE) | ❌ (REVOKE) | ❌ (REVOKE) |
 | `get_project_financial_summary()` (RPC) | ✅ | ✅ | ❌ (0 filas) | ❌ (0 filas) |
+| `get_project_status_summary()` (RPC) | ✅ | ✅ | ❌ (0 filas hasta 010+) | ❌ (0 filas hasta 010+) |
 | `project_expenses` | ✅ | ✅ | Solo los suyos | ❌ |
 | `project_refunds` | ✅ | ✅ | ❌ | ❌ |
 | `project_disbursements` | ✅ | ✅ | ❌ | ❌ |
 
 > [!CAUTION]
-> `field_user` y `viewer` **nunca** deben ver: `profit`, `cost_basis`, `cash_invested`, `net_expense_cost`, `project_cash_position`, `net_proceeds`, `purchase_price`, `down_payment`, `total_disbursements`.
+> `field_user` y `viewer` **no tienen superficie de proyectos** en esta fase. Accederán a `project_status_summary` solo después de que se implemente `project_assignments` (migración 010+) para garantizar scope por proyecto.
 
 ---
 
@@ -92,6 +93,15 @@ Ambos triggers están escritos como SQL ejecutable en sus respectivos drafts (no
 
 ---
 
+## Estructura del Paquete Draft
+
+- **`004_user_roles.sql` original:** archivado en `archive/004_user_roles.deprecated.sql` — **NO usar**.
+- **Paquete activo:** `004a` + `004b` + `005` a `009`.
+- Todos los archivos `004b`–`009` son idempotentes (`DROP POLICY/TRIGGER IF EXISTS`).
+
+---
+
+
 ## Protección de `project_financial_summaries`
 
 **Estrategia:** `REVOKE SELECT` total + acceso exclusivo via RPC `SECURITY DEFINER`.
@@ -115,7 +125,7 @@ Ambos triggers están escritos como SQL ejecutable en sus respectivos drafts (no
 | 3 | `006_rls_expenses_refunds.sql` | 004a+b | `created_by`, policies con enforcement, refunds restringidos |
 | 4 | `007_rls_disbursements.sql` | 004a+b | Policies + trigger `paid` solo owner |
 | 5 | `008_rls_financial_summaries.sql` | 004-007 | REVOKE total + RPCs `SECURITY DEFINER` |
-| 6 | `009_project_status_summary_view.sql` | 008 | Vista segura con REVOKE anon + GRANT authenticated |
+| 6 | `009_project_status_summary_view.sql` | 008 | Vista segura (Opción B): REVOKE total + RPC `get_project_status_summary()` solo para owner/admin. field_user/viewer acceden en migración 010+ cuando exista `project_assignments`. |
 
 > **Todos los archivos 005-009 son idempotentes:** incluyen `DROP POLICY IF EXISTS` y `DROP TRIGGER IF EXISTS` antes de cada `CREATE`. Seguros para reintentos.
 
@@ -140,6 +150,7 @@ Ambos triggers están escritos como SQL ejecutable en sus respectivos drafts (no
 | Decisión | Resolución |
 |---|---|
 | ¿Admin puede marcar `paid` en disbursements? | **NO** — Solo owner. Trigger enforced. |
+| ¿`field_user`/`viewer` acceden a `project_status_summary`? | **NO todavía** — REVOKE total. Acceso diferido a migración 010+ cuando exista `project_assignments`. |
 | ¿Se incluyen montos en `project_status_summary`? | **NO** — Solo conteos y metadata operativa. |
 | ¿`field_user` crea refunds? | **NO** — Correcciones contables internas (owner/admin). |
 | ¿`field_user` tiene SELECT directo en `projects`? | **NO** — Usa `project_status_summary`. |

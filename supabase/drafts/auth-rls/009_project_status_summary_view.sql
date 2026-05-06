@@ -1,16 +1,25 @@
 -- ============================================================
 -- DRAFT — Auth/RLS Hardening
--- Migración 009: Vista operativa segura `project_status_summary`
+-- Migración 009: Vista operativa `project_status_summary`
 -- ============================================================
 -- ⚠️  DRAFT ONLY — DO NOT APPLY
 --     Gate: Workflow Supabase Financial QA debe retornar PASS.
 --     Requiere migración 008 aplicada primero.
 --
--- PROPÓSITO:
--- Esta vista es la ÚNICA superficie de datos permitida para field_user y viewer.
--- Expone solo metadata operativa del proyecto, sin ningún dato financiero.
+-- ESTRATEGIA ACTUAL: Opción B — Acceso restringido (owner/admin only)
 --
--- CAMPOS EXPLÍCITAMENTE EXCLUIDOS (nunca deben aparecer aquí):
+-- MOTIVO:
+-- GRANT SELECT a todos los usuarios autenticados expondría metadata
+-- de proyectos a cualquier field_user o viewer, incluyendo proyectos
+-- a los que no están asignados. Sin una tabla `project_assignments`
+-- (o mecanismo equivalente de scope por proyecto), no es posible
+-- filtrar correctamente qué proyectos puede ver cada field_user.
+--
+-- DECISIÓN: field_user y viewer quedan sin superficie de proyectos
+-- hasta que exista `project_assignments` o una lógica de scope segura.
+-- Esta restricción se levantará en una migración futura (010+).
+--
+-- CAMPOS EXPLÍCITAMENTE EXCLUIDOS DE ESTA VISTA (ninguno debe agregarse):
 --   profit, cost_basis, cash_invested, net_expense_cost,
 --   total_disbursements, project_cash_position, net_proceeds,
 --   purchase_price, down_payment, amount (de expenses/refunds)
@@ -37,24 +46,51 @@ LEFT JOIN project_refunds  r ON r.project_id = p.id
 GROUP BY p.id, p.name, p.address, p.status, p.property_type;
 
 -- ============================================================
--- PERMISOS EXPLÍCITOS
+-- PERMISOS: Opción B — Acceso inicial solo para owner/admin
 -- ============================================================
 
--- Bloquear acceso anónimo (usuarios no autenticados)
+-- Bloquear acceso anónimo
 REVOKE SELECT ON project_status_summary FROM anon;
 
--- Otorgar acceso a todos los usuarios autenticados.
--- Las policies de RLS de las tablas base filtran qué filas
--- puede ver cada rol (field_user no ve proyectos de otros, etc.)
-GRANT SELECT ON project_status_summary TO authenticated;
+-- Bloquear acceso genérico a todos los autenticados
+-- (evita exposición de proyectos a roles sin scope definido)
+REVOKE SELECT ON project_status_summary FROM authenticated;
+
+-- Acceso via RPC segura: solo owner/admin por ahora
+CREATE OR REPLACE FUNCTION get_project_status_summary()
+RETURNS SETOF project_status_summary
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = public, pg_temp
+AS $$
+  SELECT *
+  FROM project_status_summary
+  WHERE auth_role() IN ('owner', 'admin');
+$$;
+
+GRANT EXECUTE ON FUNCTION get_project_status_summary() TO authenticated;
 
 -- ============================================================
--- VERIFICACIÓN POST-ACTIVACIÓN:
--- Como field_user autenticado:
---   SELECT project_id, name, status FROM project_status_summary;
---   → debe retornar filas SIN montos financieros
+-- MIGRACIÓN FUTURA (010+): Cuando exista project_assignments
+-- ============================================================
+-- Una vez que se implemente la tabla project_assignments
+-- (que mapea qué proyectos puede ver cada user_id), esta función
+-- se puede actualizar para que field_user y viewer vean
+-- únicamente sus proyectos asignados:
 --
--- Intentar acceder a columnas financieras:
---   SELECT profit FROM project_status_summary;
---   → debe fallar (columna no existe en la vista)
+-- CREATE OR REPLACE FUNCTION get_project_status_summary()
+-- RETURNS SETOF project_status_summary
+-- LANGUAGE sql STABLE SECURITY DEFINER
+-- SET search_path = public, pg_temp
+-- AS $$
+--   SELECT pss.*
+--   FROM project_status_summary pss
+--   WHERE auth_role() IN ('owner', 'admin')
+--     OR EXISTS (
+--       SELECT 1 FROM project_assignments pa
+--       WHERE pa.project_id = pss.project_id
+--         AND pa.user_id = auth.uid()
+--     );
+-- $$;
 -- ============================================================

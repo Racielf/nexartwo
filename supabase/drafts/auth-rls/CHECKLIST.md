@@ -9,16 +9,21 @@
 
 | Archivo Draft | Estado | Descripción |
 |---|---|---|
+| ~~`004_user_roles.sql`~~ | ❌ Archivado | Movido a `archive/004_user_roles.deprecated.sql`. No usar. |
 | `004a_user_roles_bootstrap.sql` | ✅ Listo | Tabla + funciones helper (`is_owner`, `auth_role`) + instrucciones de bootstrap |
 | `004b_user_roles_policies.sql` | ✅ Listo | Policies de `user_roles` — ejecutar solo tras verificar owner |
 | `005_rls_projects.sql` | ✅ Listo | Policies granulares + trigger de columnas financieras |
 | `006_rls_expenses_refunds.sql` | ✅ Listo | `created_by`, policies con enforcement en INSERT |
 | `007_rls_disbursements.sql` | ✅ Listo | Policies + trigger `paid` solo para owner |
 | `008_rls_financial_summaries.sql` | ✅ Listo | REVOKE total + RPCs SECURITY DEFINER |
-| `009_project_status_summary_view.sql` | ✅ Listo | Vista segura con REVOKE anon + GRANT authenticated |
+| `009_project_status_summary_view.sql` | ✅ Listo | Opción B: REVOKE total + RPC `get_project_status_summary()` para owner/admin únicamente |
 | `permission_smoke_test.sql` | ✅ Listo | 18 tests en 4 bloques por rol |
 | `ROLLBACK.md` | ✅ Listo | Protocolo de rollback sin pérdida de datos |
 | `DESIGN.md` | ✅ Listo | Diseño técnico completo, decisiones cerradas |
+
+> **Estado de field_user/viewer:** No tienen superficie de proyectos en esta fase.  
+> Accederán a `project_status_summary` en migración 010+ cuando exista `project_assignments`.
+
 
 ---
 
