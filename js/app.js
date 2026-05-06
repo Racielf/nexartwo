@@ -2534,7 +2534,8 @@ function buildPDF(template, hidePrices, docStyle) {
     progress: 'Progress Report',
     invoice: 'Invoice / Estimate',
     informative: 'Informative Property Report',
-    negotiation: 'Negotiation Summary'
+    negotiation: 'Negotiation Summary',
+    proposal: 'Change Order Proposal'
   };
 
   let bodyContent = '';
@@ -2808,6 +2809,116 @@ function buildPDF(template, hidePrices, docStyle) {
       '</div>' +
       '<p style="font-size:11px;color:#888;margin:0">This negotiation summary is for discussion purposes. Final pricing subject to signed agreement.</p>' +
     '</div>';
+    docStyle = 'classic';
+  }
+
+  // ---- CLIENT CHANGE ORDER PROPOSAL (clean client-facing doc) ----
+  if (template === 'proposal') {
+    var neg = buildNegotiationSummary();
+    if (!neg) { showToast('No data to generate proposal'); return; }
+
+    // Guard: same 3-case logic as negotiation
+    if (neg.change_orders_applied === 0) {
+      var totalCOs = _currentCOs.length;
+      if (totalCOs > 0) {
+        var parts = [];
+        var draftCount = _currentCOs.filter(function(c) { return c.status === 'draft'; }).length;
+        if (draftCount > 0) parts.push(draftCount + ' draft');
+        if (neg.change_orders_pending > 0) parts.push(neg.change_orders_pending + ' pending');
+        if (neg.change_orders_rejected > 0) parts.push(neg.change_orders_rejected + ' rejected');
+        showToast('Proposal requires at least one Approved Change Order. (' + parts.join(', ') + ')', 4000);
+      } else {
+        showToast('No Change Orders found for this Work Order.', 3000);
+      }
+      return;
+    }
+    if (neg.total_difference === 0 && neg.items_modified === 0 && neg.items_removed === 0) {
+      showToast('Approved Change Orders found, but no scope changes were detected.', 3500);
+      return;
+    }
+
+    // Filter: only active items (exclude removed)
+    var activeItems = neg.items.filter(function(it) { return it.status !== 'removed'; });
+    var revisedTotal = activeItems.reduce(function(s, it) { return s + it.negotiated_total; }, 0);
+
+    function pMoney(v) { return '$' + v.toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2}); }
+
+    // Build line rows
+    var lineRows = activeItems.map(function(it, i) {
+      return '<tr>' +
+        '<td style="padding:10px 8px;border-bottom:1px solid #e5e7eb;font-size:12px;color:#6b7280;text-align:center">' + (i + 1) + '</td>' +
+        '<td style="padding:10px 8px;border-bottom:1px solid #e5e7eb">' +
+          '<div style="font-weight:600;font-size:13px;color:#1a1a1a">' + (it.name || '—') + '</div>' +
+          (it.category ? '<div style="font-size:11px;color:#9ca3af;margin-top:2px">' + it.category + '</div>' : '') +
+        '</td>' +
+        '<td style="padding:10px 8px;border-bottom:1px solid #e5e7eb;text-align:right;font-size:13px">' + pMoney(it.negotiated_price) + '</td>' +
+        '<td style="padding:10px 8px;border-bottom:1px solid #e5e7eb;text-align:center;font-size:13px">' + it.negotiated_qty + '</td>' +
+        '<td style="padding:10px 8px;border-bottom:1px solid #e5e7eb;text-align:right;font-size:13px;font-weight:600">' + pMoney(it.negotiated_total) + '</td>' +
+      '</tr>';
+    }).join('');
+
+    bodyContent =
+      // Title
+      '<div style="margin-bottom:28px">' +
+        '<h1 style="font-size:22px;font-weight:800;color:#1a1a1a;margin:0 0 6px;letter-spacing:-0.3px">Change Order Proposal</h1>' +
+        '<p style="font-size:13px;color:#6b7280;margin:0">Revised scope of work for your review and approval</p>' +
+      '</div>' +
+
+      // Meta row
+      '<div style="display:flex;gap:24px;margin-bottom:28px;padding:18px 22px;background:#f9fafb;border-radius:10px;border:1px solid #e5e7eb">' +
+        '<div style="flex:1"><div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.6px;color:#d97706;margin-bottom:4px">Prepared For</div>' +
+          '<div style="font-size:14px;font-weight:600;color:#1a1a1a">' + (neg.client || '—') + '</div>' +
+          (neg.property ? '<div style="font-size:12px;color:#6b7280;margin-top:2px">' + neg.property + '</div>' : '') +
+        '</div>' +
+        '<div><div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.6px;color:#d97706;margin-bottom:4px">Date</div>' +
+          '<div style="font-size:14px;font-weight:600;color:#1a1a1a">' + today + '</div>' +
+        '</div>' +
+        '<div><div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.6px;color:#d97706;margin-bottom:4px">Reference</div>' +
+          '<div style="font-size:14px;font-weight:600;color:#1a1a1a">' + (wo.id || '') + '</div>' +
+          '<div style="font-size:12px;color:#6b7280;margin-top:2px">' + (neg.wo_title || '') + '</div>' +
+        '</div>' +
+      '</div>' +
+
+      // Scope table
+      '<div style="margin-bottom:24px">' +
+        '<h2 style="font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:0.6px;color:#d97706;margin:0 0 12px;padding-bottom:8px;border-bottom:2px solid #d97706">Revised Scope of Work</h2>' +
+        '<table style="width:100%;border-collapse:collapse">' +
+          '<thead><tr style="border-bottom:2px solid #e5e7eb">' +
+            '<th style="padding:10px 8px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:#6b7280;text-align:center;width:40px">#</th>' +
+            '<th style="padding:10px 8px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:#6b7280;text-align:left">Service</th>' +
+            '<th style="padding:10px 8px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:#6b7280;text-align:right">Rate</th>' +
+            '<th style="padding:10px 8px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:#6b7280;text-align:center;width:50px">Qty</th>' +
+            '<th style="padding:10px 8px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:#6b7280;text-align:right">Total</th>' +
+          '</tr></thead>' +
+          '<tbody>' + lineRows + '</tbody>' +
+        '</table>' +
+      '</div>' +
+
+      // Totals
+      '<div style="margin-left:auto;width:260px;margin-bottom:32px">' +
+        '<div style="display:flex;justify-content:space-between;padding:8px 0;font-size:13px;color:#6b7280"><span>Subtotal</span><span>' + pMoney(revisedTotal) + '</span></div>' +
+        '<div style="display:flex;justify-content:space-between;padding:8px 0;font-size:13px;color:#6b7280"><span>Tax</span><span>$0.00</span></div>' +
+        '<div style="display:flex;justify-content:space-between;padding:12px 0 8px;font-size:17px;font-weight:800;color:#1a1a1a;border-top:2px solid #d97706;margin-top:4px"><span>Revised Total</span><span>' + pMoney(revisedTotal) + '</span></div>' +
+      '</div>' +
+
+      // Notes
+      '<div style="margin-bottom:32px;padding:16px 20px;background:#fffbeb;border-radius:8px;border:1px solid #fde68a">' +
+        '<h3 style="font-size:12px;font-weight:700;text-transform:uppercase;color:#92400e;margin:0 0 8px">Notes &amp; Conditions</h3>' +
+        '<p style="font-size:12px;color:#78350f;margin:0;line-height:1.6">' +
+          'This proposal reflects the revised scope of work following approved change order negotiations. ' +
+          'All pricing is based on current material and labor rates. Additional work outside this scope ' +
+          'will require a separate change order. Payment terms per existing contract agreement.' +
+        '</p>' +
+      '</div>' +
+
+      // Signatures
+      '<div style="margin-top:40px">' +
+        '<div style="display:flex;gap:48px;margin-bottom:20px">' +
+          '<div style="flex:1"><div style="border-bottom:1.5px solid #d1d5db;height:44px"></div><div style="font-size:11px;color:#9ca3af;margin-top:6px">Contractor Signature / Date</div></div>' +
+          '<div style="flex:1"><div style="border-bottom:1.5px solid #d1d5db;height:44px"></div><div style="font-size:11px;color:#9ca3af;margin-top:6px">Client Signature / Date</div></div>' +
+        '</div>' +
+        '<p style="font-size:10px;color:#9ca3af;margin:0;text-align:center">This proposal is valid for 30 days from the date above. Acceptance constitutes agreement to the revised scope and pricing.</p>' +
+      '</div>';
     docStyle = 'classic';
   }
 
