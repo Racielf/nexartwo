@@ -1,35 +1,74 @@
 -- ============================================================
 -- DRAFT — Auth/RLS Hardening
--- Migración 008: Restringir vista `project_financial_summaries`
+-- Migración 008: Protección de la Vista `project_financial_summaries`
 -- ============================================================
--- ⚠️  NO EJECUTAR — Draft para revisión.
---     Requiere migración 004 aplicada.
---     Las vistas en Postgres heredan RLS de las tablas base, pero
---     agregar una policy explícita sobre la vista la hace más robusta.
+-- ⚠️  DRAFT ONLY — DO NOT APPLY
+--     Gate: Workflow Supabase Financial QA debe retornar PASS.
+--     Requiere migraciones 004-007 aplicadas primero.
+--
+-- ADVERTENCIA: field_user y viewer NUNCA deben poder consultar
+-- profit, cost_basis, cash_invested, project_cash_position,
+-- net_expense_cost ni total_disbursements de esta vista.
 -- ============================================================
 
--- Las vistas no soportan RLS directamente como las tablas,
--- pero podemos protegerlas mediante la función SECURITY INVOKER/DEFINER
--- y a través de las policies de las tablas subyacentes.
+-- ============================================================
+-- ESTRATEGIA DE PROTECCIÓN
+-- ============================================================
+--
+-- Las vistas en Supabase/PostgreSQL NO soportan RLS directamente
+-- como las tablas. Sin embargo, existen dos mecanismos:
+--
+-- OPCIÓN A (Recomendada): security_invoker = true
+--   La vista hereda los permisos del usuario que la consulta.
+--   Las policies de las tablas base (project_expenses, etc.)
+--   filtran automáticamente lo que el usuario puede ver.
+--   Si un field_user consulta la vista, no verá filas donde
+--   sus policies lo excluyan.
+--
+-- OPCIÓN B: Revocar acceso y usar RPC
+--   REVOKE SELECT ON project_financial_summaries FROM authenticated;
+--   Crear una función RPC que solo ejecute el owner/admin:
+--   CREATE OR REPLACE FUNCTION get_financial_summary(p_project_id TEXT)
+--   RETURNS SETOF project_financial_summaries
+--   LANGUAGE sql SECURITY DEFINER SET search_path = public, pg_temp
+--   AS $$ SELECT * FROM project_financial_summaries WHERE project_id = p_project_id $$;
+--   GRANT EXECUTE ON FUNCTION get_financial_summary TO authenticated;
+--   (RLS de las tablas base filtra internamente)
+--
+-- DECISIÓN PARA IMPLEMENTACIÓN: Usar OPCIÓN A + REVOKE de anon.
+-- ============================================================
 
--- Opción recomendada: Recrear la vista con SECURITY INVOKER
--- para que herede los permisos del usuario que la consulta.
--- Esto asegura que si un field_user consulta la vista,
--- las policies de project_expenses le bloqueen sus filas.
-
--- Recrear la vista actual con SECURITY INVOKER (no cambia la lógica financiera):
--- CREATE OR REPLACE VIEW project_financial_summaries
--- WITH (security_invoker = true)  -- <-- este atributo aplica RLS del usuario
--- AS
--- [... mismo SELECT que en 003_projects_financial_system.sql ...]
-
--- NOTA IMPORTANTE:
--- No incluimos aquí el SELECT completo de la vista para no desincronizarla del SQL base aprobado.
--- Cuando se active esta migración, se debe copiar el SELECT vigente de la vista
--- desde supabase/migrations/20260506_projects_financial_system.sql
--- y agregar WITH (security_invoker = true) antes del AS.
-
--- Política adicional de Grant: Restringir EXECUTE/SELECT en la vista
+-- PASO 1: Revocar acceso anónimo (usuarios sin autenticar)
 -- REVOKE SELECT ON project_financial_summaries FROM anon;
--- REVOKE SELECT ON project_financial_summaries FROM authenticated;
--- GRANT SELECT ON project_financial_summaries TO authenticated;  -- controlado por RLS base
+
+-- PASO 2: Recrear la vista con SECURITY INVOKER
+-- IMPORTANTE: Al activar esta migración, copiar el SELECT completo
+-- vigente de supabase/migrations/20260506_projects_financial_system.sql
+-- y añadir WITH (security_invoker = true) después del nombre de la vista.
+-- NO se duplica el SQL aquí para evitar drift con el SQL base aprobado.
+--
+-- Esquema de activación:
+--
+-- CREATE OR REPLACE VIEW project_financial_summaries
+-- WITH (security_invoker = true)
+-- AS
+-- [PEGAR AQUÍ el SELECT completo de la vista desde 20260506_projects_financial_system.sql]
+-- ;
+--
+-- Verificación post-activación:
+-- 1. Como field_user: SELECT profit FROM project_financial_summaries; → debe retornar 0 filas
+-- 2. Como admin: SELECT profit FROM project_financial_summaries; → debe retornar filas
+-- 3. Como owner: SELECT * FROM project_financial_summaries; → acceso total
+--
+-- PASO 3: Los campos internos que NUNCA deben exponerse a field_user/viewer:
+--   - profit
+--   - cost_basis
+--   - cash_invested
+--   - net_expense_cost
+--   - total_disbursements
+--   - project_cash_position
+--   - net_proceeds
+--   - purchase_price (campo de la tabla base)
+--   - down_payment (campo de la tabla base)
+--
+-- Para field_user y viewer usar la vista reducida: project_status_summary (migración 009).
