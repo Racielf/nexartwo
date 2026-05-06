@@ -12,7 +12,7 @@ Antes de hacer el despliegue final (Fase 1 + Fase 2), el equipo debe confirmar q
 ## Pasos para el Lanzamiento Oficial
 1. Obtén confirmación escrita (o "Approved" en PR) de que el Smoke test pasó.
 2. Guarda el screenshot o link del workflow exitoso como evidencia.
-3. Efectúa el merge de la rama `main`.
+3. Efectúa el merge de la rama aprobada hacia `main`.
 4. El equipo debe usar Supabase CLI desde un entorno con credenciales de admin para aplicar las migraciones a producción:
    ```bash
    npx supabase db push

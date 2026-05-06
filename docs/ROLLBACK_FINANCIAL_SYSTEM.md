@@ -6,13 +6,11 @@ Ante la existencia de un fallo crítico en producción después de desplegar la 
 La forma más rápida y segura de apagar un fuego sin riesgo a corromper datos es desconectar la interfaz financiera. 
 
 - **Git Revert:** Puedes hacer un `git revert` del commit de integración de Fase 2 en `projects.html` y `js/projects.js`.
-- **Apagado en Frío (Killswitch):** En el archivo `js/supabase.js`, puedes forzar que la conexión retorne falso:
-  ```javascript
-  function isSupabaseReady() {
-    return false; // FORZADO A OFFLINE MODE TEMPORALMENTE
-  }
-  ```
-Esto obliga a la aplicación a usar `localStorage` (sin funcionalidad financiera en tiempo real) aislando la base de datos instantáneamente.
+- **Apagado Visual Controlado:**
+  - Deshabilitar visualmente las pestañas Financials, Expenses y Disbursements.
+  - Mostrar el banner: "Financial module temporarily disabled".
+  - Bloquear la creación/edición de registros financieros desde la UI.
+  - **Crucial:** Mantener Supabase como la única fuente de verdad. No capturar datos financieros offline ni caer a localStorage durante un incidente. Si se necesita apagar el módulo, hacerlo mediante una bandera de configuración o cambio controlado de UI, no alterando la conexión.
 
 ## 2. Reversión de la Base de Datos (SQL Rollback)
 
