@@ -67,3 +67,5 @@ DROP FUNCTION IF EXISTS auth_role();
 - No modificar `amount`, `tax` ni campos históricos
 - No intentar "limpiar" registros `cancelled` — deben quedar como historia
 - No desactivar los triggers de inmutabilidad para "trabajar más rápido"
+- No usar localStorage como fallback o rollback financiero.
+- No forzar isSupabaseReady() = false para capturar datos financieros locales. Si RLS falla, el rollback correcto es restaurar acceso en Supabase/RLS (`DISABLE ROW LEVEL SECURITY`), no desviar la captura financiera a localStorage. Supabase sigue siendo la única fuente de verdad.

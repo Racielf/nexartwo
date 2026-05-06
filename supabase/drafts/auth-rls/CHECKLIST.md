@@ -24,6 +24,13 @@
 > **Estado de field_user/viewer:** No tienen superficie de proyectos en esta fase.  
 > Accederán a `project_status_summary` en migración 010+ cuando exista `project_assignments`.
 
+## Tarea Bloqueante de Activación (Activation Readiness)
+> [!WARNING]
+> Antes de activar `008_rls_financial_summaries.sql`, se debe planificar y ejecutar un cambio futuro en `js/supabase.js`:
+> - Reemplazar el `SELECT` directo a `project_financial_summaries`.
+> - Usar la RPC `get_all_financial_summaries()`.
+> - Usar la RPC `get_project_financial_summary({ p_project_id })`.
+> No implementar ese cambio ahora. Documentado como bloqueante para la activación.
 
 ---
 

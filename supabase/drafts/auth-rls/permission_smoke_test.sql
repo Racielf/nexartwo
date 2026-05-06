@@ -128,3 +128,37 @@ DELETE FROM project_expenses WHERE id = '<EXPENSE_ID>';
 -- Test 4.4 — UPDATE status DEBE funcionar para owner/admin
 -- RESULTADO ESPERADO: 1 row updated
 UPDATE project_expenses SET status = 'cancelled' WHERE id = '<EXPENSE_ID>';
+
+-- ==========================================
+-- BLOQUE 5: Pruebas como `viewer`
+-- ==========================================
+
+-- Test 5.1 — viewer NO puede SELECT directo en projects
+-- RESULTADO ESPERADO: 0 filas (RLS bloquea)
+SELECT id, name, purchase_price, down_payment FROM projects LIMIT 5;
+
+-- Test 5.2 — viewer NO puede SELECT directo en project_financial_summaries
+-- RESULTADO ESPERADO: error de permisos (REVOKE)
+SELECT profit FROM project_financial_summaries LIMIT 1;
+
+-- Test 5.3 — viewer NO puede ejecutar get_project_financial_summary() con resultados
+-- RESULTADO ESPERADO: 0 filas
+SELECT * FROM get_project_financial_summary('<PROJECT_ID>');
+
+-- Test 5.4 — viewer NO puede SELECT project_disbursements
+-- RESULTADO ESPERADO: 0 filas
+SELECT * FROM project_disbursements LIMIT 5;
+
+-- Test 5.5 — viewer NO puede SELECT project_refunds
+-- RESULTADO ESPERADO: 0 filas
+SELECT * FROM project_refunds LIMIT 5;
+
+-- Test 5.6 — viewer NO puede INSERT/UPDATE project_expenses
+-- RESULTADO ESPERADO: error de permisos (RLS bloquea)
+INSERT INTO project_expenses (project_id, vendor, amount, status, created_by)
+VALUES ('<PROJECT_ID>', 'Test', 100, 'pending', auth.uid());
+UPDATE project_expenses SET status = 'cancelled' WHERE id = '<EXPENSE_ID>';
+
+-- Test 5.7 — viewer NO tiene project_status_summary (hasta migración futura 010+)
+-- RESULTADO ESPERADO: error de permisos o 0 filas
+SELECT * FROM get_project_status_summary();

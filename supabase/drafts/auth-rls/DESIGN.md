@@ -111,8 +111,13 @@ Ambos triggers están escritos como SQL ejecutable en sus respectivos drafts (no
 3. `get_all_financial_summaries()` → ídem para listado completo
 4. `GRANT EXECUTE` solo a `authenticated` — el auth_role check interno filtra
 
-> El frontend deberá llamar `supabase.rpc('get_project_financial_summary', ...)` en lugar de SELECT directo. **Cambio a hacer en la Fase de Activación**, no en este draft.
-
+> [!WARNING]
+> ## Tarea Bloqueante de Activación (Activation Readiness)
+> Antes de activar `008_rls_financial_summaries.sql`, se debe planificar un cambio futuro en `js/supabase.js`:
+> - reemplazar `SELECT` directo a `project_financial_summaries`
+> - usar RPC `get_all_financial_summaries()`
+> - usar RPC `get_project_financial_summary({ p_project_id })`
+> No implementar ese cambio ahora. Solo documentarlo como tarea bloqueante de activación.
 ---
 
 ## Orden de Migraciones (No ejecutar aún)
