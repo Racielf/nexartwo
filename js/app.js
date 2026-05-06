@@ -1298,6 +1298,69 @@ var CO_STATUSES = {
   rejected: { label: 'Rejected',         color: '#ef4444' }
 };
 
+// ---- Custom status pill + dropdown ----
+function renderCOStatusPill(idx, currentStatus, context) {
+  var st = CO_STATUSES[currentStatus] || CO_STATUSES.draft;
+  var id = 'co-status-pill-' + context + '-' + idx;
+  var opts = Object.keys(CO_STATUSES).map(function(k) {
+    var s = CO_STATUSES[k];
+    return '<div class="co-status-option' + (k === currentStatus ? ' active' : '') + '" data-val="' + k + '" onclick="selectCOStatus(\'' + id + '\',' + idx + ',\'' + k + '\',\'' + context + '\')">' +
+      '<span class="co-opt-dot"></span>' + s.label +
+      '<span class="co-opt-check">&check;</span></div>';
+  }).join('');
+  return '<div class="co-status-wrap" onclick="event.stopPropagation()">' +
+    '<div class="co-status-pill" id="' + id + '" data-status="' + currentStatus + '" data-idx="' + idx + '" onclick="toggleCOStatusDropdown(\'' + id + '\')">' +
+      '<span class="co-status-dot"></span>' + st.label + '<span class="co-status-chevron">&#9662;</span>' +
+    '</div>' +
+    '<div class="co-status-dropdown" id="' + id + '-dd">' + opts + '</div>' +
+  '</div>';
+}
+
+function toggleCOStatusDropdown(id) {
+  var pill = document.getElementById(id);
+  var dd = document.getElementById(id + '-dd');
+  if (!pill || !dd) return;
+  var isOpen = dd.classList.contains('open');
+  // Close all open dropdowns first
+  document.querySelectorAll('.co-status-dropdown.open').forEach(function(d) { d.classList.remove('open'); });
+  document.querySelectorAll('.co-status-pill.open').forEach(function(p) { p.classList.remove('open'); });
+  document.querySelectorAll('.co-status-backdrop').forEach(function(b) { b.remove(); });
+  if (!isOpen) {
+    pill.classList.add('open');
+    dd.classList.add('open');
+    var backdrop = document.createElement('div');
+    backdrop.className = 'co-status-backdrop';
+    backdrop.onclick = function() { toggleCOStatusDropdown(id); };
+    document.body.appendChild(backdrop);
+  }
+}
+
+function selectCOStatus(pillId, idx, newStatus, context) {
+  // Close dropdown
+  toggleCOStatusDropdown(pillId);
+  // Update pill UI
+  var pill = document.getElementById(pillId);
+  if (pill) {
+    pill.setAttribute('data-status', newStatus);
+    var st = CO_STATUSES[newStatus] || CO_STATUSES.draft;
+    // Update label text (keep dot + chevron)
+    pill.innerHTML = '<span class="co-status-dot"></span>' + st.label + '<span class="co-status-chevron">&#9662;</span>';
+  }
+  // Update dropdown checkmarks
+  var dd = document.getElementById(pillId + '-dd');
+  if (dd) {
+    dd.querySelectorAll('.co-status-option').forEach(function(opt) {
+      opt.classList.toggle('active', opt.getAttribute('data-val') === newStatus);
+    });
+  }
+  // Only apply directly for card context (editor saves on explicit Save)
+  if (context === 'card') {
+    updateCOStatus(idx, newStatus);
+    // Re-render to update the card badge too
+    renderChangeOrders();
+  }
+}
+
 function loadCOs(woId) {
   try {
     var raw = localStorage.getItem('wo_changes_' + woId);
@@ -1369,7 +1432,7 @@ function renderChangeOrders() {
       '<div style="font-size:11px;color:var(--text-muted);margin-top:4px">' + new Date(co.createdAt).toLocaleDateString() +
       (co.requestedBy ? ' &middot; ' + escHtml(co.requestedBy) : '') + '</div></div>' +
       '<div style="display:flex;flex-direction:column;gap:4px" onclick="event.stopPropagation()">' +
-      '<select class="form-control" style="font-size:11px;padding:2px 6px;width:auto" onchange="updateCOStatus(' + idx + ',this.value)">' + statusOpts + '</select>' +
+      renderCOStatusPill(idx, co.status, 'card') +
       '<button onclick="event.stopPropagation();deleteCO(' + idx + ')" title="Delete" style="background:none;border:none;cursor:pointer;opacity:0.4;font-size:13px;padding:2px;color:var(--text-primary);text-align:center" onmouseover="this.style.opacity=0.8" onmouseout="this.style.opacity=0.4">&#x2715;</button>' +
       '</div></div></div></div>';
   }).join('');
@@ -1552,10 +1615,8 @@ function openCOEditor(idx) {
       '<td><button class="doc-remove-btn" onclick="coEditorToggleRemove(' + i + ')" title="' + (isRemoved ? 'Restore item' : 'Remove item') + '">' + (isRemoved ? '&#x21A9;' : '&#x2715;') + '</button></td></tr>';
   }).join('');
 
-  // Build status options for inline select
-  var statusOpts = Object.keys(CO_STATUSES).map(function(k) {
-    return '<option value="' + k + '"' + (co.status === k ? ' selected' : '') + '>' + CO_STATUSES[k].label + '</option>';
-  }).join('');
+  // Build status pill for editor
+  var statusPillHtml = renderCOStatusPill(_coEditorIdx, co.status, 'editor');
 
   container.innerHTML =
     // ---- Slim Action Bar: Back | Template | Save ----
@@ -1603,7 +1664,7 @@ function openCOEditor(idx) {
     '<div class="doc-meta-col"><div class="doc-meta-label">Work Order</div>' +
     '<div class="doc-meta-value">' + escHtml(currentWO ? currentWO.id : '') + '</div></div>' +
     '<div class="doc-meta-col"><div class="doc-meta-label">Status</div>' +
-    '<div class="doc-meta-value"><select id="co-ed-status" class="co-status-inline">' + statusOpts + '</select></div></div>' +
+    '<div class="doc-meta-value">' + statusPillHtml + '</div></div>' +
     '<div class="doc-meta-col"><div class="doc-meta-label">Requested By</div>' +
     '<div class="doc-meta-value"><input type="text" id="co-ed-reqby" class="doc-inline-input" value="' + escHtml(co.requestedBy || '') + '" placeholder="Client / realtor" style="width:100%"></div></div>' +
     '</div>' +
@@ -1670,7 +1731,8 @@ function hasCOEditorChanges() {
   var domTitle = (document.getElementById('co-ed-title')?.value || '').trim();
   var domDesc = (document.getElementById('co-ed-desc')?.value || '').trim();
   var domReqBy = (document.getElementById('co-ed-reqby')?.value || '').trim();
-  var domStatus = (document.getElementById('co-ed-status')?.value || '').trim();
+  var edPill = document.querySelector('#co-status-pill-editor-' + _coEditorIdx);
+  var domStatus = (edPill ? edPill.getAttribute('data-status') : '') || '';
 
   if (domTitle !== (co.title || '').trim()) return true;
   if (domDesc !== (co.description || '').trim()) return true;
@@ -1756,7 +1818,8 @@ function saveCOFromEditor() {
   _coEditorDraft.title = (document.getElementById('co-ed-title')?.value || '').trim() || _coEditorDraft.title;
   _coEditorDraft.description = (document.getElementById('co-ed-desc')?.value || '').trim();
   _coEditorDraft.requestedBy = (document.getElementById('co-ed-reqby')?.value || '').trim();
-  _coEditorDraft.status = document.getElementById('co-ed-status')?.value || _coEditorDraft.status;
+  var savePill = document.querySelector('#co-status-pill-editor-' + _coEditorIdx);
+  _coEditorDraft.status = (savePill ? savePill.getAttribute('data-status') : '') || _coEditorDraft.status;
   _coEditorDraft.template = _coTemplate;
   if (_coEditorDraft.status === 'approved' && !_coEditorDraft.approvedAt) _coEditorDraft.approvedAt = new Date().toISOString();
 

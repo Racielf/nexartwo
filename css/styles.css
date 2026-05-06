@@ -2167,22 +2167,118 @@ body {
 .co-desc-input::placeholder { color: #bbb; }
 .co-desc-input:focus { border-bottom: 1px solid #ddd; }
 
-/* ---- CO Inline Status Select ---- */
-.co-status-inline {
-  border: none;
-  outline: none;
-  background: transparent;
-  font-family: 'Inter', sans-serif;
-  font-size: 13px;
-  font-weight: 600;
-  color: inherit;
+/* ---- CO Status Pill + Custom Dropdown ---- */
+.co-status-wrap { position: relative; display: inline-block; }
+
+.co-status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px 4px 8px;
+  border-radius: 20px;
+  border: 1.5px solid var(--border);
+  background: var(--bg-input, #f8f8f8);
   cursor: pointer;
-  padding: 2px 4px;
-  border-radius: 4px;
-  appearance: auto;
+  font-size: 12px;
+  font-weight: 600;
+  font-family: 'Inter', sans-serif;
+  transition: all 0.2s;
+  user-select: none;
+  white-space: nowrap;
+  line-height: 1;
 }
-.co-status-inline:hover { background: rgba(0,0,0,0.04); }
-.co-status-inline:focus { box-shadow: 0 0 0 2px var(--accent, #e67e22); }
+.co-status-pill:hover { border-color: var(--accent); box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+.co-status-pill .co-status-dot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.co-status-pill .co-status-chevron {
+  font-size: 10px;
+  opacity: 0.5;
+  transition: transform 0.2s;
+  margin-left: 2px;
+}
+.co-status-pill.open .co-status-chevron { transform: rotate(180deg); }
+
+/* -- Pill color variants -- */
+.co-status-pill[data-status="draft"]    { color: #475569; border-color: #cbd5e1; background: #f1f5f9; }
+.co-status-pill[data-status="pending"]  { color: #b45309; border-color: #fcd34d; background: #fffbeb; }
+.co-status-pill[data-status="approved"] { color: #047857; border-color: #6ee7b7; background: #ecfdf5; }
+.co-status-pill[data-status="rejected"] { color: #dc2626; border-color: #fca5a5; background: #fef2f2; }
+
+.co-status-pill[data-status="draft"]    .co-status-dot { background: #64748b; }
+.co-status-pill[data-status="pending"]  .co-status-dot { background: #f59e0b; box-shadow: 0 0 6px rgba(245,158,11,0.4); }
+.co-status-pill[data-status="approved"] .co-status-dot { background: #10b981; box-shadow: 0 0 6px rgba(16,185,129,0.4); }
+.co-status-pill[data-status="rejected"] .co-status-dot { background: #ef4444; box-shadow: 0 0 6px rgba(239,68,68,0.4); }
+
+/* -- Dropdown panel -- */
+.co-status-dropdown {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  z-index: 600;
+  min-width: 180px;
+  background: var(--bg-secondary, #fff);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  box-shadow: 0 8px 30px rgba(0,0,0,0.14), 0 2px 8px rgba(0,0,0,0.06);
+  padding: 5px 0;
+  opacity: 0;
+  transform: translateY(-6px) scale(0.97);
+  pointer-events: none;
+  transition: opacity 0.15s, transform 0.15s;
+}
+.co-status-dropdown.open {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+  pointer-events: auto;
+}
+
+.co-status-option {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 14px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-primary);
+  cursor: pointer;
+  transition: background 0.12s;
+  position: relative;
+}
+.co-status-option:hover { background: var(--bg-input, #f5f5f5); }
+.co-status-option .co-opt-dot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.co-status-option .co-opt-check {
+  margin-left: auto;
+  font-size: 14px;
+  font-weight: 700;
+  opacity: 0;
+}
+.co-status-option.active { font-weight: 700; }
+.co-status-option.active .co-opt-check { opacity: 1; }
+
+.co-status-option[data-val="draft"]    .co-opt-dot { background: #64748b; }
+.co-status-option[data-val="pending"]  .co-opt-dot { background: #f59e0b; }
+.co-status-option[data-val="approved"] .co-opt-dot { background: #10b981; }
+.co-status-option[data-val="rejected"] .co-opt-dot { background: #ef4444; }
+
+.co-status-option[data-val="draft"]    .co-opt-check { color: #64748b; }
+.co-status-option[data-val="pending"]  .co-opt-check { color: #f59e0b; }
+.co-status-option[data-val="approved"] .co-opt-check { color: #10b981; }
+.co-status-option[data-val="rejected"] .co-opt-check { color: #ef4444; }
+
+/* Backdrop to close dropdown on outside click */
+.co-status-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 599;
+  background: transparent;
+}
 
 /* ---- SHARED DOC ELEMENTS ---- */
 .doc-logo-initials {
