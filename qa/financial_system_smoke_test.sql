@@ -10,9 +10,9 @@ CREATE TEMP TABLE qa_results (
 DO $$
 DECLARE
     v_project_id TEXT := 'PROJ-QA-AUTO-001';
-    v_expense_id UUID;
-    v_refund_id UUID;
-    v_disb_id UUID;
+    v_expense_id INTEGER;
+    v_refund_id INTEGER;
+    v_disb_id INTEGER;
     v_summary RECORD;
 BEGIN
     -- 1. Create temporary project

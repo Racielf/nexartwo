@@ -25,14 +25,20 @@ jobs:
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
 
+      - name: Install PostgreSQL Client
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client
+
       - name: Run Smoke Test via psql
         id: smoke_test
         run: |
+          set -e
           # Use standard PostgreSQL client to execute the smoke test against the remote DB
           export PGPASSWORD="${{ secrets.SUPABASE_DB_PASSWORD }}"
           
           # We format output to be aligned and grep for any FAILs
-          psql -h db.${{ secrets.SUPABASE_PROJECT_REF }}.supabase.co -U postgres -d postgres -f qa/financial_system_smoke_test.sql -A -t > qa_output.txt
+          psql -h db.${{ secrets.SUPABASE_PROJECT_REF }}.supabase.co -U postgres -d postgres -v ON_ERROR_STOP=1 -f qa/financial_system_smoke_test.sql -A -t > qa_output.txt
           
           echo "==== QA SMOKE TEST RESULTS ===="
           cat qa_output.txt
