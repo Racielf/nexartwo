@@ -165,7 +165,14 @@ SELECT
     (p.sale_price - p.selling_agent_commission - p.seller_closing_costs) -
     ((p.purchase_price + p.realtor_fee + p.title_company_fee + p.closing_costs + p.inspection_fee + p.insurance) +
      (COALESCE(e.total_expenses, 0) - COALESCE(r.total_refunds, 0)))
-  ELSE 0 END AS profit
+  ELSE 0 END AS profit,
+  
+  -- 7.5 PROJECT CASH POSITION (Cash Outflow & Inflow Real-Time)
+  -- Net Proceeds - Cash Invested - Net Expenses - Disbursements
+  ((p.sale_price - p.selling_agent_commission - p.seller_closing_costs) - 
+   (p.down_payment + p.realtor_fee + p.title_company_fee + p.closing_costs + p.inspection_fee + p.insurance) - 
+   (COALESCE(e.total_expenses, 0) - COALESCE(r.total_refunds, 0)) - 
+   COALESCE(d.total_disbursements, 0)) AS project_cash_position
 
 FROM projects p
 
@@ -213,6 +220,7 @@ FOR EACH ROW EXECUTE FUNCTION prevent_financial_delete();
 CREATE OR REPLACE FUNCTION prevent_expense_update() RETURNS TRIGGER AS $$
 BEGIN
     IF OLD.amount IS DISTINCT FROM NEW.amount OR
+       OLD.tax IS DISTINCT FROM NEW.tax OR
        OLD.project_id IS DISTINCT FROM NEW.project_id OR
        OLD.work_order_id IS DISTINCT FROM NEW.work_order_id OR
        OLD.receipt_date IS DISTINCT FROM NEW.receipt_date OR
@@ -277,7 +285,6 @@ ALTER TABLE project_disbursements ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Allow select projects" ON projects FOR SELECT USING (true);
 CREATE POLICY "Allow insert projects" ON projects FOR INSERT WITH CHECK (true);
 CREATE POLICY "Allow update projects" ON projects FOR UPDATE USING (true) WITH CHECK (true);
-CREATE POLICY "Allow delete projects" ON projects FOR DELETE USING (true);
 
 -- Expenses (Delete blocked by Trigger, Update limited by Trigger)
 CREATE POLICY "Allow select project_expenses" ON project_expenses FOR SELECT USING (true);
