@@ -134,8 +134,8 @@
             <button class="btn btn-secondary btn-sm" onclick="editCurrentProject()" style="gap:4px">
               <i data-lucide="edit-3" style="width:13px;height:13px"></i> Edit
             </button>
-            <button class="btn btn-sm" style="gap:4px;background:var(--danger);color:#fff;border:none" onclick="deleteCurrentProject()">
-              <i data-lucide="trash-2" style="width:13px;height:13px"></i> Delete
+            <button class="btn btn-sm" style="gap:4px;background:#f59e0b;color:#fff;border:none" onclick="cancelCurrentProject()">
+              <i data-lucide="archive" style="width:13px;height:13px"></i> Cancel Project
             </button>
           </div>
         </div>
@@ -160,6 +160,10 @@
 
   <div id="toast" class="toast"></div>
 
+  <!-- Supabase -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="js/supabase.js"></script>
+  <!-- Application -->
   <script src="js/projects.js"></script>
   <script>
     lucide.createIcons();

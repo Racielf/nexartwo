@@ -496,6 +496,163 @@ const DB = {
     }
   },
 
+  // ---------- PROJECTS (Phase 2) ----------
+  projects: {
+    async getAll() {
+      var sb = getSupabase();
+      if (!sb) return null;
+      var { data, error } = await sb.from('projects').select('*').order('created_at', { ascending: false });
+      if (error) { console.error('DB projects.getAll:', error); return null; }
+      return data;
+    },
+    async getById(id) {
+      var sb = getSupabase();
+      if (!sb) return null;
+      var { data, error } = await sb.from('projects').select('*').eq('id', id).single();
+      if (error) { console.error('DB projects.getById:', error); return null; }
+      return data;
+    },
+    async create(p) {
+      var sb = getSupabase();
+      if (!sb) return null;
+      var { data, error } = await sb.from('projects').insert(p).select().single();
+      if (error) { console.error('DB projects.create:', error); return null; }
+      return data;
+    },
+    async update(id, changes) {
+      var sb = getSupabase();
+      if (!sb) return false;
+      changes.updated_at = new Date().toISOString();
+      var { error } = await sb.from('projects').update(changes).eq('id', id);
+      if (error) { console.error('DB projects.update:', error); return false; }
+      return true;
+    },
+    async cancel(id) {
+      // RULE 14: Never delete. We change status to cancelled.
+      var sb = getSupabase();
+      if (!sb) return false;
+      var { error } = await sb.from('projects').update({ status: 'cancelled', updated_at: new Date().toISOString() }).eq('id', id);
+      if (error) { console.error('DB projects.cancel:', error); return false; }
+      return true;
+    }
+  },
+
+  // ---------- PROJECT EXPENSES (Phase 2) ----------
+  projectExpenses: {
+    async getByProject(projectId) {
+      var sb = getSupabase();
+      if (!sb) return null;
+      var { data, error } = await sb.from('project_expenses').select('*').eq('project_id', projectId).order('created_at', { ascending: false });
+      if (error) { console.error('DB projectExpenses.getByProject:', error); return null; }
+      return data;
+    },
+    async create(ex) {
+      var sb = getSupabase();
+      if (!sb) return null;
+      var { data, error } = await sb.from('project_expenses').insert(ex).select().single();
+      if (error) { console.error('DB projectExpenses.create:', error); return null; }
+      return data;
+    },
+    async updateStatus(id, status, notes) {
+      var sb = getSupabase();
+      if (!sb) return false;
+      var payload = { status: status };
+      if (notes !== undefined) payload.rejection_reason = notes;
+      var { error } = await sb.from('project_expenses').update(payload).eq('id', id);
+      if (error) { console.error('DB projectExpenses.updateStatus:', error); return false; }
+      return true;
+    },
+    async updateNotes(id, notes) {
+      var sb = getSupabase();
+      if (!sb) return false;
+      var { error } = await sb.from('project_expenses').update({ notes: notes }).eq('id', id);
+      if (error) { console.error('DB projectExpenses.updateNotes:', error); return false; }
+      return true;
+    }
+  },
+
+  // ---------- PROJECT REFUNDS (Phase 2) ----------
+  projectRefunds: {
+    async getByProject(projectId) {
+      var sb = getSupabase();
+      if (!sb) return null;
+      var { data, error } = await sb.from('project_refunds').select('*').eq('project_id', projectId).order('created_at', { ascending: false });
+      if (error) { console.error('DB projectRefunds.getByProject:', error); return null; }
+      return data;
+    },
+    async create(rf) {
+      var sb = getSupabase();
+      if (!sb) return null;
+      var { data, error } = await sb.from('project_refunds').insert(rf).select().single();
+      if (error) { console.error('DB projectRefunds.create:', error); return null; }
+      return data;
+    },
+    async updateStatus(id, status) {
+      var sb = getSupabase();
+      if (!sb) return false;
+      var { error } = await sb.from('project_refunds').update({ status: status }).eq('id', id);
+      if (error) { console.error('DB projectRefunds.updateStatus:', error); return false; }
+      return true;
+    },
+    async updateNotes(id, notes) {
+      var sb = getSupabase();
+      if (!sb) return false;
+      var { error } = await sb.from('project_refunds').update({ notes: notes }).eq('id', id);
+      if (error) { console.error('DB projectRefunds.updateNotes:', error); return false; }
+      return true;
+    }
+  },
+
+  // ---------- PROJECT DISBURSEMENTS (Phase 2) ----------
+  projectDisbursements: {
+    async getByProject(projectId) {
+      var sb = getSupabase();
+      if (!sb) return null;
+      var { data, error } = await sb.from('project_disbursements').select('*').eq('project_id', projectId).order('created_at', { ascending: false });
+      if (error) { console.error('DB projectDisbursements.getByProject:', error); return null; }
+      return data;
+    },
+    async create(db) {
+      var sb = getSupabase();
+      if (!sb) return null;
+      var { data, error } = await sb.from('project_disbursements').insert(db).select().single();
+      if (error) { console.error('DB projectDisbursements.create:', error); return null; }
+      return data;
+    },
+    async updateStatus(id, status) {
+      var sb = getSupabase();
+      if (!sb) return false;
+      var { error } = await sb.from('project_disbursements').update({ status: status }).eq('id', id);
+      if (error) { console.error('DB projectDisbursements.updateStatus:', error); return false; }
+      return true;
+    },
+    async updateNotes(id, notes) {
+      var sb = getSupabase();
+      if (!sb) return false;
+      var { error } = await sb.from('project_disbursements').update({ notes: notes }).eq('id', id);
+      if (error) { console.error('DB projectDisbursements.updateNotes:', error); return false; }
+      return true;
+    }
+  },
+
+  // ---------- PROJECT FINANCIAL SUMMARIES (Phase 2) ----------
+  projectFinancialSummaries: {
+    async getAll() {
+      var sb = getSupabase();
+      if (!sb) return null;
+      var { data, error } = await sb.from('project_financial_summaries').select('*');
+      if (error) { console.error('DB projectFinancialSummaries.getAll:', error); return null; }
+      return data;
+    },
+    async getByProject(projectId) {
+      var sb = getSupabase();
+      if (!sb) return null;
+      var { data, error } = await sb.from('project_financial_summaries').select('*').eq('project_id', projectId).single();
+      if (error) { console.error('DB projectFinancialSummaries.getByProject:', error); return null; }
+      return data;
+    }
+  },
+
   // ---------- SEED DEFAULTS ----------
   async seedIfEmpty() {
     var sb = getSupabase();
