@@ -18,64 +18,27 @@ CREATE TABLE IF NOT EXISTS user_roles (
 ALTER TABLE user_roles ENABLE ROW LEVEL SECURITY;
 
 -- ============================================================
--- SECCIÓN BOOTSTRAP (Ejecutar UNA SOLA VEZ antes de activar RLS)
--- ============================================================
--- El problema del primer owner: si RLS requiere un owner para insertar owners,
--- nadie puede insertar el primer registro.
---
--- Estrategia segura de bootstrap:
--- Paso 1) Insertar el primer owner desde el SQL Editor como superuser (service role),
---         ANTES de activar las policies de user_roles.
---         Usar el UUID real del usuario autenticado (owner del proyecto).
---
---         Ejemplo (reemplazar con UUID real del owner):
---         INSERT INTO user_roles (user_id, role)
---         VALUES ('xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx', 'owner');
---
--- Paso 2) Verificar que el registro existe:
---         SELECT * FROM user_roles;
---
--- Paso 3) Solo DESPUÉS de confirmar el owner, activar las policies.
+-- FUNCIONES HELPER (crear ANTES de las policies para evitar
+-- recursión RLS al consultar user_roles dentro de user_roles)
 -- ============================================================
 
--- Policy: solo owner puede leer/escribir user_roles
--- (Solo activa DESPUÉS del paso de bootstrap)
-CREATE POLICY "user_roles_select_owner" ON user_roles
-  FOR SELECT USING (
-    EXISTS (
-      SELECT 1 FROM user_roles ur
-      WHERE ur.user_id = auth.uid() AND ur.role = 'owner'
-    )
+-- is_owner(): SECURITY DEFINER permite leer user_roles
+-- sin pasar por el RLS de user_roles, evitando recursión infinita.
+CREATE OR REPLACE FUNCTION is_owner()
+RETURNS BOOLEAN
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = public, pg_temp
+AS $$
+  SELECT EXISTS (
+    SELECT 1 FROM user_roles
+    WHERE user_id = auth.uid() AND role = 'owner'
   );
+$$;
 
-CREATE POLICY "user_roles_insert_owner" ON user_roles
-  FOR INSERT WITH CHECK (
-    EXISTS (
-      SELECT 1 FROM user_roles ur
-      WHERE ur.user_id = auth.uid() AND ur.role = 'owner'
-    )
-  );
-
-CREATE POLICY "user_roles_update_owner" ON user_roles
-  FOR UPDATE USING (
-    EXISTS (
-      SELECT 1 FROM user_roles ur
-      WHERE ur.user_id = auth.uid() AND ur.role = 'owner'
-    )
-  );
-
-CREATE POLICY "user_roles_delete_owner" ON user_roles
-  FOR DELETE USING (
-    EXISTS (
-      SELECT 1 FROM user_roles ur
-      WHERE ur.user_id = auth.uid() AND ur.role = 'owner'
-    )
-  );
-
--- ============================================================
--- Función helper: retorna el rol del usuario autenticado actual
--- search_path explícito requerido por SECURITY DEFINER
--- ============================================================
+-- auth_role(): retorna el rol del usuario autenticado actual.
+-- Usada en todas las demás tablas. SECURITY DEFINER + search_path seguro.
 CREATE OR REPLACE FUNCTION auth_role()
 RETURNS TEXT
 LANGUAGE sql
@@ -85,3 +48,45 @@ SET search_path = public, pg_temp
 AS $$
   SELECT role FROM user_roles WHERE user_id = auth.uid();
 $$;
+
+-- ============================================================
+-- SECCIÓN BOOTSTRAP — Ejecutar UNA SOLA VEZ con service_role
+-- ANTES de activar las policies de user_roles.
+-- ============================================================
+-- El problema del primer owner: con RLS activo y sin datos,
+-- ninguna policy podría permitir el INSERT inicial.
+-- Solución: insertar el primer owner desde el SQL Editor
+-- usando el service_role key de Supabase (bypassa RLS).
+--
+-- PASO 1: En el SQL Editor de Supabase con service_role:
+--   INSERT INTO user_roles (user_id, role)
+--   VALUES ('xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx', 'owner');
+--   -- Reemplazar con el UUID real del usuario owner (auth.users.id)
+--
+-- PASO 2: Verificar el registro antes de activar policies:
+--   SELECT * FROM user_roles;
+--
+-- PASO 3: Activar las policies (ejecutar el resto de este archivo).
+-- ============================================================
+
+-- ============================================================
+-- POLICIES para user_roles
+-- Usan is_owner() para evitar self-recursion en RLS.
+-- ============================================================
+
+-- Solo owner puede leer la tabla de roles
+CREATE POLICY "user_roles_select" ON user_roles
+  FOR SELECT USING ( is_owner() );
+
+-- Solo owner puede asignar nuevos roles
+CREATE POLICY "user_roles_insert" ON user_roles
+  FOR INSERT WITH CHECK ( is_owner() );
+
+-- Solo owner puede cambiar roles existentes
+CREATE POLICY "user_roles_update" ON user_roles
+  FOR UPDATE USING ( is_owner() );
+
+-- Solo owner puede eliminar asignaciones de rol
+-- (ej. al dar de baja a un colaborador)
+CREATE POLICY "user_roles_delete" ON user_roles
+  FOR DELETE USING ( is_owner() );

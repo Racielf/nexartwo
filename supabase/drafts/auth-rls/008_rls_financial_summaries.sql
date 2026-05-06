@@ -1,74 +1,73 @@
 -- ============================================================
 -- DRAFT — Auth/RLS Hardening
--- Migración 008: Protección de la Vista `project_financial_summaries`
+-- Migración 008: Protección fuerte de `project_financial_summaries`
 -- ============================================================
 -- ⚠️  DRAFT ONLY — DO NOT APPLY
 --     Gate: Workflow Supabase Financial QA debe retornar PASS.
 --     Requiere migraciones 004-007 aplicadas primero.
 --
--- ADVERTENCIA: field_user y viewer NUNCA deben poder consultar
--- profit, cost_basis, cash_invested, project_cash_position,
--- net_expense_cost ni total_disbursements de esta vista.
+-- CAMPOS PROHIBIDOS para field_user / viewer (nunca deben verlos):
+--   profit, cost_basis, cash_invested, net_expense_cost,
+--   total_disbursements, project_cash_position, net_proceeds,
+--   purchase_price, down_payment
 -- ============================================================
 
 -- ============================================================
--- ESTRATEGIA DE PROTECCIÓN
--- ============================================================
---
--- Las vistas en Supabase/PostgreSQL NO soportan RLS directamente
--- como las tablas. Sin embargo, existen dos mecanismos:
---
--- OPCIÓN A (Recomendada): security_invoker = true
---   La vista hereda los permisos del usuario que la consulta.
---   Las policies de las tablas base (project_expenses, etc.)
---   filtran automáticamente lo que el usuario puede ver.
---   Si un field_user consulta la vista, no verá filas donde
---   sus policies lo excluyan.
---
--- OPCIÓN B: Revocar acceso y usar RPC
---   REVOKE SELECT ON project_financial_summaries FROM authenticated;
---   Crear una función RPC que solo ejecute el owner/admin:
---   CREATE OR REPLACE FUNCTION get_financial_summary(p_project_id TEXT)
---   RETURNS SETOF project_financial_summaries
---   LANGUAGE sql SECURITY DEFINER SET search_path = public, pg_temp
---   AS $$ SELECT * FROM project_financial_summaries WHERE project_id = p_project_id $$;
---   GRANT EXECUTE ON FUNCTION get_financial_summary TO authenticated;
---   (RLS de las tablas base filtra internamente)
---
--- DECISIÓN PARA IMPLEMENTACIÓN: Usar OPCIÓN A + REVOKE de anon.
+-- ESTRATEGIA: REVOKE total + acceso via RPC gated con auth_role()
+-- No se confía únicamente en security_invoker porque la vista
+-- puede ser consultada directamente desde cualquier cliente SQL.
 -- ============================================================
 
--- PASO 1: Revocar acceso anónimo (usuarios sin autenticar)
--- REVOKE SELECT ON project_financial_summaries FROM anon;
+-- PASO 1: Revocar acceso directo a la vista para todos los roles de DB
+REVOKE SELECT ON project_financial_summaries FROM anon;
+REVOKE SELECT ON project_financial_summaries FROM authenticated;
 
--- PASO 2: Recrear la vista con SECURITY INVOKER
--- IMPORTANTE: Al activar esta migración, copiar el SELECT completo
--- vigente de supabase/migrations/20260506_projects_financial_system.sql
--- y añadir WITH (security_invoker = true) después del nombre de la vista.
--- NO se duplica el SQL aquí para evitar drift con el SQL base aprobado.
---
--- Esquema de activación:
---
--- CREATE OR REPLACE VIEW project_financial_summaries
--- WITH (security_invoker = true)
--- AS
--- [PEGAR AQUÍ el SELECT completo de la vista desde 20260506_projects_financial_system.sql]
--- ;
---
--- Verificación post-activación:
--- 1. Como field_user: SELECT profit FROM project_financial_summaries; → debe retornar 0 filas
--- 2. Como admin: SELECT profit FROM project_financial_summaries; → debe retornar filas
--- 3. Como owner: SELECT * FROM project_financial_summaries; → acceso total
---
--- PASO 3: Los campos internos que NUNCA deben exponerse a field_user/viewer:
---   - profit
---   - cost_basis
---   - cash_invested
---   - net_expense_cost
---   - total_disbursements
---   - project_cash_position
---   - net_proceeds
---   - purchase_price (campo de la tabla base)
---   - down_payment (campo de la tabla base)
---
--- Para field_user y viewer usar la vista reducida: project_status_summary (migración 009).
+-- PASO 2: Crear RPC segura que actúa como gateway de acceso.
+-- Solo owner y admin pueden invocarla.
+-- SECURITY DEFINER + search_path aseguran que la función corra
+-- con privilegios del creador y no sea inyectable.
+CREATE OR REPLACE FUNCTION get_project_financial_summary(p_project_id TEXT)
+RETURNS SETOF project_financial_summaries
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = public, pg_temp
+AS $$
+  SELECT *
+  FROM project_financial_summaries
+  WHERE project_id = p_project_id
+    AND auth_role() IN ('owner', 'admin');
+$$;
+
+-- Otorgar EXECUTE solo a authenticated (el auth_role check interno
+-- bloquea a field_user y viewer aunque invoquen la función)
+GRANT EXECUTE ON FUNCTION get_project_financial_summary(TEXT) TO authenticated;
+
+-- PASO 3: Para listado de todos los proyectos financieros (solo owner/admin)
+CREATE OR REPLACE FUNCTION get_all_financial_summaries()
+RETURNS SETOF project_financial_summaries
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = public, pg_temp
+AS $$
+  SELECT *
+  FROM project_financial_summaries
+  WHERE auth_role() IN ('owner', 'admin');
+$$;
+
+GRANT EXECUTE ON FUNCTION get_all_financial_summaries() TO authenticated;
+
+-- ============================================================
+-- RESULTADO ESPERADO:
+-- owner/admin   → invocan get_project_financial_summary() o get_all_financial_summaries() → ven datos
+-- field_user    → invocan función → retorna 0 filas (auth_role() no es owner/admin)
+-- viewer        → invocan función → retorna 0 filas
+-- Cualquier rol → SELECT directo en project_financial_summaries → error de permisos (REVOKE)
+-- ============================================================
+
+-- NOTA: El frontend Vanilla JS deberá llamar a estas RPCs mediante:
+-- supabase.rpc('get_project_financial_summary', { p_project_id: id })
+-- en lugar de un SELECT directo a la vista.
+-- Este cambio en js/supabase.js se realizará en la Fase de Activación,
+-- DESPUÉS del PASS del workflow, NO en esta fase de draft.

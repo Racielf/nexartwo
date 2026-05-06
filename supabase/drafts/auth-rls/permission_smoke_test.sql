@@ -4,26 +4,23 @@
 -- ============================================================
 -- ⚠️  DRAFT ONLY — DO NOT EXECUTE AGAINST PRODUCTION
 --     Correr DESPUÉS de activar las 6 migraciones de RLS (004-009).
---     Usar con sesiones de usuario reales autenticadas en Supabase.
+--     Usar sesiones de usuario reales autenticadas en Supabase.
 --     No usa ROLLBACK — valida permisos reales de sesión activa.
 --
 -- INSTRUCCIONES:
--- 1. Autenticar con usuario de rol `field_user` en Supabase.
--- 2. Ejecutar los bloques del Bloque 1 y verificar resultados.
--- 3. Repetir autenticando como `admin` (Bloque 2).
--- 4. Repetir autenticando como `owner` (Bloque 3).
--- Reemplazar los placeholders <PROJECT_ID>, <EXPENSE_ID>, <DISB_ID>
--- con IDs reales de la base de datos antes de correr.
+-- Reemplazar <PROJECT_ID>, <EXPENSE_ID>, <DISB_ID> con IDs reales.
+-- Autenticar en Supabase con el rol correspondiente antes de cada bloque.
 -- ============================================================
 
 -- ==========================================
 -- BLOQUE 1: Pruebas como `field_user`
 -- ==========================================
 
--- Test 1.1 — field_user NO puede ver project_financial_summaries (KPIs internos)
--- RESULTADO ESPERADO: 0 filas (security_invoker filtra por RLS de tablas base)
-SELECT project_id, profit, cost_basis, cash_invested
-FROM project_financial_summaries
+-- Test 1.1 — field_user NO puede SELECT directo en projects
+-- (contendría purchase_price, down_payment, etc.)
+-- RESULTADO ESPERADO: 0 filas (RLS bloquea)
+SELECT id, name, purchase_price, down_payment
+FROM projects
 LIMIT 5;
 
 -- Test 1.2 — field_user SÍ puede consultar project_status_summary (vista segura)
@@ -32,92 +29,102 @@ SELECT project_id, name, status, expense_count, refund_count, last_activity
 FROM project_status_summary
 LIMIT 5;
 
--- Test 1.3 — field_user SÍ puede insertar un expense en un proyecto activo
--- RESULTADO ESPERADO: INSERT exitoso (1 row)
-INSERT INTO project_expenses (project_id, vendor, amount, status)
-VALUES ('<PROJECT_ID>', 'Field Test Vendor', 100, 'pending');
+-- Test 1.3 — field_user NO puede consultar project_financial_summaries directamente
+-- RESULTADO ESPERADO: error de permisos (REVOKE) — 0 filas o excepción
+SELECT project_id, profit, cost_basis, cash_invested
+FROM project_financial_summaries
+LIMIT 5;
 
--- Test 1.4 — field_user NO puede aprobar su propio expense
--- RESULTADO ESPERADO: 0 rows updated (RLS bloquea UPDATE a field_user)
+-- Test 1.4 — field_user NO puede invocar RPC financiera y obtener datos
+-- RESULTADO ESPERADO: 0 filas (auth_role check interno bloquea)
+SELECT * FROM get_all_financial_summaries();
+
+-- Test 1.5 — field_user SÍ puede insertar un expense con created_by = auth.uid()
+-- RESULTADO ESPERADO: INSERT exitoso (1 row)
+INSERT INTO project_expenses (project_id, vendor, amount, status, created_by)
+VALUES ('<PROJECT_ID>', 'Field Test Vendor', 100, 'pending', auth.uid());
+
+-- Test 1.6 — field_user NO puede insertar expense con created_by de otro usuario
+-- RESULTADO ESPERADO: error de policy (created_by != auth.uid())
+INSERT INTO project_expenses (project_id, vendor, amount, status, created_by)
+VALUES ('<PROJECT_ID>', 'Spoof Vendor', 100, 'pending', '00000000-0000-0000-0000-000000000000');
+
+-- Test 1.7 — field_user NO puede aprobar su propio expense
+-- RESULTADO ESPERADO: 0 rows updated (RLS bloquea UPDATE para field_user)
 UPDATE project_expenses
 SET status = 'approved'
 WHERE id = '<EXPENSE_ID>';
 
--- Test 1.5 — field_user NO puede ver project_disbursements
+-- Test 1.8 — field_user NO puede ver project_disbursements
 -- RESULTADO ESPERADO: 0 filas
 SELECT * FROM project_disbursements LIMIT 5;
 
--- Test 1.6 — field_user NO puede insertar un disbursement
--- RESULTADO ESPERADO: error de RLS o 0 rows
-INSERT INTO project_disbursements (project_id, beneficiary, amount, status)
-VALUES ('<PROJECT_ID>', 'Field Unauthorized', 500, 'pending');
+-- Test 1.9 — field_user NO puede ver project_refunds (contienen amount)
+-- RESULTADO ESPERADO: 0 filas
+SELECT id, amount FROM project_refunds LIMIT 5;
 
 -- ==========================================
 -- BLOQUE 2: Pruebas como `admin`
 -- ==========================================
 
--- Test 2.1 — admin SÍ puede ver project_financial_summaries completa
--- RESULTADO ESPERADO: filas con profit, cost_basis, cash_invested, etc.
-SELECT project_id, profit, cost_basis, cash_invested, project_cash_position
-FROM project_financial_summaries
-LIMIT 5;
+-- Test 2.1 — admin SÍ puede SELECT directo en projects
+-- RESULTADO ESPERADO: filas completas
+SELECT id, name, purchase_price, down_payment FROM projects LIMIT 5;
 
--- Test 2.2 — admin SÍ puede aprobar un expense
+-- Test 2.2 — admin SÍ puede invocar RPC financiera
+-- RESULTADO ESPERADO: filas con profit, cost_basis, etc.
+SELECT * FROM get_all_financial_summaries();
+
+-- Test 2.3 — admin SÍ puede consultar project_financial_summaries via RPC
+SELECT * FROM get_project_financial_summary('<PROJECT_ID>');
+
+-- Test 2.4 — admin NO puede consultar project_financial_summaries directamente
+-- RESULTADO ESPERADO: error de permisos (REVOKE)
+SELECT profit FROM project_financial_summaries LIMIT 1;
+
+-- Test 2.5 — admin SÍ puede aprobar un expense
 -- RESULTADO ESPERADO: 1 row updated
-UPDATE project_expenses
-SET status = 'approved'
-WHERE id = '<EXPENSE_ID>';
+UPDATE project_expenses SET status = 'approved' WHERE id = '<EXPENSE_ID>';
 
--- Test 2.3 — admin NO puede marcar un disbursement como paid
+-- Test 2.6 — admin NO puede marcar un disbursement como paid
 -- RESULTADO ESPERADO: excepción del trigger prevent_non_owner_paid_disbursement
-UPDATE project_disbursements
-SET status = 'paid'
-WHERE id = '<DISB_ID>';
+UPDATE project_disbursements SET status = 'paid' WHERE id = '<DISB_ID>';
 
--- Test 2.4 — admin NO puede modificar campos financieros de un proyecto
+-- Test 2.7 — admin NO puede modificar campos financieros de un proyecto
 -- RESULTADO ESPERADO: excepción del trigger prevent_non_owner_project_financial_update
-UPDATE projects
-SET purchase_price = 999999
-WHERE id = '<PROJECT_ID>';
+UPDATE projects SET purchase_price = 999999 WHERE id = '<PROJECT_ID>';
 
 -- ==========================================
 -- BLOQUE 3: Pruebas como `owner`
 -- ==========================================
 
--- Test 3.1 — owner puede marcar disbursement como paid
+-- Test 3.1 — owner SÍ puede marcar disbursement como paid
 -- RESULTADO ESPERADO: 1 row updated
-UPDATE project_disbursements
-SET status = 'paid'
-WHERE id = '<DISB_ID>';
+UPDATE project_disbursements SET status = 'paid' WHERE id = '<DISB_ID>';
 
--- Test 3.2 — owner puede modificar campos financieros de un proyecto
+-- Test 3.2 — owner SÍ puede modificar campos financieros del proyecto
 -- RESULTADO ESPERADO: 1 row updated
-UPDATE projects
-SET purchase_price = 110000
-WHERE id = '<PROJECT_ID>';
+UPDATE projects SET purchase_price = 110000 WHERE id = '<PROJECT_ID>';
+
+-- Test 3.3 — owner SÍ puede invocar RPC financiera
+SELECT * FROM get_project_financial_summary('<PROJECT_ID>');
 
 -- ==========================================
--- BLOQUE 4: Triggers de inmutabilidad (cualquier rol)
+-- BLOQUE 4: Triggers de inmutabilidad (cualquier rol, incluyendo owner)
 -- ==========================================
 
--- Test 4.1 — UPDATE amount DEBE fallar (trigger trg_no_update_expenses)
+-- Test 4.1 — UPDATE amount DEBE fallar (trigger trg_no_update_expenses / REGLA 9)
 -- RESULTADO ESPERADO: excepción REGLA 9
-UPDATE project_expenses
-SET amount = 999
-WHERE id = '<EXPENSE_ID>';
+UPDATE project_expenses SET amount = 999 WHERE id = '<EXPENSE_ID>';
 
--- Test 4.2 — DELETE DEBE fallar (trigger prevent_financial_delete)
+-- Test 4.2 — UPDATE tax DEBE fallar (REGLA 9)
+-- RESULTADO ESPERADO: excepción REGLA 9
+UPDATE project_expenses SET tax = 999 WHERE id = '<EXPENSE_ID>';
+
+-- Test 4.3 — DELETE DEBE fallar (trigger prevent_financial_delete / REGLA 14)
 -- RESULTADO ESPERADO: excepción REGLA 14
 DELETE FROM project_expenses WHERE id = '<EXPENSE_ID>';
 
--- Test 4.3 — UPDATE tax DEBE fallar
--- RESULTADO ESPERADO: excepción REGLA 9
-UPDATE project_expenses
-SET tax = 999
-WHERE id = '<EXPENSE_ID>';
-
 -- Test 4.4 — UPDATE status DEBE funcionar para owner/admin
 -- RESULTADO ESPERADO: 1 row updated
-UPDATE project_expenses
-SET status = 'cancelled'
-WHERE id = '<EXPENSE_ID>';
+UPDATE project_expenses SET status = 'cancelled' WHERE id = '<EXPENSE_ID>';
