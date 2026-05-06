@@ -1401,6 +1401,49 @@ function renderChangeOrders() {
     '<button class="btn btn-sm btn-primary" onclick="createNewCO()" style="gap:6px">' +
     '<i data-lucide="plus" style="width:13px;height:13px"></i> New Change Order</button></div></div>';
 
+  // ---- Financial Summary Bar ----
+  var summaryBar = '';
+  var neg = buildNegotiationSummary();
+  if (neg && neg.change_orders_applied > 0) {
+    var diff = neg.total_difference;
+    var diffSign = diff >= 0 ? '+' : '';
+    var diffColor = diff > 0 ? '#10b981' : diff < 0 ? '#ef4444' : '#64748b';
+    var pctStr = neg.total_difference_pct !== 0 ? ' (' + (neg.total_difference_pct > 0 ? '+' : '') + neg.total_difference_pct + '%)' : '';
+    function fmtM(v) { return '$' + v.toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2}); }
+
+    summaryBar =
+      '<div class="co-summary-bar">' +
+        '<div class="co-summary-card">' +
+          '<div class="co-summary-label">Original Estimate</div>' +
+          '<div class="co-summary-value">' + fmtM(neg.original_total) + '</div>' +
+        '</div>' +
+        '<div class="co-summary-card">' +
+          '<div class="co-summary-label">Negotiated Total</div>' +
+          '<div class="co-summary-value" style="color:var(--accent)">' + fmtM(neg.negotiated_total) + '</div>' +
+        '</div>' +
+        '<div class="co-summary-card">' +
+          '<div class="co-summary-label">Net Impact</div>' +
+          '<div class="co-summary-value" style="color:' + diffColor + '">' + diffSign + fmtM(Math.abs(diff)) + pctStr + '</div>' +
+        '</div>' +
+        '<div class="co-summary-card">' +
+          '<div class="co-summary-label">Scope Changes</div>' +
+          '<div class="co-summary-value" style="font-size:13px">' +
+            '<span style="color:#10b981" title="Approved COs">' + neg.change_orders_applied + ' approved</span>' +
+            '<span style="co-summary-sep">&middot;</span>' +
+            '<span style="color:#64748b">' + neg.items_modified + ' modified</span>' +
+            '<span class="co-summary-sep">&middot;</span>' +
+            '<span style="color:#ef4444">' + neg.items_removed + ' removed</span>' +
+          '</div>' +
+        '</div>' +
+      '</div>';
+  } else if (_currentCOs.length > 0) {
+    summaryBar =
+      '<div class="co-summary-bar co-summary-muted">' +
+        '<i data-lucide="bar-chart-2" style="width:16px;height:16px;opacity:0.4"></i>' +
+        '<span>Approve a Change Order to calculate negotiation impact.</span>' +
+      '</div>';
+  }
+
   if (_currentCOs.length === 0) {
     container.innerHTML = toolbar + '<div style="text-align:center;padding:48px 0;color:var(--text-muted)">' +
       '<i data-lucide="edit-3" style="width:36px;height:36px;margin-bottom:12px;opacity:0.4"></i>' +
@@ -1437,7 +1480,7 @@ function renderChangeOrders() {
       '</div></div></div></div>';
   }).join('');
 
-  container.innerHTML = toolbar + cards;
+  container.innerHTML = toolbar + summaryBar + cards;
   lucide.createIcons();
 }
 
