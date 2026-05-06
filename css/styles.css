@@ -2611,12 +2611,14 @@ body {
   body * { visibility: hidden; }
   #wo-document-wrap, #wo-document-wrap * { visibility: visible; }
   #wo-document-wrap {
-    position: fixed; top: 0; left: 0;
-    width: 100%; height: 100%;
+    position: absolute; top: 0; left: 0;
+    width: 100%; height: auto;
     box-shadow: none;
     border-radius: 0;
     max-width: 100%;
     z-index: 99999;
+    margin: 0;
+    padding: 0;
   }
   .doc-remove-btn, .doc-add-line, .doc-tpl-btn { display: none !important; }
   .doc-qty-input { border: none !important; }
