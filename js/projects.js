@@ -566,7 +566,7 @@ async function saveDisbursement() {
     payment_type: document.getElementById('disb-type').value,
     payment_date: document.getElementById('disb-date').value || null,
     reference_number: (document.getElementById('disb-ref').value || '').trim(),
-    status: 'approved' // default auto-approve for internal
+    status: 'pending' // default to pending to test approval flow
   };
 
   var res = await DB.projectDisbursements.create(data);
@@ -592,7 +592,7 @@ async function saveFinRecord(type) {
     description: (document.getElementById('fin-desc').value || '').trim(),
     amount: amt,
     receipt_date: document.getElementById('fin-date').value || null,
-    status: 'approved' // Auto approve for MVP internally
+    status: 'pending' // default to pending to test approval flow
   };
 
   if (type === 'expense') {
