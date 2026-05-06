@@ -2558,8 +2558,26 @@ function buildPDF(template, hidePrices, docStyle) {
   if (template === 'negotiation') {
     var neg = buildNegotiationSummary();
     if (!neg) { showToast('No data to generate negotiation summary'); return; }
+
+    // Case 1: COs exist but none are approved
     if (neg.change_orders_applied === 0) {
-      showToast(neg.change_orders_pending > 0 ? '⏳ ' + neg.change_orders_pending + ' CO(s) pending — none approved yet' : 'ℹ️ No change orders — WO is unchanged');
+      var totalCOs = _currentCOs.length;
+      if (totalCOs > 0) {
+        var parts = [];
+        var draftCount = _currentCOs.filter(function(c) { return c.status === 'draft'; }).length;
+        if (draftCount > 0) parts.push(draftCount + ' draft');
+        if (neg.change_orders_pending > 0) parts.push(neg.change_orders_pending + ' pending');
+        if (neg.change_orders_rejected > 0) parts.push(neg.change_orders_rejected + ' rejected');
+        showToast('Negotiation Summary requires at least one Approved Change Order. (' + parts.join(', ') + ')', 4000);
+      } else {
+        showToast('No Change Orders found for this Work Order.', 3000);
+      }
+      return;
+    }
+
+    // Case 2: Approved COs exist but no financial/scope changes
+    if (neg.total_difference === 0 && neg.items_modified === 0 && neg.items_removed === 0) {
+      showToast('Approved Change Orders found, but no changes were detected.', 3500);
       return;
     }
 
