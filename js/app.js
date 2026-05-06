@@ -1462,6 +1462,55 @@ function renderChangeOrders() {
     var amountStr = co.amount ? ((co.amount < 0 ? '' : '+') + '$' + parseFloat(co.amount).toLocaleString()) : '';
     var amountColor = co.amount < 0 ? '#ef4444' : '#10b981';
 
+    // ---- Per-CO Financial Calculation (from co.items only) ----
+    var coFinHTML = '';
+    if (co.items && co.items.length > 0) {
+      var coOriginal = 0, coProposed = 0;
+      var cntUnchanged = 0, cntModified = 0, cntRemoved = 0;
+      co.items.forEach(function(it) {
+        var origT = (it.original_price || 0) * (it.original_qty || 1);
+        coOriginal += origT;
+        if (it.action === 'remove') {
+          coProposed += 0;
+          cntRemoved++;
+        } else if (it.action === 'unchanged') {
+          coProposed += origT;
+          cntUnchanged++;
+        } else {
+          coProposed += (it.new_price || 0) * (it.new_qty || 1);
+          cntModified++;
+        }
+      });
+      var coImpact = Math.round((coProposed - coOriginal) * 100) / 100;
+      var coImpactPct = coOriginal > 0 ? Math.round(((coProposed - coOriginal) / coOriginal) * 1000) / 10 : 0;
+      var impSign = coImpact >= 0 ? '+' : '';
+      var impColor = coImpact > 0 ? '#10b981' : coImpact < 0 ? '#ef4444' : '#64748b';
+      var fmtV = function(v) { return '$' + Math.abs(v).toLocaleString(undefined, {minimumFractionDigits:0, maximumFractionDigits:0}); };
+
+      coFinHTML =
+        '<div class="co-mini-finance" onclick="event.stopPropagation()">' +
+          '<div class="co-mini-card">' +
+            '<div class="co-mini-label">Original</div>' +
+            '<div class="co-mini-value">' + fmtV(coOriginal) + '</div>' +
+          '</div>' +
+          '<div class="co-mini-card">' +
+            '<div class="co-mini-label">Proposed</div>' +
+            '<div class="co-mini-value" style="color:var(--accent)">' + fmtV(coProposed) + '</div>' +
+          '</div>' +
+          '<div class="co-mini-card co-mini-card-impact" style="border-color:' + impColor + '22">' +
+            '<div class="co-mini-label">Net Impact</div>' +
+            '<div class="co-mini-value" style="color:' + impColor + '">' + (coImpact < 0 ? '-' : impSign) + fmtV(coImpact) +
+              (coImpactPct !== 0 ? ' <span style="font-size:9px;font-weight:600;opacity:0.7">(' + (coImpactPct > 0 ? '+' : '') + coImpactPct + '%)</span>' : '') +
+            '</div>' +
+          '</div>' +
+          '<div class="co-mini-counts">' +
+            (cntUnchanged ? '<span>' + cntUnchanged + ' unchanged</span>' : '') +
+            (cntModified ? '<span class="co-cnt-mod">' + cntModified + ' modified</span>' : '') +
+            (cntRemoved ? '<span class="co-cnt-rem">' + cntRemoved + ' removed</span>' : '') +
+          '</div>' +
+        '</div>';
+    }
+
     return '<div class="card" style="margin-bottom:10px;cursor:pointer" onclick="openCOEditor(' + idx + ')">' +
       '<div class="card-body" style="padding:14px 16px"><div style="display:flex;align-items:flex-start;gap:12px">' +
       '<div style="flex:1;min-width:0">' +
@@ -1473,7 +1522,8 @@ function renderChangeOrders() {
       '</div>' +
       '<div style="font-weight:600;font-size:13px;color:var(--text-primary)">' + escHtml(co.title) + '</div>' +
       '<div style="font-size:11px;color:var(--text-muted);margin-top:4px">' + new Date(co.createdAt).toLocaleDateString() +
-      (co.requestedBy ? ' &middot; ' + escHtml(co.requestedBy) : '') + '</div></div>' +
+      (co.requestedBy ? ' &middot; ' + escHtml(co.requestedBy) : '') + '</div>' +
+      coFinHTML + '</div>' +
       '<div style="display:flex;flex-direction:column;gap:4px" onclick="event.stopPropagation()">' +
       renderCOStatusPill(idx, co.status, 'card') +
       '<button onclick="event.stopPropagation();deleteCO(' + idx + ')" title="Delete" style="background:none;border:none;cursor:pointer;opacity:0.4;font-size:13px;padding:2px;color:var(--text-primary);text-align:center" onmouseover="this.style.opacity=0.8" onmouseout="this.style.opacity=0.4">&#x2715;</button>' +

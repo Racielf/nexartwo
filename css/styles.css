@@ -2223,6 +2223,61 @@ body {
   .co-summary-card { min-width: 0; }
 }
 
+/* ---- Per-CO Mini Finance Cards ---- */
+.co-mini-finance {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border);
+  flex-wrap: wrap;
+}
+.co-mini-card {
+  padding: 6px 10px;
+  background: var(--bg-input, #f8f8f8);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  min-width: 0;
+}
+.co-mini-card-impact { background: transparent; }
+.co-mini-label {
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  color: var(--text-muted);
+  margin-bottom: 1px;
+  line-height: 1;
+}
+.co-mini-value {
+  font-size: 14px;
+  font-weight: 800;
+  color: var(--text-primary);
+  font-family: 'Inter', sans-serif;
+  letter-spacing: -0.3px;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+.co-mini-counts {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  margin-left: auto;
+  flex-shrink: 0;
+}
+.co-mini-counts span {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text-muted);
+  padding: 2px 7px;
+  border-radius: 6px;
+  background: var(--bg-input, #f5f5f5);
+  white-space: nowrap;
+}
+.co-mini-counts .co-cnt-mod { color: #d97706; background: #fef3c720; }
+.co-mini-counts .co-cnt-rem { color: #ef4444; background: #fef2f220; }
+
 /* ---- CO Status Pill + Custom Dropdown ---- */
 .co-status-wrap { position: relative; display: inline-flex; align-items: center; }
 
