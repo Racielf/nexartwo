@@ -64,10 +64,11 @@ jobs:
           echo "Applying pending migrations to nexartwo-staging."
           echo "Production is NOT connected. Production secrets are NOT used."
           echo "=============================="
-          supabase db push --password "${{ secrets.STAGING_SUPABASE_DB_PASSWORD }}"
+          supabase db push --password "$SUPABASE_DB_PASSWORD"
         env:
           # This targets staging ONLY. Never use production secrets here.
           SUPABASE_ACCESS_TOKEN: ${{ secrets.STAGING_SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_DB_PASSWORD: ${{ secrets.STAGING_SUPABASE_DB_PASSWORD }}
 
       # -------------------------------------------------------
       # STEP 5 — Install PostgreSQL client (psql)
