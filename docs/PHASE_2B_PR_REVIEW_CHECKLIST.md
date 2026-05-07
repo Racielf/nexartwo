@@ -20,13 +20,14 @@
 
 ## 2. Archivos Esperados en el PR
 
-Los siguientes 8 archivos deben estar presentes y solo estos:
+Los siguientes 9 archivos deben estar presentes y solo estos:
 
 | Archivo | Tipo | Estado esperado |
 |---|---|---|
 | `docs/PHASE_2_INVESTOR_HUB_PLAN.md` | Documentación | Nuevo |
 | `docs/PHASE_2A_INVESTOR_HUB_SPEC.md` | Documentación | Nuevo |
 | `docs/PHASE_2B_INVESTOR_ENTITIES_IMPLEMENTATION_PLAN.md` | Documentación | Nuevo |
+| `docs/PHASE_2B_PR_REVIEW_CHECKLIST.md` | Documentación | Nuevo |
 | `supabase/migrations/202605070001_investor_entities.sql` | SQL Migration | Nuevo |
 | `qa/investor_hub_smoke_test.sql` | QA Script | Nuevo |
 | `js/supabase.js` | JS Data Layer | Modificado |

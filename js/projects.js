@@ -705,12 +705,10 @@ async function renderInvestorHub(projectId) {
   if (!pis.length) {
     html += '<p style="color:var(--text-muted);font-size:13px;padding:12px 0">No investors attached yet.</p>';
   } else {
-    html += '<table class="proj-table" style="margin-bottom:20px"><thead><tr><th>Name</th><th>Role</th><th>Own%</th><th>Split%</th><th>Status</th><th></th></tr></thead><tbody>';
+    html += '<table class="proj-table" style="margin-bottom:20px"><thead><tr><th>Name</th><th>Role</th><th>Status</th><th></th></tr></thead><tbody>';
     pis.forEach(function(pi) {
       var n = pi.investors ? escHtml(pi.investors.name) : '—';
       html += '<tr><td>' + n + '</td><td>' + (ROLES[pi.role]||pi.role) + '</td>'
-        + '<td>' + (pi.ownership_percentage != null ? pi.ownership_percentage + '%' : '—') + '</td>'
-        + '<td>' + (pi.profit_split_percentage != null ? pi.profit_split_percentage + '%' : '—') + '</td>'
         + '<td><span style="font-size:11px;font-weight:700;color:' + (SCOL[pi.status]||'#999') + '">' + pi.status.toUpperCase() + '</span></td>'
         + '<td style="display:flex;gap:4px">'
         + (pi.status==='pending' ? '<button class="btn btn-sm" style="font-size:11px;background:#10b981;color:#fff;border:none" onclick="ihConfirmPI(\'' + pi.id + '\')">Confirm</button>' : '')
