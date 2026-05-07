@@ -33,6 +33,36 @@ Without this pipeline, every database migration, RLS policy, or feature activati
 
 ---
 
+## 2B. Real Incidents Already Seen
+
+These incidents occurred during actual development and QA cycles. They are documented here as mandatory learning for any future staging/dev workflow design.
+
+### Incident 1 — Supabase Financial QA `psql` Failure
+
+| Field | Detail |
+|---|---|
+| **Workflow** | `supabase-financial-qa.yml` |
+| **Step that failed** | Run Smoke Test via psql |
+| **Symptom** | Workflow passed: Setup, Checkout, Supabase CLI, Link Project, Run DB Push, Install PostgreSQL Client — but failed at the `psql` smoke test step with a connection error. |
+| **Probable cause** | Direct connection to `db.[project_ref].supabase.co` failed from a GitHub-hosted runner, likely due to IPv6 routing or network restriction on the runner. |
+| **Mitigation applied** | Switched to the Supabase connection pooler (Supavisor, IPv4-compatible) endpoint instead of the direct DB host. |
+| **Lesson learned** | Remote smoke tests must use runner-compatible connection endpoints. Direct DB hosts are not safe assumptions for GitHub-hosted runners. |
+| **New rule** | Workflows that use `psql` against Supabase **must explicitly document** whether they use the direct DB host or the pooler, and justify the choice. |
+
+### Incident 2 — Investor Hub PR QA UUID Mismatch
+
+| Field | Detail |
+|---|---|
+| **Workflow** | `investor-hub-pr-qa.yml` |
+| **Step that failed** | STEP 11 — Verify `project_financial_summaries` unchanged |
+| **Symptom** | `invalid input syntax for type uuid` |
+| **Cause** | The smoke test attempted to insert a hardcoded text string (`PROJ-2026-1000`) into a column that the migration defined as `UUID`. The schema expects a real UUID; the test invented a text ID. |
+| **Mitigation applied** | Modified the test to first `SELECT id FROM projects LIMIT 1` after inserting the test project (using `RETURNING id`), then reuse that real UUID for subsequent inserts. |
+| **Lesson learned** | Smoke tests must respect real schema types. Never invent IDs if the migration uses `UUID`. |
+| **New rule** | Tests must generate or select real IDs from the database and reuse them, instead of hardcoding any identifier. Use `RETURNING id` on insert or `SELECT id` after insert. |
+
+---
+
 ## 3. Required Environments
 
 ### A) Local / Dev
@@ -189,6 +219,22 @@ Currently applicable:
 
 ---
 
+## 7B. Smoke Test Policy
+
+Applies to all SQL smoke tests used in any workflow (ephemeral, staging, or production QA).
+
+- Use `ON_ERROR_STOP=1` in all `psql` invocations so any SQL error immediately fails the workflow step.
+- Use `BEGIN` / `ROLLBACK` blocks when tests should not leave residual data. Verify explicitly that no residual data remains after the rollback.
+- **Never hardcode UUIDs** in test SQL. The schema generates real UUIDs; hardcoded values will cause type mismatch errors.
+- **Never insert text strings into UUID columns.** If a column is typed `UUID`, only a valid UUID value is acceptable.
+- Always obtain inserted IDs using `RETURNING id` on insert, or `SELECT id FROM table LIMIT 1` after insert, and bind that real ID to subsequent test statements.
+- Confirm Phase 1 views (`project_financial_summaries`) are **unchanged** before and after any Phase 2 smoke test that inserts financial-adjacent data.
+- Do not run destructive or semi-destructive smoke tests against production databases.
+- If no safe test environment exists (no ephemeral Postgres, no staging), the correct status is **BLOCKED**. Do not proceed.
+- Connection to remote Supabase via `psql` must use the pooler endpoint, not the direct DB host, when running inside GitHub-hosted runners.
+
+---
+
 ## 8. Investor Hub Staging Gate
 
 Investor Hub (`INVESTOR_HUB_ENABLED = false`) may only advance when **all** of the following are complete, in order:
@@ -288,6 +334,8 @@ It requires no new infrastructure beyond creating the staging Supabase project. 
 | LocalStorage desync from Supabase | 🟡 Medium | Ensure cache invalidation logic is tested when toggling between local/staging/production. |
 | GitHub Pages publishing `main` before staging QA | 🟡 Medium | Follow branch discipline: only merge to `main` what has been validated in staging. |
 | Agent executing implementation steps without approval | 🟡 Medium | This document is read-only planning. Implementation requires explicit per-step owner approval. |
+| Smoke tests using incorrect ID types (text vs UUID) | 🟠 High | Always obtain real IDs from the DB using `RETURNING id` or `SELECT id` after insert. Never hardcode identifiers. |
+| `psql` workflow using incompatible Supabase host | 🟠 High | Use Supabase pooler (Supavisor, IPv4) endpoint for GitHub-hosted runners. Document connection choice in the workflow file. |
 
 ---
 
@@ -319,5 +367,7 @@ The current state of NexArtWO is stable and safe. The next actions, in strict or
 5. **Review Auth/RLS in staging.** Apply policies, run permission smoke tests, confirm data access model.
 6. **Prepare Investor Hub activation plan.** Only after all staging gates pass and rollback plan is ready.
 7. **Production activation.** With explicit owner approval, coordinated release window, and rollback plan confirmed.
+
+> **Confirmed by real incidents:** The two incidents documented in Section 2B (psql connection failure and UUID type mismatch) demonstrate exactly why staging discipline and rigorous smoke-test standards must precede any further feature work. Both failures were caught in safe ephemeral environments — which is why that pattern is mandatory. The same discipline must be replicated at the staging layer before Investor Hub or Auth/RLS advance.
 
 > Nothing in this document authorizes any of these steps. Each step requires explicit human approval before the agent may proceed.
