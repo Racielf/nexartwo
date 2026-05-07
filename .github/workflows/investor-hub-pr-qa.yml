@@ -194,56 +194,51 @@ jobs:
       # -------------------------------------------------------
       - name: "STEP 11 — Verify project_financial_summaries unchanged"
         run: |
-          # Get project id cleanly (btrim removes all whitespace)
-          PROJECT_ID=$(psql -t -A -c "SELECT btrim(id) FROM projects LIMIT 1;")
-          echo "Project ID: [${PROJECT_ID}]"
-
-          # Snapshot BEFORE — cast to numeric to ensure clean comparison
-          FIN_BEFORE=$(psql -t -A -c "
-            SELECT COALESCE(net_expense_cost, 0)::numeric
-            FROM project_financial_summaries
-            WHERE project_id = '${PROJECT_ID}';
-          " | tr -d '[:space:]')
-          echo "net_expense_cost BEFORE: [${FIN_BEFORE}]"
-
-          # Create investor, capture UUID cleanly
-          INVESTOR_ID=$(psql -t -A -c "
-            INSERT INTO investors (name, type, notes)
-            VALUES ('QA Isolation Investor', 'person', 'Step 11 isolation test')
-            RETURNING btrim(id::text);
-          " | tr -d '[:space:]')
-          echo "Investor ID: [${INVESTOR_ID}]"
-
-          # Insert a capital contribution (confirmed)
+          # Pure SQL isolation test — no bash string comparison.
+          # DO block creates investor + contribution, snapshots before/after,
+          # and raises EXCEPTION if project_financial_summaries changed.
           psql -v ON_ERROR_STOP=1 -c "
+          DO \$\$
+          DECLARE
+            v_project_id         TEXT;
+            v_investor_id        UUID;
+            v_fin_before         NUMERIC;
+            v_fin_after          NUMERIC;
+          BEGIN
+            SELECT id INTO v_project_id FROM projects LIMIT 1;
+            IF v_project_id IS NULL THEN
+              RAISE EXCEPTION 'STEP 11 SETUP: No projects found';
+            END IF;
+
+            -- Snapshot BEFORE
+            SELECT COALESCE(net_expense_cost, 0) INTO v_fin_before
+              FROM project_financial_summaries WHERE project_id = v_project_id;
+
+            -- Create isolation investor
+            INSERT INTO investors (name, type, notes)
+              VALUES ('QA Isolation Investor', 'person', 'Step 11 isolation test')
+              RETURNING id INTO v_investor_id;
+
+            -- Insert confirmed capital contribution
             INSERT INTO capital_contributions
               (project_id, investor_id, amount, date, method, type, status)
-            VALUES (
-              '${PROJECT_ID}',
-              '${INVESTOR_ID}',
-              50000.00,
-              CURRENT_DATE,
-              'wire',
-              'initial',
-              'confirmed'
-            );
+              VALUES (v_project_id, v_investor_id, 50000.00, CURRENT_DATE, 'wire', 'initial', 'confirmed');
+
+            -- Snapshot AFTER
+            SELECT COALESCE(net_expense_cost, 0) INTO v_fin_after
+              FROM project_financial_summaries WHERE project_id = v_project_id;
+
+            RAISE NOTICE 'net_expense_cost BEFORE = %, AFTER = %', v_fin_before, v_fin_after;
+
+            IF v_fin_before IS DISTINCT FROM v_fin_after THEN
+              RAISE EXCEPTION 'FAIL: project_financial_summaries changed! before=% after=%. Phase 2B contaminating Phase 1.', v_fin_before, v_fin_after;
+            END IF;
+
+            RAISE NOTICE 'STEP 11 PASS: project_financial_summaries UNCHANGED after 50000 capital contribution';
+          END;
+          \$\$;
           "
-          echo "Capital contribution inserted (50000 confirmed)"
-
-          # Snapshot AFTER
-          FIN_AFTER=$(psql -t -A -c "
-            SELECT COALESCE(net_expense_cost, 0)::numeric
-            FROM project_financial_summaries
-            WHERE project_id = '${PROJECT_ID}';
-          " | tr -d '[:space:]')
-          echo "net_expense_cost AFTER adding 50k contribution: [${FIN_AFTER}]"
-
-          if [ "${FIN_BEFORE}" != "${FIN_AFTER}" ]; then
-            echo "FAIL: project_financial_summaries changed after capital contribution!"
-            echo "Phase 2B data is contaminating Phase 1 financials. CRITICAL BUG."
-            exit 1
-          fi
-          echo "STEP 11 PASS: project_financial_summaries UNCHANGED — Phase 1 isolation confirmed"
+          echo "STEP 11 PASS: Phase 1 isolation confirmed via SQL DO block"
 
       # -------------------------------------------------------
       - name: "STEP 12 — Print smoke test output summary"
