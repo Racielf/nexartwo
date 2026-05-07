@@ -640,14 +640,14 @@ const DB = {
     async getAll() {
       var sb = getSupabase();
       if (!sb) return null;
-      var { data, error } = await sb.from('project_financial_summaries').select('*');
+      var { data, error } = await sb.rpc('get_all_financial_summaries');
       if (error) { console.error('DB projectFinancialSummaries.getAll:', error); return null; }
       return data;
     },
     async getByProject(projectId) {
       var sb = getSupabase();
       if (!sb) return null;
-      var { data, error } = await sb.from('project_financial_summaries').select('*').eq('project_id', projectId).single();
+      var { data, error } = await sb.rpc('get_project_financial_summary', { p_project_id: projectId }).single();
       if (error) { console.error('DB projectFinancialSummaries.getByProject:', error); return null; }
       return data;
     }
