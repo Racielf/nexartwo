@@ -39,18 +39,28 @@ CREATE POLICY "user_roles_delete" ON user_roles
   FOR DELETE USING ( is_owner() );
 
 -- ============================================================
--- 3. POST-VERIFICATION
+-- 3. POST-VERIFICATION (Primary)
 -- ============================================================
 
--- List applied policies
+-- A. List applied policies (verifies policies exist)
 SELECT policyname, cmd, qual, with_check 
 FROM pg_policies 
 WHERE tablename = 'user_roles';
 
--- Verify access (should work if executed as service_role or owner)
-SELECT count(*) as "Total Roles (Expected: >0)" FROM user_roles;
-SELECT is_owner() as "Is current user owner?";
-SELECT auth_role() as "Current role";
+-- B. Verify owner row exists (verifies data integrity)
+-- Should work if executed as service_role
+SELECT user_id, role FROM user_roles;
+
+-- ============================================================
+-- 4. OPTIONAL AUTHENTICATED OWNER-SESSION VERIFICATION ONLY
+-- ============================================================
+-- These require an active authenticated session as the owner.
+-- They will NOT work as expected with service_role in SQL Editor.
+-- ------------------------------------------------------------
+-- SELECT * FROM user_roles;      -- Expected: returns rows
+-- SELECT is_owner();             -- Expected: returns true
+-- SELECT auth_role();            -- Expected: returns 'owner'
+-- ------------------------------------------------------------
 
 -- ============================================================
 -- NOTE: Once verified, user_roles is hardened.

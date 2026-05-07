@@ -8,7 +8,7 @@
 
 ## 1. Purpose
 
-This plan defines the application of Row Level Security (RLS) policies to the `user_roles` table in `nexartwo-staging`. This step transforms `user_roles` from an open table (current state in staging) into a protected administrative table where only users with the `owner` role can manage permissions.
+This plan defines the application of Row Level Security (RLS) policies to the `user_roles` table in `nexartwo-staging`. At this stage, user_roles has RLS enabled and owner bootstrap completed, but owner-only policies are not applied yet. Applying these policies will transform it into a protected administrative table where only users with the `owner` role can manage permissions.
 
 ---
 
@@ -55,17 +55,27 @@ Before execution, the script verifies that at least one owner exists. **Applying
 
 After manual application in Supabase SQL Editor:
 
-1. **Verify Policies:**
-   ```sql
-   SELECT policyname, cmd, qual, with_check 
-   FROM pg_policies 
-   WHERE tablename = 'user_roles';
-   ```
-2. **Positive Test (as Owner):**
-   - Execute `SELECT * FROM user_roles;` -> Should return rows.
+1. **Verify Policies and Data (Primary Verification):**
+   - Execute the following to confirm policies are active:
+     ```sql
+     SELECT policyname, cmd, qual, with_check 
+     FROM pg_policies 
+     WHERE tablename = 'user_roles';
+     ```
+   - Execute the following to confirm the owner row exists (using `service_role` or authorized context):
+     ```sql
+     SELECT user_id, role FROM user_roles;
+     ```
+
+2. **Optional Authenticated Owner-Session Verification:**
+   > [!IMPORTANT]
+   > The following queries require an active authenticated session as the owner (e.g., via a frontend login or a test session with `auth.uid()` set). They will NOT return expected results when run in the Supabase SQL Editor using the `service_role` key because `auth.uid()` is null in that context.
+   - Execute `SELECT * FROM user_roles;` -> Should return rows only for the owner.
    - Execute `SELECT is_owner();` -> Should return `true`.
+   - Execute `SELECT auth_role();` -> Should return `'owner'`.
+
 3. **Negative Test (as Anon/Non-Owner):**
-   - Anonymous SELECT should return 0 rows.
+   - Anonymous SELECT should return 0 rows once policies are active.
    - (Optional) Use a second staging user without role -> SELECT should return 0 rows.
 
 ---
