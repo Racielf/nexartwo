@@ -43,9 +43,19 @@ This document defines the mandatory checkpoints (gates) that every change must p
 - Migrations must be idempotent and thoroughly smoke-tested in an isolated ephemeral environment (GitHub Actions).
 
 ## 11. Production Activation Gate
-- Requires confirmation that migrations are applied.
-- Requires manual UI check.
-- Requires feature flag toggle to `true`.
+- Requires confirmation that migrations are applied in a **staging/dev environment first**.
+- Requires manual UI check in staging.
+- Requires feature flag toggle to `true` only after all prerequisites below pass.
+- **Audit completion, documentation approval, or CI/CD success do NOT constitute production activation approval.**
+
+> Production activation is never the next step after an audit. It requires, in order:
+> 1. Phase 1 (or the current stable baseline) is visually verified and merged.
+> 2. A safe staging/dev environment is provisioned and confirmed.
+> 3. The migration is applied and smoke-tested in staging.
+> 4. Manual UI check passes in staging.
+> 5. Auth/RLS policies are reviewed and applied.
+> 6. A rollback plan is documented and ready.
+> 7. Explicit owner approval is recorded.
 
 ## 12. Post-Merge Verification Gate
 - After merging, monitor deployment (e.g., GitHub Pages).

@@ -80,6 +80,16 @@ NexArtWO is a vanilla JavaScript/HTML application utilizing Supabase for backend
 - Missing error boundaries around Supabase calls could crash UI if network fails.
 
 ## 20. Recommended Next Steps
-- Finalize and merge PR #4 to resolve UI confusion.
-- Execute the production activation gate for Investor Hub (DB Migration + manual QA).
-- Review and apply RLS policies from `supabase/drafts/auth-rls/` before opening the app to broader use.
+1. Complete Phase 1 Visual Exposure Cleanup: review and merge PR #4 after visual verification.
+2. Define and provision a safe staging/dev environment for future DB-touching work.
+3. Formalize and apply Auth/RLS policies from `supabase/drafts/auth-rls/` — this must happen before Investor Hub or any new module is opened to broader access.
+4. Prepare Investor Hub activation only after ALL of the following are satisfied:
+   - Phase 1 visual cleanup is complete and stable.
+   - A safe staging/dev environment is confirmed and available.
+   - Migration `202605070001_investor_entities.sql` is validated in staging.
+   - Manual UI check in Projects > Investor Hub passes.
+   - RLS/security review is complete.
+   - Explicit owner approval is documented.
+   - A rollback plan is ready.
+
+> ⚠️ Audit or documentation approval does **not** authorize Investor Hub activation.

@@ -56,3 +56,14 @@ When completing an audit or significant task, the agent MUST return a response i
 
 ## Senior Engineering Rule
 Always prioritize stability, isolation, and explicit gates over velocity. A working, hidden feature is better than a broken, visible feature. Protect the data layer at all costs.
+
+Do not recommend production activation as a next step unless **all** of the following prerequisites are already confirmed complete:
+- The current stable phase (Phase 1) is visually verified, merged, and stable.
+- A safe staging/dev environment is provisioned and confirmed.
+- The relevant migration is validated in staging via smoke test.
+- Manual UI check has passed in staging.
+- Auth/RLS security review is complete.
+- A rollback plan is documented.
+- Explicit owner approval is on record.
+
+> If any of these gates are incomplete, the correct recommendation is: prepare those gates first. Never skip stages to accelerate activation.

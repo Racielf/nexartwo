@@ -23,5 +23,8 @@ Do not activate without explicit approval. The following must be completed:
 **Deactivation Process:**
 Set `INVESTOR_HUB_ENABLED = false` in `js/projects.js` and ensure the UI tab retains `display:none` in `projects.html`.
 
+**Critical Rule:**
+`INVESTOR_HUB_ENABLED` must remain `false` until ALL activation gates are complete. Completing an audit, receiving a documentation approval, or passing a CI/CD workflow does **not** authorize enabling this flag. Only explicit owner approval after full prerequisite completion authorizes activation.
+
 **Cleanup Note:**
 The flag and associated conditionally hidden UI elements should only be cleaned up (removed) after the Investor Hub feature is fully stable, tested, and integrated into the primary workflow.
