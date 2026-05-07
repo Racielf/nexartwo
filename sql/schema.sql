@@ -55,32 +55,9 @@ CREATE TABLE IF NOT EXISTS services (
   created_at TIMESTAMPTZ DEFAULT now()
 );
 
--- 3.5 Projects (Financial Core)
-CREATE SEQUENCE IF NOT EXISTS project_seq START 1000;
-
-CREATE TABLE IF NOT EXISTS projects (
-  id TEXT PRIMARY KEY DEFAULT ('PRJ-' || nextval('project_seq')::TEXT),
-  name TEXT NOT NULL,
-  address TEXT DEFAULT '',
-  purchase_date DATE,
-  status TEXT DEFAULT 'Active',
-  responsible TEXT DEFAULT '',
-  purchase_price NUMERIC DEFAULT 0,
-  down_payment NUMERIC DEFAULT 0,
-  realtor_fee NUMERIC DEFAULT 0,
-  loan_amount NUMERIC DEFAULT 0,
-  title_company TEXT DEFAULT '',
-  closing_costs NUMERIC DEFAULT 0,
-  created_at TIMESTAMPTZ DEFAULT now(),
-  updated_at TIMESTAMPTZ DEFAULT now()
-);
-
 -- 4. Work Orders
 CREATE TABLE IF NOT EXISTS work_orders (
   id TEXT PRIMARY KEY,
-  project_id TEXT REFERENCES projects(id) ON DELETE RESTRICT,
-  budget NUMERIC DEFAULT 0,
-  expenses_total NUMERIC DEFAULT 0,
   title TEXT NOT NULL,
   client_name TEXT DEFAULT '',
   client_id INT REFERENCES clients(id) ON DELETE SET NULL,
@@ -176,95 +153,28 @@ CREATE TABLE IF NOT EXISTS wo_photos (
   created_at TIMESTAMPTZ DEFAULT now()
 );
 
--- 10. Project Expenses
-CREATE TABLE IF NOT EXISTS project_expenses (
-  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-  project_id TEXT NOT NULL REFERENCES projects(id) ON DELETE RESTRICT,
-  work_order_id TEXT REFERENCES work_orders(id) ON DELETE RESTRICT,
-  vendor TEXT DEFAULT '',
-  amount NUMERIC NOT NULL DEFAULT 0 CHECK (amount >= 0),
-  date DATE DEFAULT CURRENT_DATE,
-  category TEXT DEFAULT '',
-  receipt_url TEXT DEFAULT '',
-  status TEXT DEFAULT 'Pending',
-  created_at TIMESTAMPTZ DEFAULT now(),
-  updated_at TIMESTAMPTZ DEFAULT now()
-);
-
--- 11. Project Refunds
-CREATE TABLE IF NOT EXISTS project_refunds (
-  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-  project_id TEXT NOT NULL REFERENCES projects(id) ON DELETE RESTRICT,
-  work_order_id TEXT REFERENCES work_orders(id) ON DELETE RESTRICT,
-  expense_id UUID REFERENCES project_expenses(id) ON DELETE RESTRICT,
-  vendor TEXT DEFAULT '',
-  amount NUMERIC NOT NULL DEFAULT 0 CHECK (amount >= 0),
-  date DATE DEFAULT CURRENT_DATE,
-  receipt_url TEXT DEFAULT '',
-  status TEXT DEFAULT 'Pending',
-  created_at TIMESTAMPTZ DEFAULT now(),
-  updated_at TIMESTAMPTZ DEFAULT now()
-);
-
--- 12. Project Disbursements
-CREATE TABLE IF NOT EXISTS project_disbursements (
-  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-  project_id TEXT NOT NULL REFERENCES projects(id) ON DELETE RESTRICT,
-  work_order_id TEXT REFERENCES work_orders(id) ON DELETE RESTRICT,
-  type TEXT DEFAULT 'Check',
-  payee TEXT DEFAULT '',
-  amount NUMERIC NOT NULL DEFAULT 0 CHECK (amount >= 0),
-  date DATE DEFAULT CURRENT_DATE,
-  document_url TEXT DEFAULT '',
-  status TEXT DEFAULT 'Pending',
-  created_at TIMESTAMPTZ DEFAULT now(),
-  updated_at TIMESTAMPTZ DEFAULT now()
-);
-
--- 13. Financial Summaries View
-CREATE OR REPLACE VIEW project_financial_summaries AS
-SELECT 
-    p.id AS project_id,
-    p.name,
-    COALESCE((SELECT SUM(amount) FROM project_expenses WHERE project_id = p.id AND status != 'Cancelled'), 0) AS total_expenses,
-    COALESCE((SELECT SUM(amount) FROM project_refunds WHERE project_id = p.id AND status != 'Cancelled'), 0) AS total_refunds,
-    COALESCE((SELECT SUM(amount) FROM project_disbursements WHERE project_id = p.id AND status != 'Cancelled'), 0) AS total_disbursements,
-    (COALESCE((SELECT SUM(amount) FROM project_expenses WHERE project_id = p.id AND status != 'Cancelled'), 0) - 
-     COALESCE((SELECT SUM(amount) FROM project_refunds WHERE project_id = p.id AND status != 'Cancelled'), 0)) AS net_cost
-FROM projects p;
-
 -- ============================================================
 -- Row Level Security — Allow all for single-tenant
 -- ============================================================
 ALTER TABLE company_settings ENABLE ROW LEVEL SECURITY;
 ALTER TABLE clients ENABLE ROW LEVEL SECURITY;
 ALTER TABLE services ENABLE ROW LEVEL SECURITY;
-ALTER TABLE projects ENABLE ROW LEVEL SECURITY;
 ALTER TABLE work_orders ENABLE ROW LEVEL SECURITY;
 ALTER TABLE wo_line_items ENABLE ROW LEVEL SECURITY;
 ALTER TABLE documents ENABLE ROW LEVEL SECURITY;
 ALTER TABLE wo_communications ENABLE ROW LEVEL SECURITY;
 ALTER TABLE change_orders ENABLE ROW LEVEL SECURITY;
 ALTER TABLE wo_photos ENABLE ROW LEVEL SECURITY;
-ALTER TABLE project_expenses ENABLE ROW LEVEL SECURITY;
-ALTER TABLE project_refunds ENABLE ROW LEVEL SECURITY;
-ALTER TABLE project_disbursements ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "Allow all for company_settings" ON company_settings FOR ALL USING (true) WITH CHECK (true);
 CREATE POLICY "Allow all for clients" ON clients FOR ALL USING (true) WITH CHECK (true);
 CREATE POLICY "Allow all for services" ON services FOR ALL USING (true) WITH CHECK (true);
--- NOTA IMPORTANT: Las policies FOR ALL USING (true) son temporales para MVP/single-tenant.
--- Antes de producción, estas tablas financieras deben ser admin/internal-only.
-CREATE POLICY "Allow all for projects" ON projects FOR ALL USING (true) WITH CHECK (true);
 CREATE POLICY "Allow all for work_orders" ON work_orders FOR ALL USING (true) WITH CHECK (true);
 CREATE POLICY "Allow all for wo_line_items" ON wo_line_items FOR ALL USING (true) WITH CHECK (true);
 CREATE POLICY "Allow all for documents" ON documents FOR ALL USING (true) WITH CHECK (true);
 CREATE POLICY "Allow all for wo_communications" ON wo_communications FOR ALL USING (true) WITH CHECK (true);
 CREATE POLICY "Allow all for change_orders" ON change_orders FOR ALL USING (true) WITH CHECK (true);
 CREATE POLICY "Allow all for wo_photos" ON wo_photos FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Allow all for project_expenses" ON project_expenses FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Allow all for project_refunds" ON project_refunds FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Allow all for project_disbursements" ON project_disbursements FOR ALL USING (true) WITH CHECK (true);
 
 -- ============================================================
 -- Storage Buckets
