@@ -399,6 +399,12 @@ var _woSelected = new Set();
 
 function renderWorkOrders() {
   const tbody = document.getElementById('wo-table-body');
+  if (!WORK_ORDERS || WORK_ORDERS.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;padding:40px;color:var(--text-muted)"><i data-lucide="inbox" style="width:32px;height:32px;margin-bottom:8px"></i><p>No Work Orders found. Click "New Work Order" to create one.</p></td></tr>';
+    lucide.createIcons();
+    woUpdateSelectionUI();
+    return;
+  }
   tbody.innerHTML = WORK_ORDERS.map(wo => {
     const progress = wo.items > 0 ? Math.round((wo.completed / wo.items) * 100) : 0;
     const isChecked = _woSelected.has(wo.id);
@@ -686,7 +692,7 @@ function openWorkOrderDetail(woId) {
   currentWO = wo;
 
   document.getElementById('wo-detail-id').textContent = wo.id;
-  document.getElementById('wo-detail-title').textContent = wo.title;
+  document.getElementById('wo-detail-title').innerHTML = escHtml(wo.title) + ' <i data-lucide="edit-2" style="width:14px;height:14px;opacity:0.5"></i>';
   document.getElementById('wo-detail-status').innerHTML = `<span class="badge badge-${wo.status}">${statusLabel(wo.status)}</span>`;
   document.getElementById('wo-detail-client').textContent = wo.client;
   document.getElementById('wo-detail-property').textContent = wo.property;
@@ -2543,10 +2549,10 @@ function startEditWOTitle(el) {
     var val = input.value.trim() || current;
     var h2 = document.createElement('h2');
     h2.id = 'wo-detail-title';
-    h2.style.cssText = 'font-size:18px;font-weight:600;color:var(--text-secondary);cursor:pointer;border-radius:6px;padding:2px 6px;transition:background 0.15s';
+    h2.style.cssText = 'font-size:18px;font-weight:600;color:var(--text-secondary);cursor:pointer;border-radius:6px;padding:2px 6px;transition:background 0.15s;display:flex;align-items:center;gap:6px';
     h2.title = 'Click to edit title';
     h2.onclick = function() { startEditWOTitle(this); };
-    h2.textContent = val;
+    h2.innerHTML = escHtml(val) + ' <i data-lucide="edit-2" style="width:14px;height:14px;opacity:0.5"></i>';
     input.replaceWith(h2);
 
     if (currentWO) {
@@ -2616,6 +2622,9 @@ function buildPDF(template, hidePrices, docStyle) {
   const items = currentLineItems || [];
   const progress = wo.items > 0 ? Math.round((wo.completed / wo.items) * 100) : 0;
   const total = items.reduce((s, i) => s + (i.price * (i.qty || 1)), 0);
+  const taxPct = document.getElementById('doc-tax-pct') ? (parseFloat(document.getElementById('doc-tax-pct').value) || 0) : 0;
+  const taxAmt = total * (taxPct / 100);
+  const grandTotal = total + taxAmt;
   const completedItems = items.filter(i => i.status === 'completed');
   const pendingItems = items.filter(i => i.status !== 'completed');
   const photos = WO_PHOTOS[wo.id] || [];
@@ -2704,8 +2713,8 @@ function buildPDF(template, hidePrices, docStyle) {
       }).join('') +
       '</tbody></table>' +
       '<div class="invoice-totals"><div class="total-row"><span>Subtotal</span><span>$' + total.toLocaleString() + '</span></div>' +
-      '<div class="total-row"><span>Tax (0%)</span><span>$0</span></div>' +
-      '<div class="total-row grand"><span>Total Due</span><span>$' + total.toLocaleString() + '</span></div></div></div>' +
+      (taxPct > 0 ? '<div class="total-row"><span>Tax (' + taxPct + '%)</span><span>$' + taxAmt.toLocaleString() + '</span></div>' : '') +
+      '<div class="total-row grand"><span>Total Due</span><span>$' + grandTotal.toLocaleString() + '</span></div></div></div>' +
       '<div class="section" style="margin-top:24px;padding:16px;background:#f8f8f8;border-radius:8px"><h3 style="font-size:12px;color:#888;text-transform:uppercase;margin-bottom:8px">Payment Information</h3>' +
       '<p style="font-size:13px">Please make checks payable to <strong>R.C Art Construction LLC</strong></p>' +
       '<p style="font-size:13px">Payment Terms: <strong>Net 30</strong> from invoice date</p></div>';
@@ -4002,6 +4011,13 @@ function assignServiceToWO() {
 function renderClients() {
   const tbody = document.getElementById('clients-table-body');
   const filtered = currentClientFilter === 'All' ? CLIENTS : CLIENTS.filter(c => c.type === currentClientFilter);
+
+  if (!filtered || filtered.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:40px;color:var(--text-muted)"><i data-lucide="users" style="width:32px;height:32px;margin-bottom:8px"></i><p>No clients found. Click "New Client" to create one.</p></td></tr>';
+    lucide.createIcons();
+    clientsUpdateBulkUI();
+    return;
+  }
 
   tbody.innerHTML = filtered.map(c => {
     const typeColors = {

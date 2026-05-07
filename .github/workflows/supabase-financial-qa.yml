@@ -38,7 +38,7 @@ jobs:
           export PGPASSWORD="${{ secrets.SUPABASE_DB_PASSWORD }}"
           
           # We format output to be aligned and grep for any FAILs
-          psql -h db.${{ secrets.SUPABASE_PROJECT_REF }}.supabase.co -U postgres -d postgres -v ON_ERROR_STOP=1 -f qa/financial_system_smoke_test.sql -A -t > qa_output.txt
+          psql -h aws-1-us-east-1.pooler.supabase.com -p 5432 -U postgres.${{ secrets.SUPABASE_PROJECT_REF }} -d postgres -v ON_ERROR_STOP=1 -f qa/financial_system_smoke_test.sql -A -t > qa_output.txt
           
           echo "==== QA SMOKE TEST RESULTS ===="
           cat qa_output.txt
