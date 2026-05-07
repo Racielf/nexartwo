@@ -161,8 +161,8 @@ BEGIN
   -- ============================================================
   -- TEST 14: Cancel contribution (no delete — record persists)
   -- ============================================================
-  -- Create extra contribution to cancel
-  DECLARE v_cancel_id UUID;
+  DECLARE
+    v_cancel_id UUID;
   BEGIN
     INSERT INTO capital_contributions
       (project_id, investor_id, amount, date, method, type, status)
