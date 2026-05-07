@@ -194,38 +194,49 @@ jobs:
       # -------------------------------------------------------
       - name: "STEP 11 — Verify project_financial_summaries unchanged"
         run: |
-          # Run a quick isolation test: add a contribution and confirm the view doesn't change
-          PROJECT_ID=$(psql -t -A -c "SELECT id FROM projects LIMIT 1;")
+          # Get project id cleanly (btrim removes all whitespace)
+          PROJECT_ID=$(psql -t -A -c "SELECT btrim(id) FROM projects LIMIT 1;")
+          echo "Project ID: [${PROJECT_ID}]"
 
-          # Snapshot BEFORE
+          # Snapshot BEFORE — cast to numeric to ensure clean comparison
           FIN_BEFORE=$(psql -t -A -c "
-            SELECT COALESCE(net_expense_cost, 0)
+            SELECT COALESCE(net_expense_cost, 0)::numeric
             FROM project_financial_summaries
             WHERE project_id = '${PROJECT_ID}';
-          ")
+          " | tr -d '[:space:]')
+          echo "net_expense_cost BEFORE: [${FIN_BEFORE}]"
 
-          # Create investor and contribution outside a transaction (committed)
+          # Create investor, capture UUID cleanly
           INVESTOR_ID=$(psql -t -A -c "
             INSERT INTO investors (name, type, notes)
             VALUES ('QA Isolation Investor', 'person', 'Step 11 isolation test')
-            RETURNING id;
-          ")
+            RETURNING btrim(id::text);
+          " | tr -d '[:space:]')
+          echo "Investor ID: [${INVESTOR_ID}]"
 
+          # Insert a capital contribution (confirmed)
           psql -v ON_ERROR_STOP=1 -c "
             INSERT INTO capital_contributions
               (project_id, investor_id, amount, date, method, type, status)
-            VALUES ('${PROJECT_ID}', '${INVESTOR_ID}', 50000.00, CURRENT_DATE, 'wire', 'initial', 'confirmed');
+            VALUES (
+              '${PROJECT_ID}',
+              '${INVESTOR_ID}',
+              50000.00,
+              CURRENT_DATE,
+              'wire',
+              'initial',
+              'confirmed'
+            );
           "
+          echo "Capital contribution inserted (50000 confirmed)"
 
           # Snapshot AFTER
           FIN_AFTER=$(psql -t -A -c "
-            SELECT COALESCE(net_expense_cost, 0)
+            SELECT COALESCE(net_expense_cost, 0)::numeric
             FROM project_financial_summaries
             WHERE project_id = '${PROJECT_ID}';
-          ")
-
-          echo "net_expense_cost BEFORE: ${FIN_BEFORE}"
-          echo "net_expense_cost AFTER adding 50k contribution: ${FIN_AFTER}"
+          " | tr -d '[:space:]')
+          echo "net_expense_cost AFTER adding 50k contribution: [${FIN_AFTER}]"
 
           if [ "${FIN_BEFORE}" != "${FIN_AFTER}" ]; then
             echo "FAIL: project_financial_summaries changed after capital contribution!"
