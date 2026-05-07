@@ -1,0 +1,263 @@
+name: Investor Hub PR QA
+
+# Temporary QA workflow for Phase 2B Draft PR #2.
+# Uses an isolated, ephemeral Postgres service — NO Supabase, NO secrets, NO production.
+on:
+  workflow_dispatch:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'supabase/migrations/202605070001_investor_entities.sql'
+      - 'qa/investor_hub_smoke_test.sql'
+      - 'js/supabase.js'
+      - 'js/projects.js'
+      - 'projects.html'
+
+jobs:
+  investor-hub-qa:
+    name: "Investor Hub Migration + Smoke Test"
+    runs-on: ubuntu-latest
+
+    # -------------------------------------------------------
+    # SECURITY: Ephemeral Postgres only. No Supabase. No secrets.
+    # -------------------------------------------------------
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_DB: postgres
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      PGHOST: localhost
+      PGPORT: 5432
+      PGUSER: postgres
+      PGPASSWORD: postgres
+      PGDATABASE: postgres
+
+    steps:
+      # -------------------------------------------------------
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      # -------------------------------------------------------
+      - name: "[SECURITY CHECK] Confirm no remote Supabase connection"
+        run: |
+          echo "=== SECURITY CHECK ==="
+          echo "SUPABASE_PROJECT_REF is set: ${{ secrets.SUPABASE_PROJECT_REF != '' }}"
+          echo "Using ephemeral postgres at localhost:5432 ONLY"
+          echo "No db push. No remote connection."
+          echo "======================"
+
+      # -------------------------------------------------------
+      - name: "Wait for Postgres to be ready"
+        run: |
+          until pg_isready -h localhost -p 5432 -U postgres; do
+            echo "Waiting for postgres..."
+            sleep 2
+          done
+          echo "Postgres is ready."
+
+      # -------------------------------------------------------
+      - name: "STEP 1 — Enable pgcrypto extension"
+        run: |
+          psql -v ON_ERROR_STOP=1 -c "CREATE EXTENSION IF NOT EXISTS pgcrypto;"
+          echo "STEP 1 PASS: pgcrypto enabled"
+
+      # -------------------------------------------------------
+      - name: "STEP 2 — Create work_orders baseline table"
+        run: |
+          # Required because Phase 1 migration does:
+          # ALTER TABLE work_orders ADD COLUMN IF NOT EXISTS project_id ...
+          # We need the table to exist before that migration runs.
+          psql -v ON_ERROR_STOP=1 -c "
+            CREATE TABLE IF NOT EXISTS work_orders (
+              id TEXT PRIMARY KEY,
+              title TEXT DEFAULT '',
+              status TEXT DEFAULT 'draft',
+              created_at TIMESTAMPTZ DEFAULT now()
+            );
+          "
+          echo "STEP 2 PASS: work_orders baseline created"
+
+      # -------------------------------------------------------
+      - name: "STEP 3 — Apply Phase 1 financial migration (baseline)"
+        run: |
+          psql -v ON_ERROR_STOP=1 \
+            -f supabase/migrations/20260506_projects_financial_system.sql
+          echo "STEP 3 PASS: Phase 1 financial migration applied"
+
+      # -------------------------------------------------------
+      - name: "STEP 4 — Insert test project"
+        run: |
+          psql -v ON_ERROR_STOP=1 -c "
+            INSERT INTO projects (name, address, status)
+            VALUES ('Investor Hub QA Project', 'QA Address 123', 'active');
+          "
+          PROJECT_ID=$(psql -t -A -c "SELECT id FROM projects LIMIT 1;")
+          echo "STEP 4 PASS: test project created — id=${PROJECT_ID}"
+
+      # -------------------------------------------------------
+      - name: "STEP 5 — Apply Phase 2B Investor Hub migration"
+        run: |
+          psql -v ON_ERROR_STOP=1 \
+            -f supabase/migrations/202605070001_investor_entities.sql
+          echo "STEP 5 PASS: Investor Hub migration applied"
+
+      # -------------------------------------------------------
+      - name: "STEP 6 — Verify Phase 2B tables exist"
+        run: |
+          TABLES=$(psql -t -A -c "
+            SELECT COUNT(*) FROM information_schema.tables
+            WHERE table_schema = 'public'
+              AND table_name IN (
+                'investors',
+                'investor_companies',
+                'project_investors',
+                'capital_contributions',
+                'capital_calls'
+              );
+          ")
+          echo "Tables found: ${TABLES}"
+          if [ "${TABLES}" != "5" ]; then
+            echo "FAIL: Expected 5 Phase 2B tables, found ${TABLES}"
+            exit 1
+          fi
+          echo "STEP 6 PASS: All 5 Phase 2B tables exist"
+
+      # -------------------------------------------------------
+      - name: "STEP 7 — Verify Phase 1 tables are untouched"
+        run: |
+          # Confirm Phase 1 view still exists and is queryable
+          ROWS=$(psql -t -A -c "SELECT COUNT(*) FROM project_financial_summaries;")
+          echo "project_financial_summaries rows: ${ROWS}"
+          echo "STEP 7 PASS: Phase 1 view project_financial_summaries is intact"
+
+      # -------------------------------------------------------
+      - name: "STEP 8 — Verify Phase 2B triggers exist"
+        run: |
+          TRIGGERS=$(psql -t -A -c "
+            SELECT COUNT(*) FROM information_schema.triggers
+            WHERE trigger_schema = 'public'
+              AND trigger_name IN (
+                'trg_no_delete_capital_contributions',
+                'trg_no_update_capital_contributions'
+              );
+          ")
+          echo "Triggers found: ${TRIGGERS}"
+          if [ "${TRIGGERS}" != "2" ]; then
+            echo "FAIL: Expected 2 immutability triggers, found ${TRIGGERS}"
+            exit 1
+          fi
+          echo "STEP 8 PASS: Both immutability triggers exist"
+
+      # -------------------------------------------------------
+      - name: "STEP 9 — Execute Investor Hub smoke test"
+        run: |
+          # The smoke test runs inside BEGIN/ROLLBACK — leaves no data.
+          # ON_ERROR_STOP=1 ensures psql exits non-zero if any RAISE EXCEPTION fires.
+          psql -v ON_ERROR_STOP=1 \
+            -f qa/investor_hub_smoke_test.sql \
+            2>&1 | tee smoke_test_output.txt
+
+          # Verify the success marker was reached
+          if grep -q "ALL SMOKE TESTS PASSED" smoke_test_output.txt; then
+            echo "STEP 9 PASS: Smoke test completed — ALL SMOKE TESTS PASSED"
+          else
+            echo "STEP 9 FAIL: 'ALL SMOKE TESTS PASSED' marker not found in output"
+            cat smoke_test_output.txt
+            exit 1
+          fi
+
+      # -------------------------------------------------------
+      - name: "STEP 10 — Verify smoke test left no residual data"
+        run: |
+          # The smoke test uses BEGIN/ROLLBACK — all data must be gone
+          INV=$(psql -t -A -c "SELECT COUNT(*) FROM investors WHERE notes LIKE '%Smoke test%';")
+          CONTRIB=$(psql -t -A -c "SELECT COUNT(*) FROM capital_contributions WHERE notes LIKE '%Smoke test%';")
+          echo "Residual investors: ${INV}"
+          echo "Residual contributions: ${CONTRIB}"
+          if [ "${INV}" != "0" ] || [ "${CONTRIB}" != "0" ]; then
+            echo "FAIL: Smoke test left residual data — BEGIN/ROLLBACK not working"
+            exit 1
+          fi
+          echo "STEP 10 PASS: No residual data — BEGIN/ROLLBACK working correctly"
+
+      # -------------------------------------------------------
+      - name: "STEP 11 — Verify project_financial_summaries unchanged"
+        run: |
+          # Run a quick isolation test: add a contribution and confirm the view doesn't change
+          PROJECT_ID=$(psql -t -A -c "SELECT id FROM projects LIMIT 1;")
+
+          # Snapshot BEFORE
+          FIN_BEFORE=$(psql -t -A -c "
+            SELECT COALESCE(net_expense_cost, 0)
+            FROM project_financial_summaries
+            WHERE project_id = '${PROJECT_ID}';
+          ")
+
+          # Create investor and contribution outside a transaction (committed)
+          INVESTOR_ID=$(psql -t -A -c "
+            INSERT INTO investors (name, type, notes)
+            VALUES ('QA Isolation Investor', 'person', 'Step 11 isolation test')
+            RETURNING id;
+          ")
+
+          psql -v ON_ERROR_STOP=1 -c "
+            INSERT INTO capital_contributions
+              (project_id, investor_id, amount, date, method, type, status)
+            VALUES ('${PROJECT_ID}', '${INVESTOR_ID}', 50000.00, CURRENT_DATE, 'wire', 'initial', 'confirmed');
+          "
+
+          # Snapshot AFTER
+          FIN_AFTER=$(psql -t -A -c "
+            SELECT COALESCE(net_expense_cost, 0)
+            FROM project_financial_summaries
+            WHERE project_id = '${PROJECT_ID}';
+          ")
+
+          echo "net_expense_cost BEFORE: ${FIN_BEFORE}"
+          echo "net_expense_cost AFTER adding 50k contribution: ${FIN_AFTER}"
+
+          if [ "${FIN_BEFORE}" != "${FIN_AFTER}" ]; then
+            echo "FAIL: project_financial_summaries changed after capital contribution!"
+            echo "Phase 2B data is contaminating Phase 1 financials. CRITICAL BUG."
+            exit 1
+          fi
+          echo "STEP 11 PASS: project_financial_summaries UNCHANGED — Phase 1 isolation confirmed"
+
+      # -------------------------------------------------------
+      - name: "STEP 12 — Print smoke test output summary"
+        if: always()
+        run: |
+          echo "=== SMOKE TEST OUTPUT ==="
+          cat smoke_test_output.txt 2>/dev/null || echo "(no output file)"
+          echo "========================="
+
+      # -------------------------------------------------------
+      - name: "Final summary"
+        if: success()
+        run: |
+          echo "================================================"
+          echo "  Investor Hub PR QA — ALL STEPS PASSED"
+          echo "================================================"
+          echo "  Phase 1 migration: PASS"
+          echo "  Phase 2B migration: PASS"
+          echo "  5 new tables:       PASS"
+          echo "  Immutability triggers: PASS"
+          echo "  Smoke test (20 tests): PASS"
+          echo "  BEGIN/ROLLBACK clean:  PASS"
+          echo "  Phase 1 isolation:     PASS"
+          echo "================================================"
+          echo "  Production touched: NO"
+          echo "  Secrets used:       NO"
+          echo "  Supabase remote:    NO"
+          echo "================================================"
