@@ -20,10 +20,11 @@
 
 ## 2. Archivos Esperados en el PR
 
-Los siguientes 9 archivos deben estar presentes y solo estos:
+Los siguientes 10 archivos deben estar presentes y solo estos:
 
 | Archivo | Tipo | Estado esperado |
 |---|---|---|
+| `.github/workflows/investor-hub-pr-qa.yml` | Workflow | Nuevo |
 | `docs/PHASE_2_INVESTOR_HUB_PLAN.md` | Documentación | Nuevo |
 | `docs/PHASE_2A_INVESTOR_HUB_SPEC.md` | Documentación | Nuevo |
 | `docs/PHASE_2B_INVESTOR_ENTITIES_IMPLEMENTATION_PLAN.md` | Documentación | Nuevo |
@@ -127,13 +128,13 @@ Estas pruebas deben ejecutarse en un entorno **dev/staging**, nunca en producci�
 
 | # | Prueba | Entorno | Estado |
 |---|---|---|---|
-| 6.1 | Aplicar migración `202605070001_investor_entities.sql` en dev/staging | Supabase CLI o SQL Editor (dev) | ⬜ BLOCKED |
-| 6.2 | Ejecutar `qa/investor_hub_smoke_test.sql` completo | Supabase SQL Editor (dev) | ⬜ BLOCKED |
-| 6.3 | Verificar que `BEGIN/ROLLBACK` no deja datos en tablas nuevas | SELECT * FROM investors → 0 rows después de correr test | ⬜ BLOCKED |
-| 6.4 | Verificar que `project_financial_summaries` no cambia antes/después | Test 18 del smoke test debe PASS | ⬜ BLOCKED |
-| 6.5 | Verificar que trigger bloquea DELETE en `capital_contributions` | Test 15 del smoke test debe PASS | ⬜ BLOCKED |
-| 6.6 | Verificar que trigger bloquea UPDATE de `amount` | Test 16 del smoke test debe PASS | ⬜ BLOCKED |
-| 6.7 | Verificar que `amount = 0` es rechazado | Test 10 del smoke test debe PASS | ⬜ BLOCKED |
+| 6.1 | Aplicar migración `202605070001_investor_entities.sql` en dev/staging | GitHub Actions (temporal) | ✅ PASS |
+| 6.2 | Ejecutar `qa/investor_hub_smoke_test.sql` completo | GitHub Actions (temporal) | ✅ PASS |
+| 6.3 | Verificar que `BEGIN/ROLLBACK` no deja datos en tablas nuevas | SELECT * FROM investors → 0 rows después de correr test | ✅ PASS |
+| 6.4 | Verificar que `project_financial_summaries` no cambia antes/después | Test 18 del smoke test debe PASS | ✅ PASS |
+| 6.5 | Verificar que trigger bloquea DELETE en `capital_contributions` | Test 15 del smoke test debe PASS | ✅ PASS |
+| 6.6 | Verificar que trigger bloquea UPDATE de `amount` | Test 16 del smoke test debe PASS | ✅ PASS |
+| 6.7 | Verificar que `amount = 0` es rechazado | Test 10 del smoke test debe PASS | ✅ PASS |
 | 6.8 | Ejecutar workflow existente `Supabase Financial QA` → debe seguir en PASS | GitHub Actions (dev branch) | ⬜ BLOCKED |
 | 6.9 | Verificar UI manualmente: abrir proyecto, click en Investor Hub | Browser con app en dev | ⬜ BLOCKED |
 | 6.10 | Crear investor desde UI, adjuntar a proyecto, confirmar | Browser con app en dev | ⬜ BLOCKED |
@@ -148,9 +149,9 @@ El PR #2 **no puede mergearse** hasta que se resuelvan todos estos puntos:
 
 | # | Blocker | Estado |
 |---|---|---|
-| 7.1 | Smoke test real no ejecutado contra DB (solo validación estática PASS) | 🔴 BLOCKER |
-| 7.2 | PR sigue en estado Draft | 🔴 BLOCKER — no marcar Ready hasta que 6.1-6.8 estén PASS |
-| 7.3 | Migración no aplicada en ningún entorno real | 🔴 BLOCKER |
+| 7.1 | Smoke test real ejecutado contra DB temporal en GitHub Actions | ✅ PASS |
+| 7.2 | PR sigue en estado Draft | 🔴 BLOCKER — no marcar Ready hasta que 6.8 y UI checks estén listos |
+| 7.3 | Migración no aplicada en ningún entorno real persistente | 🔴 BLOCKER |
 | 7.4 | UI no verificada manualmente en browser real | 🔴 BLOCKER |
 | 7.5 | `Supabase Financial QA` workflow no ejecutado post-2B | 🔴 BLOCKER |
 
