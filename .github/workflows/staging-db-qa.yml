@@ -54,11 +54,50 @@ jobs:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.STAGING_SUPABASE_ACCESS_TOKEN }}
 
       # -------------------------------------------------------
-      # STEP 4 — Apply migrations to STAGING project
+      # STEP 4 — Install PostgreSQL client (psql)
+      # Installed here (before db push) so psql is available
+      # for the base schema bootstrap check in STEP 5.
+      # -------------------------------------------------------
+      - name: "STEP 4 — Install PostgreSQL client"
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y postgresql-client
+          echo "STEP 4 PASS: psql installed"
+
+      # -------------------------------------------------------
+      # STEP 5 — Bootstrap base schema if missing
+      # Uses STAGING_SUPABASE_POOLER_DB_URL (staging pooler ONLY).
+      # Checks if public.work_orders exists. If missing, applies
+      # sql/schema.sql to nexartwo-staging as a one-time bootstrap.
+      # This step is idempotent: safe to re-run if schema is already present.
+      # SECURITY: No production secrets. No production host. No hardcoded values.
+      # -------------------------------------------------------
+      - name: "STEP 5 — Bootstrap Base Schema if Missing"
+        run: |
+          echo "=== BASE SCHEMA BOOTSTRAP CHECK — STAGING ONLY ==="
+          BASE_SCHEMA_PRESENT=$(psql "$STAGING_POOLER_DB_URL" \
+            -v ON_ERROR_STOP=1 -t -A \
+            -c "SELECT CASE WHEN to_regclass('public.work_orders') IS NULL THEN 'missing' ELSE 'present' END;")
+
+          echo "Base schema status: ${BASE_SCHEMA_PRESENT}"
+
+          if [ "${BASE_SCHEMA_PRESENT}" = "missing" ]; then
+            echo "Base schema missing. Applying sql/schema.sql to nexartwo-staging only..."
+            psql "$STAGING_POOLER_DB_URL" -v ON_ERROR_STOP=1 -f sql/schema.sql
+            echo "STEP 5 PASS: Base schema bootstrap completed."
+          else
+            echo "STEP 5 PASS: Base schema already present. Skipping bootstrap."
+          fi
+        env:
+          # Pooler URL for staging ONLY. Never use production secrets here.
+          STAGING_POOLER_DB_URL: ${{ secrets.STAGING_SUPABASE_POOLER_DB_URL }}
+
+      # -------------------------------------------------------
+      # STEP 6 — Apply migrations to STAGING project
       # SECURITY: This db push targets nexartwo-staging only.
       # Production is never touched. No production secrets are used.
       # -------------------------------------------------------
-      - name: "STEP 4 — Run DB Push to Staging"
+      - name: "STEP 6 — Run DB Push to Staging"
         run: |
           echo "=== DB PUSH — STAGING ONLY ==="
           echo "Applying pending migrations to nexartwo-staging."
@@ -71,20 +110,11 @@ jobs:
           SUPABASE_DB_PASSWORD: ${{ secrets.STAGING_SUPABASE_DB_PASSWORD }}
 
       # -------------------------------------------------------
-      # STEP 5 — Install PostgreSQL client (psql)
-      # -------------------------------------------------------
-      - name: "STEP 5 — Install PostgreSQL client"
-        run: |
-          sudo apt-get update -qq
-          sudo apt-get install -y postgresql-client
-          echo "STEP 5 PASS: psql installed"
-
-      # -------------------------------------------------------
-      # STEP 6 — Run Phase 1 Financial Smoke Test
+      # STEP 7 — Run Phase 1 Financial Smoke Test
       # Uses STAGING_SUPABASE_POOLER_DB_URL (Supavisor / IPv4 pooler).
       # Direct DB host is NOT used. Per Incident 1 lesson: always use pooler on GitHub runners.
       # -------------------------------------------------------
-      - name: "STEP 6 — Run Phase 1 Financial Smoke Test"
+      - name: "STEP 7 — Run Phase 1 Financial Smoke Test"
         run: |
           echo "=== PHASE 1 FINANCIAL SMOKE TEST ==="
           psql "${{ secrets.STAGING_SUPABASE_POOLER_DB_URL }}" \
@@ -100,14 +130,14 @@ jobs:
             echo "::error::Phase 1 Financial Smoke Test FAILED — one or more assertions returned FAIL."
             exit 1
           fi
-          echo "STEP 6 PASS: Phase 1 Financial Smoke Test PASSED"
+          echo "STEP 7 PASS: Phase 1 Financial Smoke Test PASSED"
 
       # -------------------------------------------------------
-      # STEP 7 — Run Investor Hub Smoke Test
+      # STEP 8 — Run Investor Hub Smoke Test
       # Uses STAGING_SUPABASE_POOLER_DB_URL (Supavisor / IPv4 pooler).
       # Per Smoke Test Policy: ON_ERROR_STOP=1, pooler endpoint, no hardcoded IDs.
       # -------------------------------------------------------
-      - name: "STEP 7 — Run Investor Hub Smoke Test"
+      - name: "STEP 8 — Run Investor Hub Smoke Test"
         run: |
           echo "=== INVESTOR HUB SMOKE TEST ==="
           psql "${{ secrets.STAGING_SUPABASE_POOLER_DB_URL }}" \
@@ -128,13 +158,13 @@ jobs:
             echo "::error::Investor Hub Smoke Test did not reach ALL SMOKE TESTS PASSED marker."
             exit 1
           fi
-          echo "STEP 7 PASS: Investor Hub Smoke Test PASSED"
+          echo "STEP 8 PASS: Investor Hub Smoke Test PASSED"
 
       # -------------------------------------------------------
-      # STEP 8 — Verify Phase 1 view project_financial_summaries exists
+      # STEP 9 — Verify Phase 1 view project_financial_summaries exists
       # Confirms Phase 2B migration did not break Phase 1 views.
       # -------------------------------------------------------
-      - name: "STEP 8 — Verify Phase 1 view exists"
+      - name: "STEP 9 — Verify Phase 1 view exists"
         run: |
           VIEW_COUNT=$(psql "${{ secrets.STAGING_SUPABASE_POOLER_DB_URL }}" \
             -v ON_ERROR_STOP=1 -t -A \
@@ -148,13 +178,13 @@ jobs:
             echo "::error::FAIL: Phase 1 view project_financial_summaries is MISSING. Phase 2B may have broken Phase 1."
             exit 1
           fi
-          echo "STEP 8 PASS: project_financial_summaries view exists and is intact"
+          echo "STEP 9 PASS: project_financial_summaries view exists and is intact"
 
       # -------------------------------------------------------
-      # STEP 9 — Verify Investor Hub tables exist
+      # STEP 10 — Verify Investor Hub tables exist
       # All 5 Phase 2B tables must be present.
       # -------------------------------------------------------
-      - name: "STEP 9 — Verify Investor Hub tables exist"
+      - name: "STEP 10 — Verify Investor Hub tables exist"
         run: |
           TABLE_COUNT=$(psql "${{ secrets.STAGING_SUPABASE_POOLER_DB_URL }}" \
             -v ON_ERROR_STOP=1 -t -A \
@@ -174,12 +204,12 @@ jobs:
             echo "::error::FAIL: Expected 5 Investor Hub tables, found ${TABLE_COUNT}. Migration may be incomplete."
             exit 1
           fi
-          echo "STEP 9 PASS: All 5 Investor Hub tables exist in staging"
+          echo "STEP 10 PASS: All 5 Investor Hub tables exist in staging"
 
       # -------------------------------------------------------
-      # STEP 10 — Final summary
+      # STEP 11 — Final summary
       # -------------------------------------------------------
-      - name: "STEP 10 — Final summary"
+      - name: "STEP 11 — Final summary"
         if: success()
         run: |
           echo "=================================================="
