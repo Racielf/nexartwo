@@ -32,6 +32,18 @@ BEGIN
 END $$;
 
 -- C. Confirm auth_role() function exists
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM information_schema.routines
+    WHERE routine_schema = 'public'
+      AND routine_name = 'auth_role'
+  ) THEN
+    RAISE EXCEPTION 'CRITICAL: auth_role() function missing. Aborting 008.';
+  END IF;
+END $$;
+
 SELECT routine_name 
 FROM information_schema.routines 
 WHERE routine_schema = 'public' AND routine_name = 'auth_role';
@@ -41,6 +53,7 @@ WHERE routine_schema = 'public' AND routine_name = 'auth_role';
 -- 2. REVOKE DIRECT ACCESS
 -- ============================================================
 
+REVOKE SELECT ON public.project_financial_summaries FROM PUBLIC;
 REVOKE SELECT ON public.project_financial_summaries FROM anon;
 REVOKE SELECT ON public.project_financial_summaries FROM authenticated;
 
@@ -62,6 +75,8 @@ AS $$
     AND auth_role() IN ('owner', 'admin');
 $$;
 
+REVOKE ALL ON FUNCTION get_project_financial_summary(TEXT) FROM PUBLIC;
+REVOKE ALL ON FUNCTION get_project_financial_summary(TEXT) FROM anon;
 GRANT EXECUTE ON FUNCTION get_project_financial_summary(TEXT) TO authenticated;
 
 -- B. Get all project summaries
@@ -77,6 +92,8 @@ AS $$
   WHERE auth_role() IN ('owner', 'admin');
 $$;
 
+REVOKE ALL ON FUNCTION get_all_financial_summaries() FROM PUBLIC;
+REVOKE ALL ON FUNCTION get_all_financial_summaries() FROM anon;
 GRANT EXECUTE ON FUNCTION get_all_financial_summaries() TO authenticated;
 
 -- ============================================================

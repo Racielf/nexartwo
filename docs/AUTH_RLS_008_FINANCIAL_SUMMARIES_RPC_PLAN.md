@@ -18,7 +18,7 @@ This plan defines the shift from direct table/view access to gated RPC access fo
 |---|---|---|
 | 004a–007 Hardening | ✅ PASS | Confirmed in 007 record. |
 | `project_financial_summaries` view | ✅ Exists | Confirmed in earlier schema migrations. |
-| `auth_role()` function | ✅ PASS | Essential for RPC gate logic. |
+| `auth_role()` function | ✅ PASS | Essential for RPC gate logic. Blocking preflight in script. |
 
 ---
 
@@ -26,12 +26,12 @@ This plan defines the shift from direct table/view access to gated RPC access fo
 
 Unlike standard RLS (which acts as a filter), this step uses **Revocation + Gateway**:
 
-1. **REVOKE SELECT**: Direct access to `project_financial_summaries` is removed from `anon` and `authenticated` roles.
+1. **REVOKE SELECT**: Direct access to `project_financial_summaries` is removed from `PUBLIC`, `anon`, and `authenticated` roles.
 2. **SECURITY DEFINER Functions**:
    - `get_project_financial_summary(p_project_id TEXT)`
    - `get_all_financial_summaries()`
 3. **Internal Auth Check**: Both functions contain `WHERE auth_role() IN ('owner', 'admin')`.
-4. **Execution Permissions**: Only `authenticated` users are granted `EXECUTE` permission, but the internal check ensures only `owner`/`admin` actually see data.
+4. **Execution Permissions**: Permissions are explicitly revoked from `PUBLIC` and `anon`. Only `authenticated` users are granted `EXECUTE` permission, but the internal check ensures only `owner`/`admin` actually see data.
 
 ---
 
@@ -53,7 +53,7 @@ var { data, error } = await sb.from('project_financial_summaries').select('*');
 var { data, error } = await sb.rpc('get_all_financial_summaries');
 ```
 
-*Note: Per protocol, no JS changes are implemented in this step. This is a documentation of required follow-up.*
+*Note: Per protocol, no JS changes are implemented in this step. This is a documentation of required follow-up. Do not apply 008 until `js/supabase.js` is refactored or owner explicitly accepts temporary UI breakage.*
 
 ---
 
