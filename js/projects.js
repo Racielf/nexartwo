@@ -327,6 +327,10 @@ function switchProjTab(tab) {
   if(tBtn) tBtn.classList.add('active');
   var tContent = document.getElementById('proj-tab-' + tab);
   if(tContent) tContent.style.display = 'block';
+  // Lazy-load Investor Hub when tab is first opened
+  if (tab === 'investorhub' && _currentProject) {
+    renderInvestorHub(_currentProject.id);
+  }
 }
 
 function renderProjectDetail() {
@@ -650,4 +654,255 @@ async function cancelRecord(id, type) {
       alert('Failed to void');
     }
   });
+}
+
+// ============================================================
+// INVESTOR HUB — Phase 2B
+// INTERNAL & ADMIN USE ONLY
+// Rules: No delete. No ROI. No distributions. No profit split.
+// Capital contributions do NOT affect project_financial_summaries.
+// ============================================================
+
+var _ihInvestors = [];
+var _ihContribs  = [];
+var _ihCalls     = [];
+
+async function renderInvestorHub(projectId) {
+  var tab = document.getElementById('proj-tab-investorhub');
+  if (!tab) return;
+  tab.innerHTML = '<div style="padding:20px;color:var(--text-muted);font-size:13px">Loading Investor Hub...</div>';
+  if (typeof isSupabaseReady !== 'function' || !isSupabaseReady()) {
+    tab.innerHTML = '<div class="proj-empty">Supabase not connected. Investor Hub requires live DB.</div>';
+    return;
+  }
+  var pis      = await DB.projectInvestors.getByProject(projectId) || [];
+  var contribs = await DB.capitalContributions.getByProject(projectId) || [];
+  var calls    = await DB.capitalCalls.getByProject(projectId) || [];
+  _ihInvestors = pis;
+  _ihContribs  = contribs;
+  _ihCalls     = calls;
+
+  var totalConfirmed = contribs
+    .filter(function(c){ return c.status === 'confirmed'; })
+    .reduce(function(s,c){ return s + (parseFloat(c.amount)||0); }, 0);
+  var totalPending = contribs
+    .filter(function(c){ return c.status === 'pending'; })
+    .reduce(function(s,c){ return s + (parseFloat(c.amount)||0); }, 0);
+  var SCOL = { pending:'#f59e0b', confirmed:'#10b981', cancelled:'#9ca3af' };
+  var ROLES = { lead_contractor:'Lead Contractor', equity_partner:'Equity Partner', silent_partner:'Silent Partner', other:'Other' };
+
+  var html = '<div style="background:#fef2f2;color:#ef4444;padding:8px 12px;border-radius:6px;font-size:11px;font-weight:700;margin-bottom:16px">🔒 INTERNAL &amp; ADMIN USE ONLY — Investor Hub Phase 2B</div>'
+    + '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:20px">'
+    + '<div class="proj-stat-card"><div class="proj-stat-value" style="font-size:20px">' + pis.filter(function(x){return x.status!=='cancelled';}).length + '</div><div class="proj-stat-label">Investors</div></div>'
+    + '<div class="proj-stat-card"><div class="proj-stat-value" style="font-size:20px;color:#10b981">' + fmtMoney(totalConfirmed) + '</div><div class="proj-stat-label">Confirmed Capital</div></div>'
+    + '<div class="proj-stat-card"><div class="proj-stat-value" style="font-size:20px;color:#f59e0b">' + fmtMoney(totalPending) + '</div><div class="proj-stat-label">Pending Capital</div></div>'
+    + '</div>';
+
+  // Investors
+  html += '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">'
+    + '<h4 style="margin:0;font-size:13px">Investors</h4>'
+    + '<button class="btn btn-primary btn-sm" onclick="openAddInvestorModal()" style="font-size:12px">+ Add Investor</button></div>';
+  if (!pis.length) {
+    html += '<p style="color:var(--text-muted);font-size:13px;padding:12px 0">No investors attached yet.</p>';
+  } else {
+    html += '<table class="proj-table" style="margin-bottom:20px"><thead><tr><th>Name</th><th>Role</th><th>Status</th><th></th></tr></thead><tbody>';
+    pis.forEach(function(pi) {
+      var n = pi.investors ? escHtml(pi.investors.name) : '—';
+      html += '<tr><td>' + n + '</td><td>' + (ROLES[pi.role]||pi.role) + '</td>'
+        + '<td><span style="font-size:11px;font-weight:700;color:' + (SCOL[pi.status]||'#999') + '">' + pi.status.toUpperCase() + '</span></td>'
+        + '<td style="display:flex;gap:4px">'
+        + (pi.status==='pending' ? '<button class="btn btn-sm" style="font-size:11px;background:#10b981;color:#fff;border:none" onclick="ihConfirmPI(\'' + pi.id + '\')">Confirm</button>' : '')
+        + (pi.status!=='cancelled' ? '<button class="btn btn-sm btn-secondary" style="font-size:11px" onclick="ihCancelPI(\'' + pi.id + '\')">Void</button>' : '')
+        + '</td></tr>';
+    });
+    html += '</tbody></table>';
+  }
+
+  // Contributions
+  html += '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">'
+    + '<h4 style="margin:0;font-size:13px">Capital Contributions</h4>'
+    + '<button class="btn btn-primary btn-sm" onclick="openAddContribModal()" style="font-size:12px">+ Add Contribution</button></div>';
+  if (!contribs.length) {
+    html += '<p style="color:var(--text-muted);font-size:13px;padding:12px 0">No contributions recorded yet.</p>';
+  } else {
+    html += '<table class="proj-table" style="margin-bottom:20px"><thead><tr><th>Investor</th><th>Date</th><th>Amount</th><th>Type</th><th>Method</th><th>Status</th><th></th></tr></thead><tbody>';
+    contribs.forEach(function(c) {
+      var inv = c.investors ? escHtml(c.investors.name) : '—';
+      html += '<tr><td>' + inv + '</td><td>' + fmtDate(c.date) + '</td>'
+        + '<td style="font-weight:700">' + fmtMoney(c.amount) + '</td>'
+        + '<td>' + c.type + '</td><td>' + c.method + '</td>'
+        + '<td><span style="font-size:11px;font-weight:700;color:' + (SCOL[c.status]||'#999') + '">' + c.status.toUpperCase() + '</span></td>'
+        + '<td style="display:flex;gap:4px">'
+        + (c.status==='pending' ? '<button class="btn btn-sm" style="font-size:11px;background:#10b981;color:#fff;border:none" onclick="ihConfirmContrib(\'' + c.id + '\')">Confirm</button>' : '')
+        + (c.status!=='cancelled' ? '<button class="btn btn-sm btn-secondary" style="font-size:11px" onclick="ihCancelContrib(\'' + c.id + '\')">Void</button>' : '')
+        + '</td></tr>';
+    });
+    html += '</tbody></table>';
+  }
+
+  // Capital Calls
+  html += '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">'
+    + '<h4 style="margin:0;font-size:13px">Capital Calls</h4>'
+    + '<button class="btn btn-secondary btn-sm" onclick="openAddCallModal()" style="font-size:12px">+ Add Capital Call</button></div>';
+  if (!calls.length) {
+    html += '<p style="color:var(--text-muted);font-size:13px;padding:12px 0">No capital calls recorded.</p>';
+  } else {
+    html += '<table class="proj-table"><thead><tr><th>Amount</th><th>Reason</th><th>Due Date</th><th>Status</th><th></th></tr></thead><tbody>';
+    calls.forEach(function(cl) {
+      html += '<tr><td style="font-weight:700">' + fmtMoney(cl.requested_amount) + '</td>'
+        + '<td>' + escHtml(cl.reason) + '</td><td>' + fmtDate(cl.due_date) + '</td>'
+        + '<td><span style="font-size:11px;font-weight:700;color:' + (SCOL[cl.status]||'#999') + '">' + cl.status.toUpperCase() + '</span></td>'
+        + '<td style="display:flex;gap:4px">'
+        + (cl.status==='pending' ? '<button class="btn btn-sm" style="font-size:11px;background:#10b981;color:#fff;border:none" onclick="ihConfirmCall(\'' + cl.id + '\')">Confirm</button>' : '')
+        + (cl.status!=='cancelled' ? '<button class="btn btn-sm btn-secondary" style="font-size:11px" onclick="ihCancelCall(\'' + cl.id + '\')">Void</button>' : '')
+        + '</td></tr>';
+    });
+    html += '</tbody></table>';
+  }
+
+  tab.innerHTML = html;
+  if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
+async function ihConfirmPI(id) {
+  if (await DB.projectInvestors.confirm(id)) { showToast('Investor confirmed'); renderInvestorHub(_currentProject.id); }
+}
+async function ihCancelPI(id) {
+  showConfirmModal('Void Investor Link', 'Mark this investor link as cancelled? Record is retained.', async function() {
+    if (await DB.projectInvestors.cancel(id)) { showToast('Investor link voided'); renderInvestorHub(_currentProject.id); }
+  });
+}
+async function ihConfirmContrib(id) {
+  if (await DB.capitalContributions.confirm(id)) { showToast('Contribution confirmed'); renderInvestorHub(_currentProject.id); }
+}
+async function ihCancelContrib(id) {
+  showConfirmModal('Void Contribution', 'Mark as cancelled? Record is retained (Rule 2B-NO-DELETE).', async function() {
+    if (await DB.capitalContributions.cancel(id)) { showToast('Contribution voided'); renderInvestorHub(_currentProject.id); }
+  });
+}
+async function ihConfirmCall(id) {
+  if (await DB.capitalCalls.confirm(id)) { showToast('Capital call confirmed'); renderInvestorHub(_currentProject.id); }
+}
+async function ihCancelCall(id) {
+  showConfirmModal('Void Capital Call', 'Mark this capital call as cancelled?', async function() {
+    if (await DB.capitalCalls.cancel(id)) { showToast('Capital call voided'); renderInvestorHub(_currentProject.id); }
+  });
+}
+
+async function openAddInvestorModal() {
+  var allInvestors = await DB.investors.getAll() || [];
+  showConfirmModal('Add Investor to Project', '', null);
+  var box = document.querySelector('.confirm-box');
+  box.innerHTML = '<h3 style="margin:0 0 14px;font-size:15px">Add Investor to Project</h3>'
+    + '<div style="font-size:11px;color:#ef4444;font-weight:700;margin-bottom:12px">🔒 INTERNAL USE ONLY</div>'
+    + '<div style="display:flex;flex-direction:column;gap:10px;text-align:left">'
+    + '<div><label style="font-size:12px;color:var(--text-secondary);display:block;margin-bottom:4px">Select Existing Investor</label>'
+    + '<select id="ih-inv-sel" class="form-control" style="width:100%"><option value="">— Select —</option>'
+    + allInvestors.map(function(i){ return '<option value="' + i.id + '">' + escHtml(i.name) + '</option>'; }).join('') + '</select></div>'
+    + '<div style="font-size:11px;color:var(--text-muted);text-align:center">— or create new —</div>'
+    + '<div><label style="font-size:12px;color:var(--text-secondary);display:block;margin-bottom:4px">New Investor Name</label>'
+    + '<input type="text" id="ih-inv-name" class="form-control" placeholder="Full name or company" style="width:100%"></div>'
+    + '<div><label style="font-size:12px;color:var(--text-secondary);display:block;margin-bottom:4px">Type</label>'
+    + '<select id="ih-inv-type" class="form-control" style="width:100%"><option value="person">Person</option><option value="company">Company</option></select></div>'
+    + '<div><label style="font-size:12px;color:var(--text-secondary);display:block;margin-bottom:4px">Role in Project</label>'
+    + '<select id="ih-inv-role" class="form-control" style="width:100%">'
+    + '<option value="equity_partner">Equity Partner</option><option value="lead_contractor">Lead Contractor</option>'
+    + '<option value="silent_partner">Silent Partner</option><option value="other">Other</option></select></div>'
+    + '<div style="display:flex;gap:8px;margin-top:8px">'
+    + '<button class="btn btn-secondary" onclick="closeConfirmModal()" style="flex:1">Cancel</button>'
+    + '<button class="btn btn-primary" onclick="saveAddInvestor()" style="flex:1">Attach Investor</button></div></div>';
+}
+
+async function saveAddInvestor() {
+  var sel  = document.getElementById('ih-inv-sel').value;
+  var name = (document.getElementById('ih-inv-name').value || '').trim();
+  var type = document.getElementById('ih-inv-type').value;
+  var role = document.getElementById('ih-inv-role').value;
+  var invId = sel;
+  if (!invId && name) {
+    var inv = await DB.investors.create({ name: name, type: type });
+    if (!inv) { alert('Failed to create investor'); return; }
+    invId = inv.id;
+  }
+  if (!invId) { alert('Select or create an investor first'); return; }
+  var pi = await DB.projectInvestors.attach(_currentProject.id, invId, role);
+  closeConfirmModal();
+  if (pi) { showToast('Investor attached (pending)'); renderInvestorHub(_currentProject.id); }
+  else { alert('Failed to attach investor'); }
+}
+
+async function openAddContribModal() {
+  var pis = _ihInvestors.filter(function(x){ return x.status !== 'cancelled'; });
+  showConfirmModal('Add Capital Contribution', '', null);
+  var box = document.querySelector('.confirm-box');
+  box.innerHTML = '<h3 style="margin:0 0 14px;font-size:15px">Add Capital Contribution</h3>'
+    + '<div style="font-size:11px;color:#ef4444;font-weight:700;margin-bottom:12px">🔒 INTERNAL — Capital ≠ Expense. Does NOT affect financial summaries.</div>'
+    + '<div style="display:flex;flex-direction:column;gap:10px;text-align:left">'
+    + '<div><label style="font-size:12px;color:var(--text-secondary);display:block;margin-bottom:4px">Investor *</label>'
+    + '<select id="ih-c-inv" class="form-control" style="width:100%"><option value="">— Select —</option>'
+    + pis.map(function(pi){ var n = pi.investors ? pi.investors.name : pi.investor_id; return '<option value="' + pi.investor_id + '">' + escHtml(n) + '</option>'; }).join('') + '</select></div>'
+    + '<div><label style="font-size:12px;color:var(--text-secondary);display:block;margin-bottom:4px">Amount * (must be &gt; 0)</label>'
+    + '<input type="number" id="ih-c-amt" class="form-control" min="0.01" step="0.01" placeholder="e.g. 20000" style="width:100%"></div>'
+    + '<div><label style="font-size:12px;color:var(--text-secondary);display:block;margin-bottom:4px">Date *</label>'
+    + '<input type="date" id="ih-c-date" class="form-control" value="' + new Date().toISOString().split('T')[0] + '" style="width:100%"></div>'
+    + '<div style="display:flex;gap:10px">'
+    + '<div style="flex:1"><label style="font-size:12px;color:var(--text-secondary);display:block;margin-bottom:4px">Type</label>'
+    + '<select id="ih-c-type" class="form-control" style="width:100%"><option value="initial">Initial</option><option value="additional">Additional</option><option value="closing">Closing</option><option value="reimbursement">Reimbursement</option></select></div>'
+    + '<div style="flex:1"><label style="font-size:12px;color:var(--text-secondary);display:block;margin-bottom:4px">Method</label>'
+    + '<select id="ih-c-mth" class="form-control" style="width:100%"><option value="wire">Wire</option><option value="check">Check</option><option value="cash">Cash</option><option value="company_payment">Company Payment</option></select></div></div>'
+    + '<div><label style="font-size:12px;color:var(--text-secondary);display:block;margin-bottom:4px">Evidence Reference</label>'
+    + '<input type="text" id="ih-c-evid" class="form-control" placeholder="Check #, wire ref…" style="width:100%"></div>'
+    + '<div><label style="font-size:12px;color:var(--text-secondary);display:block;margin-bottom:4px">Notes</label>'
+    + '<input type="text" id="ih-c-notes" class="form-control" placeholder="Optional" style="width:100%"></div>'
+    + '<div style="display:flex;gap:8px;margin-top:8px">'
+    + '<button class="btn btn-secondary" onclick="closeConfirmModal()" style="flex:1">Cancel</button>'
+    + '<button class="btn btn-primary" onclick="saveAddContrib()" style="flex:1">Save Contribution</button></div></div>';
+}
+
+async function saveAddContrib() {
+  var invId  = document.getElementById('ih-c-inv').value;
+  var amount = parseFloat(document.getElementById('ih-c-amt').value) || 0;
+  var date   = document.getElementById('ih-c-date').value;
+  var type   = document.getElementById('ih-c-type').value;
+  var method = document.getElementById('ih-c-mth').value;
+  var evid   = document.getElementById('ih-c-evid').value || '';
+  var notes  = document.getElementById('ih-c-notes').value || '';
+  if (!invId) { alert('Select an investor'); return; }
+  if (amount <= 0) { alert('Amount must be > 0'); return; }
+  if (!date) { alert('Date is required'); return; }
+  var res = await DB.capitalContributions.create({ project_id: _currentProject.id, investor_id: invId, amount: amount, date: date, type: type, method: method, evidence_reference: evid, notes: notes });
+  closeConfirmModal();
+  if (res) { showToast('Contribution saved (pending)'); renderInvestorHub(_currentProject.id); }
+  else { alert('Failed to save contribution.'); }
+}
+
+function openAddCallModal() {
+  showConfirmModal('Add Capital Call', '', null);
+  var box = document.querySelector('.confirm-box');
+  box.innerHTML = '<h3 style="margin:0 0 14px;font-size:15px">Add Capital Call</h3>'
+    + '<div style="display:flex;flex-direction:column;gap:10px;text-align:left">'
+    + '<div><label style="font-size:12px;color:var(--text-secondary);display:block;margin-bottom:4px">Amount Requested *</label>'
+    + '<input type="number" id="ih-cc-amt" class="form-control" min="0.01" step="0.01" placeholder="e.g. 5000" style="width:100%"></div>'
+    + '<div><label style="font-size:12px;color:var(--text-secondary);display:block;margin-bottom:4px">Reason *</label>'
+    + '<input type="text" id="ih-cc-rsn" class="form-control" placeholder="Why is capital needed?" style="width:100%"></div>'
+    + '<div><label style="font-size:12px;color:var(--text-secondary);display:block;margin-bottom:4px">Due Date</label>'
+    + '<input type="date" id="ih-cc-due" class="form-control" style="width:100%"></div>'
+    + '<div><label style="font-size:12px;color:var(--text-secondary);display:block;margin-bottom:4px">Notes</label>'
+    + '<input type="text" id="ih-cc-nts" class="form-control" style="width:100%"></div>'
+    + '<div style="display:flex;gap:8px;margin-top:8px">'
+    + '<button class="btn btn-secondary" onclick="closeConfirmModal()" style="flex:1">Cancel</button>'
+    + '<button class="btn btn-primary" onclick="saveAddCall()" style="flex:1">Save Capital Call</button></div></div>';
+}
+
+async function saveAddCall() {
+  var amount = parseFloat(document.getElementById('ih-cc-amt').value) || 0;
+  var reason = (document.getElementById('ih-cc-rsn').value || '').trim();
+  var due    = document.getElementById('ih-cc-due').value || null;
+  var notes  = document.getElementById('ih-cc-nts').value || '';
+  if (amount <= 0) { alert('Amount must be > 0'); return; }
+  if (!reason) { alert('Reason is required'); return; }
+  var res = await DB.capitalCalls.create({ project_id: _currentProject.id, requested_amount: amount, reason: reason, due_date: due, notes: notes });
+  closeConfirmModal();
+  if (res) { showToast('Capital call recorded'); renderInvestorHub(_currentProject.id); }
+  else { alert('Failed to save capital call.'); }
 }
