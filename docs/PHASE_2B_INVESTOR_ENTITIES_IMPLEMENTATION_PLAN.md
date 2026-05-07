@@ -70,7 +70,7 @@ Phase 2B **no** calcula ROI, no distribuye utilidades, no registra préstamos ni
 ### SQL / Migrations
 | Archivo | Acción |
 |---|---|
-| `supabase/migrations/004_investor_entities.sql` | **[NEW]** Una sola migración con las 5 tablas nuevas |
+| `supabase/migrations/202605070001_investor_entities.sql` | **[NEW]** Una sola migración con las 5 tablas nuevas |
 
 ### JS Data Layer
 | Archivo | Acción |
@@ -107,7 +107,7 @@ Phase 2B **no** calcula ROI, no distribuye utilidades, no registra préstamos ni
 
 ## 4. Proposed Database Changes
 
-### Diseño conceptual de la migración `004_investor_entities.sql`
+### Diseño conceptual de la migración `202605070001_investor_entities.sql`
 
 > No se escribe la migración todavía. Este diseño es la especificación a seguir durante la implementación.
 
@@ -437,7 +437,7 @@ El orden exacto de ejecución durante la implementación:
 
 ```
 Paso 1 — Migration draft
-  └── Crear supabase/migrations/004_investor_entities.sql
+  └── Crear supabase/migrations/202605070001_investor_entities.sql
       (5 tablas + triggers no-delete + no-update en contributions)
 
 Paso 2 — Validate migration locally (no push todavía)
