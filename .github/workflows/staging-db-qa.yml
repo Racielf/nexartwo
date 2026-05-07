@@ -1,0 +1,200 @@
+name: Staging DB QA
+
+# -------------------------------------------------------
+# SCOPE: This workflow targets the nexartwo-staging Supabase project ONLY.
+# It NEVER uses production secrets (SUPABASE_ACCESS_TOKEN, SUPABASE_PROJECT_REF, SUPABASE_DB_PASSWORD).
+# All connections use STAGING_SUPABASE_* secrets scoped to the GitHub Environment: staging.
+# Trigger: manual only (workflow_dispatch). Do not add push/PR triggers without review.
+# -------------------------------------------------------
+
+on:
+  workflow_dispatch:
+
+jobs:
+  staging-db-qa:
+    name: "Staging DB QA — Migrations + Smoke Tests"
+    runs-on: ubuntu-latest
+
+    # -------------------------------------------------------
+    # SECURITY: This job MUST use the "staging" GitHub Environment.
+    # This enforces that only STAGING_SUPABASE_* secrets are accessible.
+    # Production environment secrets are never available here.
+    # -------------------------------------------------------
+    environment: staging
+
+    steps:
+
+      # -------------------------------------------------------
+      # STEP 1 — Checkout repository
+      # -------------------------------------------------------
+      - name: "STEP 1 — Checkout repo"
+        uses: actions/checkout@v4
+
+      # -------------------------------------------------------
+      # STEP 2 — Setup Supabase CLI
+      # -------------------------------------------------------
+      - name: "STEP 2 — Setup Supabase CLI"
+        uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      # -------------------------------------------------------
+      # STEP 3 — Link to Supabase STAGING project
+      # SECURITY: Uses STAGING_SUPABASE_PROJECT_REF and STAGING_SUPABASE_ACCESS_TOKEN only.
+      # Never use SUPABASE_PROJECT_REF (production) here.
+      # -------------------------------------------------------
+      - name: "STEP 3 — Link Supabase Staging Project"
+        run: |
+          echo "=== SECURITY CHECK ==="
+          echo "Targeting staging project. Production secrets are not available in this environment."
+          echo "======================"
+          supabase link --project-ref "${{ secrets.STAGING_SUPABASE_PROJECT_REF }}"
+        env:
+          # This targets staging ONLY. Never use production secrets here.
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.STAGING_SUPABASE_ACCESS_TOKEN }}
+
+      # -------------------------------------------------------
+      # STEP 4 — Apply migrations to STAGING project
+      # SECURITY: This db push targets nexartwo-staging only.
+      # Production is never touched. No production secrets are used.
+      # -------------------------------------------------------
+      - name: "STEP 4 — Run DB Push to Staging"
+        run: |
+          echo "=== DB PUSH — STAGING ONLY ==="
+          echo "Applying pending migrations to nexartwo-staging."
+          echo "Production is NOT connected. Production secrets are NOT used."
+          echo "=============================="
+          supabase db push --password "${{ secrets.STAGING_SUPABASE_DB_PASSWORD }}"
+        env:
+          # This targets staging ONLY. Never use production secrets here.
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.STAGING_SUPABASE_ACCESS_TOKEN }}
+
+      # -------------------------------------------------------
+      # STEP 5 — Install PostgreSQL client (psql)
+      # -------------------------------------------------------
+      - name: "STEP 5 — Install PostgreSQL client"
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y postgresql-client
+          echo "STEP 5 PASS: psql installed"
+
+      # -------------------------------------------------------
+      # STEP 6 — Run Phase 1 Financial Smoke Test
+      # Uses STAGING_SUPABASE_POOLER_DB_URL (Supavisor / IPv4 pooler).
+      # Direct DB host is NOT used. Per Incident 1 lesson: always use pooler on GitHub runners.
+      # -------------------------------------------------------
+      - name: "STEP 6 — Run Phase 1 Financial Smoke Test"
+        run: |
+          echo "=== PHASE 1 FINANCIAL SMOKE TEST ==="
+          psql "${{ secrets.STAGING_SUPABASE_POOLER_DB_URL }}" \
+            -v ON_ERROR_STOP=1 \
+            -f qa/financial_system_smoke_test.sql \
+            -A -t > qa_financial_output.txt 2>&1
+
+          echo "--- Output ---"
+          cat qa_financial_output.txt
+          echo "--------------"
+
+          if grep -q "FAIL" qa_financial_output.txt; then
+            echo "::error::Phase 1 Financial Smoke Test FAILED — one or more assertions returned FAIL."
+            exit 1
+          fi
+          echo "STEP 6 PASS: Phase 1 Financial Smoke Test PASSED"
+
+      # -------------------------------------------------------
+      # STEP 7 — Run Investor Hub Smoke Test
+      # Uses STAGING_SUPABASE_POOLER_DB_URL (Supavisor / IPv4 pooler).
+      # Per Smoke Test Policy: ON_ERROR_STOP=1, pooler endpoint, no hardcoded IDs.
+      # -------------------------------------------------------
+      - name: "STEP 7 — Run Investor Hub Smoke Test"
+        run: |
+          echo "=== INVESTOR HUB SMOKE TEST ==="
+          psql "${{ secrets.STAGING_SUPABASE_POOLER_DB_URL }}" \
+            -v ON_ERROR_STOP=1 \
+            -f qa/investor_hub_smoke_test.sql \
+            -A -t > qa_investor_output.txt 2>&1
+
+          echo "--- Output ---"
+          cat qa_investor_output.txt
+          echo "--------------"
+
+          if grep -q "FAIL" qa_investor_output.txt; then
+            echo "::error::Investor Hub Smoke Test FAILED — one or more assertions returned FAIL."
+            exit 1
+          fi
+
+          if ! grep -q "ALL SMOKE TESTS PASSED" qa_investor_output.txt; then
+            echo "::error::Investor Hub Smoke Test did not reach ALL SMOKE TESTS PASSED marker."
+            exit 1
+          fi
+          echo "STEP 7 PASS: Investor Hub Smoke Test PASSED"
+
+      # -------------------------------------------------------
+      # STEP 8 — Verify Phase 1 view project_financial_summaries exists
+      # Confirms Phase 2B migration did not break Phase 1 views.
+      # -------------------------------------------------------
+      - name: "STEP 8 — Verify Phase 1 view exists"
+        run: |
+          VIEW_COUNT=$(psql "${{ secrets.STAGING_SUPABASE_POOLER_DB_URL }}" \
+            -v ON_ERROR_STOP=1 -t -A \
+            -c "SELECT COUNT(*) FROM information_schema.views
+                WHERE table_schema = 'public'
+                  AND table_name = 'project_financial_summaries';")
+
+          echo "project_financial_summaries view count: ${VIEW_COUNT}"
+
+          if [ "${VIEW_COUNT}" != "1" ]; then
+            echo "::error::FAIL: Phase 1 view project_financial_summaries is MISSING. Phase 2B may have broken Phase 1."
+            exit 1
+          fi
+          echo "STEP 8 PASS: project_financial_summaries view exists and is intact"
+
+      # -------------------------------------------------------
+      # STEP 9 — Verify Investor Hub tables exist
+      # All 5 Phase 2B tables must be present.
+      # -------------------------------------------------------
+      - name: "STEP 9 — Verify Investor Hub tables exist"
+        run: |
+          TABLE_COUNT=$(psql "${{ secrets.STAGING_SUPABASE_POOLER_DB_URL }}" \
+            -v ON_ERROR_STOP=1 -t -A \
+            -c "SELECT COUNT(*) FROM information_schema.tables
+                WHERE table_schema = 'public'
+                  AND table_name IN (
+                    'investors',
+                    'investor_companies',
+                    'project_investors',
+                    'capital_contributions',
+                    'capital_calls'
+                  );")
+
+          echo "Phase 2B tables found: ${TABLE_COUNT} / 5"
+
+          if [ "${TABLE_COUNT}" != "5" ]; then
+            echo "::error::FAIL: Expected 5 Investor Hub tables, found ${TABLE_COUNT}. Migration may be incomplete."
+            exit 1
+          fi
+          echo "STEP 9 PASS: All 5 Investor Hub tables exist in staging"
+
+      # -------------------------------------------------------
+      # STEP 10 — Final summary
+      # -------------------------------------------------------
+      - name: "STEP 10 — Final summary"
+        if: success()
+        run: |
+          echo "=================================================="
+          echo "  STAGING DB QA — ALL STEPS PASSED"
+          echo "=================================================="
+          echo "  Phase 1 migration:              PASS"
+          echo "  Phase 2B migration:             PASS"
+          echo "  Phase 1 financial smoke test:   PASS"
+          echo "  Investor Hub smoke test:        PASS"
+          echo "  Phase 1 view intact:            PASS"
+          echo "  5 Phase 2B tables present:      PASS"
+          echo "=================================================="
+          echo "  Target environment:   staging (nexartwo-staging)"
+          echo "  Production touched:   NO"
+          echo "  Production secrets:   NOT USED"
+          echo "  db push target:       nexartwo-staging ONLY"
+          echo "=================================================="
+          echo "  STAGING DB QA PASSED"
+          echo "=================================================="
