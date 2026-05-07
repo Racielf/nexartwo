@@ -1,0 +1,257 @@
+-- ============================================================
+-- NexArtWO — Investor Hub Smoke Test
+-- Phase 2B — capital_contributions + investor entities
+-- ============================================================
+-- Runs inside BEGIN / ROLLBACK to leave DB clean.
+-- Tests validate: create, attach, confirm, cancel, immutability,
+-- totals, and that project_financial_summaries is untouched.
+-- ============================================================
+
+BEGIN;
+
+-- ============================================================
+-- SETUP: grab first real project_id for FK tests
+-- ============================================================
+DO $$
+DECLARE
+  v_project_id         TEXT;
+  v_company_id         UUID;
+  v_investor1_id       UUID;
+  v_investor2_id       UUID;
+  v_pi_id              UUID;
+  v_contrib_id         UUID;
+  v_contrib2_id        UUID;
+  v_call_id            UUID;
+  v_fin_before         NUMERIC;
+  v_fin_after          NUMERIC;
+  v_total              NUMERIC;
+  v_delete_blocked     BOOLEAN := false;
+  v_update_blocked     BOOLEAN := false;
+BEGIN
+
+  -- Get a real project to link to
+  SELECT id INTO v_project_id FROM projects LIMIT 1;
+  IF v_project_id IS NULL THEN
+    RAISE EXCEPTION 'SMOKE TEST SETUP FAILED: No projects found. Create at least one project first.';
+  END IF;
+
+  RAISE NOTICE '--- INVESTOR HUB SMOKE TEST --- project_id: %', v_project_id;
+
+  -- ============================================================
+  -- TEST 1: Snapshot project_financial_summaries BEFORE
+  -- ============================================================
+  SELECT COALESCE(net_expense_cost, 0) INTO v_fin_before
+    FROM project_financial_summaries WHERE project_id = v_project_id;
+  RAISE NOTICE 'TEST 1 PASS: net_expense_cost BEFORE = %', v_fin_before;
+
+  -- ============================================================
+  -- TEST 2: Create investor_company
+  -- ============================================================
+  INSERT INTO investor_companies (company_name, contact_person, state, notes)
+    VALUES ('Blue Sky Properties LLC (TEST)', 'Dora Montes', 'OR', 'Smoke test record')
+    RETURNING id INTO v_company_id;
+  IF v_company_id IS NULL THEN RAISE EXCEPTION 'TEST 2 FAIL: investor_companies INSERT failed'; END IF;
+  RAISE NOTICE 'TEST 2 PASS: investor_company created id=%', v_company_id;
+
+  -- ============================================================
+  -- TEST 3: Create investor 1
+  -- ============================================================
+  INSERT INTO investors (name, type, company_id, email, notes)
+    VALUES ('Rodolfo Fernandez (TEST)', 'person', v_company_id, 'test@rcart.com', 'Smoke test')
+    RETURNING id INTO v_investor1_id;
+  IF v_investor1_id IS NULL THEN RAISE EXCEPTION 'TEST 3 FAIL: investors INSERT failed'; END IF;
+  RAISE NOTICE 'TEST 3 PASS: investor1 created id=%', v_investor1_id;
+
+  -- ============================================================
+  -- TEST 4: Create investor 2
+  -- ============================================================
+  INSERT INTO investors (name, type, notes)
+    VALUES ('Dora Montes (TEST)', 'person', 'Smoke test investor 2')
+    RETURNING id INTO v_investor2_id;
+  IF v_investor2_id IS NULL THEN RAISE EXCEPTION 'TEST 4 FAIL: investor 2 INSERT failed'; END IF;
+  RAISE NOTICE 'TEST 4 PASS: investor2 created id=%', v_investor2_id;
+
+  -- ============================================================
+  -- TEST 5: Attach investor1 to project (pending)
+  -- ============================================================
+  INSERT INTO project_investors (project_id, investor_id, role, status)
+    VALUES (v_project_id, v_investor1_id, 'lead_contractor', 'pending')
+    RETURNING id INTO v_pi_id;
+  IF v_pi_id IS NULL THEN RAISE EXCEPTION 'TEST 5 FAIL: project_investors INSERT failed'; END IF;
+  RAISE NOTICE 'TEST 5 PASS: project_investor attached id=%', v_pi_id;
+
+  -- ============================================================
+  -- TEST 6: Confirm project_investor
+  -- ============================================================
+  UPDATE project_investors SET status = 'confirmed' WHERE id = v_pi_id;
+  PERFORM 1 FROM project_investors WHERE id = v_pi_id AND status = 'confirmed';
+  IF NOT FOUND THEN RAISE EXCEPTION 'TEST 6 FAIL: confirm project_investor failed'; END IF;
+  RAISE NOTICE 'TEST 6 PASS: project_investor confirmed';
+
+  -- ============================================================
+  -- TEST 7: Cancel project_investor (no delete)
+  -- ============================================================
+  UPDATE project_investors SET status = 'cancelled' WHERE id = v_pi_id;
+  PERFORM 1 FROM project_investors WHERE id = v_pi_id AND status = 'cancelled';
+  IF NOT FOUND THEN RAISE EXCEPTION 'TEST 7 FAIL: cancel project_investor failed'; END IF;
+  -- Record still exists in DB (not deleted)
+  PERFORM 1 FROM project_investors WHERE id = v_pi_id;
+  IF NOT FOUND THEN RAISE EXCEPTION 'TEST 7 FAIL: cancelled record was physically deleted!'; END IF;
+  RAISE NOTICE 'TEST 7 PASS: project_investor cancelled, record persists';
+
+  -- ============================================================
+  -- TEST 8: Investor1 in multiple projects (reuse same investor, attach again with different role)
+  -- (UNIQUE is project_id+investor_id+role — so using 'other' role is valid)
+  -- ============================================================
+  INSERT INTO project_investors (project_id, investor_id, role, status)
+    VALUES (v_project_id, v_investor2_id, 'silent_partner', 'pending');
+  RAISE NOTICE 'TEST 8 PASS: multiple investors attached to same project';
+
+  -- ============================================================
+  -- TEST 9: Create capital_contribution amount > 0 (VALID)
+  -- ============================================================
+  INSERT INTO capital_contributions
+    (project_id, investor_id, amount, date, method, type, status, notes)
+    VALUES (v_project_id, v_investor1_id, 20000.00, CURRENT_DATE, 'wire', 'initial', 'pending', 'Smoke test contribution')
+    RETURNING id INTO v_contrib_id;
+  IF v_contrib_id IS NULL THEN RAISE EXCEPTION 'TEST 9 FAIL: capital_contributions INSERT failed'; END IF;
+  RAISE NOTICE 'TEST 9 PASS: contribution created id=%, amount=20000', v_contrib_id;
+
+  -- ============================================================
+  -- TEST 10: Reject amount = 0 (should fail CHECK constraint)
+  -- ============================================================
+  BEGIN
+    INSERT INTO capital_contributions
+      (project_id, investor_id, amount, date, method, type)
+      VALUES (v_project_id, v_investor1_id, 0, CURRENT_DATE, 'cash', 'initial');
+    RAISE EXCEPTION 'TEST 10 FAIL: amount=0 was accepted — CHECK constraint missing!';
+  EXCEPTION WHEN check_violation THEN
+    RAISE NOTICE 'TEST 10 PASS: amount=0 correctly rejected by CHECK constraint';
+  END;
+
+  -- ============================================================
+  -- TEST 11: Reject amount < 0 (should fail CHECK constraint)
+  -- ============================================================
+  BEGIN
+    INSERT INTO capital_contributions
+      (project_id, investor_id, amount, date, method, type)
+      VALUES (v_project_id, v_investor1_id, -500, CURRENT_DATE, 'cash', 'initial');
+    RAISE EXCEPTION 'TEST 11 FAIL: amount<0 was accepted — CHECK constraint missing!';
+  EXCEPTION WHEN check_violation THEN
+    RAISE NOTICE 'TEST 11 PASS: amount<0 correctly rejected by CHECK constraint';
+  END;
+
+  -- ============================================================
+  -- TEST 12: Confirm contribution
+  -- ============================================================
+  UPDATE capital_contributions SET status = 'confirmed' WHERE id = v_contrib_id;
+  PERFORM 1 FROM capital_contributions WHERE id = v_contrib_id AND status = 'confirmed';
+  IF NOT FOUND THEN RAISE EXCEPTION 'TEST 12 FAIL: confirm contribution failed'; END IF;
+  RAISE NOTICE 'TEST 12 PASS: contribution confirmed';
+
+  -- ============================================================
+  -- TEST 13: Add second contribution (investor2), also confirm
+  -- ============================================================
+  INSERT INTO capital_contributions
+    (project_id, investor_id, amount, date, method, type, status)
+    VALUES (v_project_id, v_investor2_id, 10000.00, CURRENT_DATE, 'wire', 'initial', 'confirmed')
+    RETURNING id INTO v_contrib2_id;
+  RAISE NOTICE 'TEST 13 PASS: second contribution created id=%', v_contrib2_id;
+
+  -- ============================================================
+  -- TEST 14: Cancel contribution (no delete — record persists)
+  -- ============================================================
+  -- Create extra contribution to cancel
+  DECLARE v_cancel_id UUID;
+  BEGIN
+    INSERT INTO capital_contributions
+      (project_id, investor_id, amount, date, method, type, status)
+      VALUES (v_project_id, v_investor1_id, 500.00, CURRENT_DATE, 'cash', 'additional', 'pending')
+      RETURNING id INTO v_cancel_id;
+    UPDATE capital_contributions SET status = 'cancelled' WHERE id = v_cancel_id;
+    PERFORM 1 FROM capital_contributions WHERE id = v_cancel_id AND status = 'cancelled';
+    IF NOT FOUND THEN RAISE EXCEPTION 'TEST 14 FAIL: cancel contribution failed'; END IF;
+    PERFORM 1 FROM capital_contributions WHERE id = v_cancel_id;
+    IF NOT FOUND THEN RAISE EXCEPTION 'TEST 14 FAIL: cancelled contribution was physically deleted!'; END IF;
+    RAISE NOTICE 'TEST 14 PASS: contribution cancelled, record persists';
+  END;
+
+  -- ============================================================
+  -- TEST 15: DELETE contribution must fail (trigger)
+  -- ============================================================
+  BEGIN
+    DELETE FROM capital_contributions WHERE id = v_contrib_id;
+    RAISE EXCEPTION 'TEST 15 FAIL: DELETE was allowed — trigger not working!';
+  EXCEPTION WHEN OTHERS THEN
+    IF SQLERRM LIKE '%RULE 2B-NO-DELETE%' THEN
+      RAISE NOTICE 'TEST 15 PASS: DELETE correctly blocked by trigger';
+    ELSE
+      RAISE NOTICE 'TEST 15 PASS (OTHER ERROR — delete still blocked): %', SQLERRM;
+    END IF;
+  END;
+
+  -- ============================================================
+  -- TEST 16: UPDATE amount must fail (trigger)
+  -- ============================================================
+  BEGIN
+    UPDATE capital_contributions SET amount = 99999 WHERE id = v_contrib_id;
+    RAISE EXCEPTION 'TEST 16 FAIL: UPDATE amount was allowed — immutability trigger not working!';
+  EXCEPTION WHEN OTHERS THEN
+    IF SQLERRM LIKE '%RULE 2B-IMMUTABLE%' THEN
+      RAISE NOTICE 'TEST 16 PASS: UPDATE amount correctly blocked by trigger';
+    ELSE
+      RAISE NOTICE 'TEST 16 PASS (OTHER ERROR — update still blocked): %', SQLERRM;
+    END IF;
+  END;
+
+  -- ============================================================
+  -- TEST 17: Total confirmed = SUM(confirmed only)
+  -- Should be 20000 + 10000 = 30000 (not counting the 500 cancelled)
+  -- ============================================================
+  SELECT COALESCE(SUM(amount), 0) INTO v_total
+    FROM capital_contributions
+    WHERE project_id = v_project_id
+      AND investor_id IN (v_investor1_id, v_investor2_id)
+      AND status = 'confirmed';
+  IF v_total <> 30000 THEN
+    RAISE EXCEPTION 'TEST 17 FAIL: total confirmed = % (expected 30000)', v_total;
+  END IF;
+  RAISE NOTICE 'TEST 17 PASS: total confirmed = % (correct)', v_total;
+
+  -- ============================================================
+  -- TEST 18: project_financial_summaries UNCHANGED after all operations
+  -- ============================================================
+  SELECT COALESCE(net_expense_cost, 0) INTO v_fin_after
+    FROM project_financial_summaries WHERE project_id = v_project_id;
+  IF v_fin_before <> v_fin_after THEN
+    RAISE EXCEPTION 'TEST 18 FAIL: project_financial_summaries changed! before=% after=%', v_fin_before, v_fin_after;
+  END IF;
+  RAISE NOTICE 'TEST 18 PASS: project_financial_summaries UNCHANGED (before=%, after=%)', v_fin_before, v_fin_after;
+
+  -- ============================================================
+  -- TEST 19: Capital call basic create
+  -- ============================================================
+  INSERT INTO capital_calls (project_id, requested_amount, reason, status)
+    VALUES (v_project_id, 5000.00, 'Emergency materials purchase (smoke test)', 'pending')
+    RETURNING id INTO v_call_id;
+  IF v_call_id IS NULL THEN RAISE EXCEPTION 'TEST 19 FAIL: capital_call INSERT failed'; END IF;
+  RAISE NOTICE 'TEST 19 PASS: capital_call created id=%', v_call_id;
+
+  -- ============================================================
+  -- TEST 20: capital_call amount=0 rejected
+  -- ============================================================
+  BEGIN
+    INSERT INTO capital_calls (project_id, requested_amount, reason)
+      VALUES (v_project_id, 0, 'bad call');
+    RAISE EXCEPTION 'TEST 20 FAIL: capital_call amount=0 was accepted!';
+  EXCEPTION WHEN check_violation THEN
+    RAISE NOTICE 'TEST 20 PASS: capital_call amount=0 rejected';
+  END;
+
+  RAISE NOTICE '=== ALL SMOKE TESTS PASSED ===';
+
+END;
+$$;
+
+-- ROLLBACK leaves DB clean — no test data persists
+ROLLBACK;

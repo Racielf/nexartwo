@@ -653,6 +653,258 @@ const DB = {
     }
   },
 
+  // ---------- INVESTOR HUB — Phase 2B ----------
+  // RULE: No delete methods. Use cancel / status instead.
+  // RULE: Does NOT write to project_expenses, project_refunds,
+  //       project_disbursements, or project_financial_summaries.
+
+  investors: {
+    async getAll() {
+      var sb = getSupabase();
+      if (!sb) return null;
+      var { data, error } = await sb.from('investors').select('*').order('name', { ascending: true });
+      if (error) { console.error('DB investors.getAll:', error); return null; }
+      return data;
+    },
+    async getById(id) {
+      var sb = getSupabase();
+      if (!sb) return null;
+      var { data, error } = await sb.from('investors').select('*').eq('id', id).single();
+      if (error) { console.error('DB investors.getById:', error); return null; }
+      return data;
+    },
+    async create(inv) {
+      var sb = getSupabase();
+      if (!sb) return null;
+      var { data, error } = await sb.from('investors').insert({
+        name:       (inv.name || '').trim(),
+        type:       inv.type || 'person',
+        company_id: inv.company_id || null,
+        email:      inv.email || '',
+        phone:      inv.phone || '',
+        status:     inv.status || 'active',
+        notes:      inv.notes || ''
+      }).select().single();
+      if (error) { console.error('DB investors.create:', error); return null; }
+      return data;
+    },
+    async updateStatus(id, status) {
+      var sb = getSupabase();
+      if (!sb) return false;
+      var { error } = await sb.from('investors').update({ status: status }).eq('id', id);
+      if (error) { console.error('DB investors.updateStatus:', error); return false; }
+      return true;
+    },
+    async updateNotes(id, notes) {
+      var sb = getSupabase();
+      if (!sb) return false;
+      var { error } = await sb.from('investors').update({ notes: notes }).eq('id', id);
+      if (error) { console.error('DB investors.updateNotes:', error); return false; }
+      return true;
+    }
+    // No delete method — use updateStatus('inactive') instead.
+  },
+
+  investorCompanies: {
+    async getAll() {
+      var sb = getSupabase();
+      if (!sb) return null;
+      var { data, error } = await sb.from('investor_companies').select('*').order('company_name', { ascending: true });
+      if (error) { console.error('DB investorCompanies.getAll:', error); return null; }
+      return data;
+    },
+    async getById(id) {
+      var sb = getSupabase();
+      if (!sb) return null;
+      var { data, error } = await sb.from('investor_companies').select('*').eq('id', id).single();
+      if (error) { console.error('DB investorCompanies.getById:', error); return null; }
+      return data;
+    },
+    async create(co) {
+      var sb = getSupabase();
+      if (!sb) return null;
+      var { data, error } = await sb.from('investor_companies').insert({
+        company_name:   (co.company_name || '').trim(),
+        contact_person: co.contact_person || '',
+        email:          co.email || '',
+        phone:          co.phone || '',
+        license_number: co.license_number || '',
+        state:          co.state || '',
+        notes:          co.notes || ''
+      }).select().single();
+      if (error) { console.error('DB investorCompanies.create:', error); return null; }
+      return data;
+    },
+    async updateNotes(id, notes) {
+      var sb = getSupabase();
+      if (!sb) return false;
+      var { error } = await sb.from('investor_companies').update({ notes: notes }).eq('id', id);
+      if (error) { console.error('DB investorCompanies.updateNotes:', error); return false; }
+      return true;
+    }
+    // No delete method.
+  },
+
+  projectInvestors: {
+    async getByProject(projectId) {
+      var sb = getSupabase();
+      if (!sb) return null;
+      var { data, error } = await sb.from('project_investors')
+        .select('*, investors(name, type, email, status)')
+        .eq('project_id', projectId)
+        .order('created_at', { ascending: true });
+      if (error) { console.error('DB projectInvestors.getByProject:', error); return null; }
+      return data;
+    },
+    async attach(projectId, investorId, role, opts) {
+      var sb = getSupabase();
+      if (!sb) return null;
+      opts = opts || {};
+      var { data, error } = await sb.from('project_investors').insert({
+        project_id:              projectId,
+        investor_id:             investorId,
+        role:                    role || 'equity_partner',
+        ownership_percentage:    opts.ownership_percentage || null,
+        profit_split_percentage: opts.profit_split_percentage || null,
+        status:                  'pending',
+        agreement_notes:         opts.agreement_notes || ''
+      }).select().single();
+      if (error) { console.error('DB projectInvestors.attach:', error); return null; }
+      return data;
+    },
+    async confirm(id) {
+      var sb = getSupabase();
+      if (!sb) return false;
+      var { error } = await sb.from('project_investors').update({ status: 'confirmed' }).eq('id', id);
+      if (error) { console.error('DB projectInvestors.confirm:', error); return false; }
+      return true;
+    },
+    async cancel(id) {
+      // RULE 2B: No delete. Set status to cancelled.
+      var sb = getSupabase();
+      if (!sb) return false;
+      var { error } = await sb.from('project_investors').update({ status: 'cancelled' }).eq('id', id);
+      if (error) { console.error('DB projectInvestors.cancel:', error); return false; }
+      return true;
+    }
+    // No delete method.
+  },
+
+  capitalContributions: {
+    async getByProject(projectId) {
+      var sb = getSupabase();
+      if (!sb) return null;
+      var { data, error } = await sb.from('capital_contributions')
+        .select('*, investors(name, type)')
+        .eq('project_id', projectId)
+        .order('date', { ascending: false });
+      if (error) { console.error('DB capitalContributions.getByProject:', error); return null; }
+      return data;
+    },
+    async getByInvestor(projectId, investorId) {
+      var sb = getSupabase();
+      if (!sb) return null;
+      var { data, error } = await sb.from('capital_contributions')
+        .select('*')
+        .eq('project_id', projectId)
+        .eq('investor_id', investorId)
+        .order('date', { ascending: false });
+      if (error) { console.error('DB capitalContributions.getByInvestor:', error); return null; }
+      return data;
+    },
+    async getTotalConfirmedByProject(projectId) {
+      var sb = getSupabase();
+      if (!sb) return 0;
+      var { data, error } = await sb.from('capital_contributions')
+        .select('amount')
+        .eq('project_id', projectId)
+        .eq('status', 'confirmed');
+      if (error) { console.error('DB capitalContributions.getTotalConfirmedByProject:', error); return 0; }
+      return (data || []).reduce(function(sum, r) { return sum + (parseFloat(r.amount) || 0); }, 0);
+    },
+    async create(contrib) {
+      var sb = getSupabase();
+      if (!sb) return null;
+      // RULE: Validate amount > 0 in JS before sending to DB
+      var amt = parseFloat(contrib.amount) || 0;
+      if (amt <= 0) { console.error('DB capitalContributions.create: amount must be > 0'); return null; }
+      var { data, error } = await sb.from('capital_contributions').insert({
+        project_id:         contrib.project_id,
+        investor_id:        contrib.investor_id,
+        amount:             amt,
+        date:               contrib.date,
+        method:             contrib.method || 'wire',
+        type:               contrib.type || 'initial',
+        status:             'pending',
+        evidence_reference: contrib.evidence_reference || '',
+        notes:              contrib.notes || ''
+      }).select().single();
+      if (error) { console.error('DB capitalContributions.create:', error); return null; }
+      return data;
+    },
+    async confirm(id) {
+      var sb = getSupabase();
+      if (!sb) return false;
+      var { error } = await sb.from('capital_contributions').update({ status: 'confirmed' }).eq('id', id);
+      if (error) { console.error('DB capitalContributions.confirm:', error); return false; }
+      return true;
+    },
+    async cancel(id) {
+      // RULE 2B: No delete. Set status to cancelled. Historical data preserved.
+      var sb = getSupabase();
+      if (!sb) return false;
+      var { error } = await sb.from('capital_contributions').update({ status: 'cancelled' }).eq('id', id);
+      if (error) { console.error('DB capitalContributions.cancel:', error); return false; }
+      return true;
+    }
+    // No delete method — DB trigger also blocks DELETE.
+    // To correct a wrong amount: cancel this record, create a new one.
+  },
+
+  capitalCalls: {
+    async getByProject(projectId) {
+      var sb = getSupabase();
+      if (!sb) return null;
+      var { data, error } = await sb.from('capital_calls')
+        .select('*')
+        .eq('project_id', projectId)
+        .order('created_at', { ascending: false });
+      if (error) { console.error('DB capitalCalls.getByProject:', error); return null; }
+      return data;
+    },
+    async create(call) {
+      var sb = getSupabase();
+      if (!sb) return null;
+      var amt = parseFloat(call.requested_amount) || 0;
+      if (amt <= 0) { console.error('DB capitalCalls.create: requested_amount must be > 0'); return null; }
+      var { data, error } = await sb.from('capital_calls').insert({
+        project_id:       call.project_id,
+        requested_amount: amt,
+        reason:           (call.reason || '').trim(),
+        due_date:         call.due_date || null,
+        status:           'pending',
+        notes:            call.notes || ''
+      }).select().single();
+      if (error) { console.error('DB capitalCalls.create:', error); return null; }
+      return data;
+    },
+    async confirm(id) {
+      var sb = getSupabase();
+      if (!sb) return false;
+      var { error } = await sb.from('capital_calls').update({ status: 'confirmed' }).eq('id', id);
+      if (error) { console.error('DB capitalCalls.confirm:', error); return false; }
+      return true;
+    },
+    async cancel(id) {
+      var sb = getSupabase();
+      if (!sb) return false;
+      var { error } = await sb.from('capital_calls').update({ status: 'cancelled' }).eq('id', id);
+      if (error) { console.error('DB capitalCalls.cancel:', error); return false; }
+      return true;
+    }
+    // No delete method.
+  },
+
   // ---------- SEED DEFAULTS ----------
   async seedIfEmpty() {
     var sb = getSupabase();
