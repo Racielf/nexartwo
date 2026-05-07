@@ -121,10 +121,16 @@ function renderProjectList() {
   if (!container) return;
 
   if (PROJECTS.length === 0) {
-    container.innerHTML = '<div class="proj-empty">' +
+    container.innerHTML = '<div class="proj-empty" style="max-width:400px;margin:0 auto;">' +
       '<i data-lucide="building-2" style="width:48px;height:48px"></i>' +
-      '<p style="font-size:16px;margin:0 0 4px">No projects yet</p>' +
-      '<p style="font-size:13px;margin:0">Create your first project to start tracking finances.</p>' +
+      '<p style="font-size:16px;font-weight:700;color:var(--text-primary);margin:0 0 8px">No projects yet</p>' +
+      '<p style="font-size:13px;color:var(--text-secondary);margin:0 0 16px">Create your first project to unlock Financials, Expenses, Refunds, Disbursements, and Work Orders.</p>' +
+      '<div style="text-align:left;background:var(--bg-card);border:1px solid var(--border);border-radius:8px;padding:16px;margin-bottom:24px;">' +
+      '<div style="font-size:12px;font-weight:600;margin-bottom:8px">Inside each project:</div>' +
+      '<ul style="font-size:12px;color:var(--text-secondary);margin:0;padding-left:20px;line-height:1.6">' +
+      '<li>Financial dashboard</li><li>Expense tracking</li><li>Refund tracking</li><li>Disbursements</li><li>Work Orders linked to projects</li>' +
+      '</ul></div>' +
+      '<button class="btn btn-primary" onclick="openProjectModal()">Create First Project</button>' +
       '</div>';
     lucide.createIcons();
     return;
@@ -190,46 +196,59 @@ function openProjectModal(editId) {
   var box = document.querySelector('.confirm-box');
 
   box.innerHTML =
-    '<h3 style="margin:0 0 16px;font-size:16px">' + (proj ? 'Edit Project' : 'New Project') + '</h3>' +
-    '<div style="display:flex;flex-direction:column;gap:10px;text-align:left;max-height:70vh;overflow-y:auto;padding-right:8px">' +
-    '<div><label style="font-size:12px;color:var(--text-secondary);display:block;margin-bottom:4px">Project Name *</label>' +
-    '<input type="text" id="proj-name" class="form-control" placeholder="e.g. 1234 Oak Street Renovation" style="width:100%" value="' + escHtml(proj ? proj.name : '') + '"></div>' +
-    '<div><label style="font-size:12px;color:var(--text-secondary);display:block;margin-bottom:4px">Address</label>' +
-    '<input type="text" id="proj-address" class="form-control" placeholder="Full property address" style="width:100%" value="' + escHtml(proj ? proj.address : '') + '"></div>' +
-    '<div style="display:flex;gap:10px">' +
-    '<div style="flex:1"><label style="font-size:12px;color:var(--text-secondary);display:block;margin-bottom:4px">Purchase Date</label>' +
-    '<input type="date" id="proj-date" class="form-control" style="width:100%" value="' + (proj ? (proj.purchase_date || proj.purchaseDate || '') : '') + '"></div>' +
-    '<div style="flex:1"><label style="font-size:12px;color:var(--text-secondary);display:block;margin-bottom:4px">Status</label>' +
-    '<select id="proj-status" class="form-control" style="width:100%">' +
+    '<h3 style="margin:0 0 16px;font-size:18px;font-weight:700;color:var(--text-primary);display:flex;align-items:center;gap:8px">' +
+    '<i data-lucide="building-2" style="width:20px;height:20px;color:var(--accent)"></i> ' +
+    (proj ? 'Edit Project' : 'New Project') + '</h3>' +
+    '<div style="display:flex;flex-direction:column;gap:16px;text-align:left;max-height:70vh;overflow-y:auto;padding:4px 8px 12px 4px">' +
+    
+    // Core Info Group
+    '<div style="background:var(--bg-primary);border:1px solid var(--border);border-radius:8px;padding:16px;display:flex;flex-direction:column;gap:12px">' +
+    '<div><label style="font-size:12px;font-weight:600;color:var(--text-secondary);display:block;margin-bottom:6px">Project Name *</label>' +
+    '<input type="text" id="proj-name" class="form-control" placeholder="e.g. 1234 Oak Street Renovation" style="width:100%;padding:10px;font-size:14px" value="' + escHtml(proj ? proj.name : '') + '"></div>' +
+    '<div><label style="font-size:12px;font-weight:600;color:var(--text-secondary);display:block;margin-bottom:6px">Address</label>' +
+    '<input type="text" id="proj-address" class="form-control" placeholder="Full property address" style="width:100%;padding:10px;font-size:14px" value="' + escHtml(proj ? proj.address : '') + '"></div>' +
+    '<div style="display:flex;gap:12px">' +
+    '<div style="flex:1"><label style="font-size:12px;font-weight:600;color:var(--text-secondary);display:block;margin-bottom:6px">Purchase Date</label>' +
+    '<input type="date" id="proj-date" class="form-control" style="width:100%;padding:10px;font-size:14px" value="' + (proj ? (proj.purchase_date || proj.purchaseDate || '') : '') + '"></div>' +
+    '<div style="flex:1"><label style="font-size:12px;font-weight:600;color:var(--text-secondary);display:block;margin-bottom:6px">Status</label>' +
+    '<select id="proj-status" class="form-control" style="width:100%;padding:10px;font-size:14px">' +
     Object.keys(PROJECT_STATUSES).map(function(k) {
       return '<option value="' + k + '"' + (proj && proj.status === k ? ' selected' : '') + '>' + PROJECT_STATUSES[k].label + '</option>';
     }).join('') + '</select></div></div>' +
-    '<div><label style="font-size:12px;color:var(--text-secondary);display:block;margin-bottom:4px">Responsible</label>' +
-    '<input type="text" id="proj-responsible" class="form-control" placeholder="Project manager / owner" style="width:100%" value="' + escHtml(proj ? proj.responsible : '') + '"></div>' +
-    '<div style="font-size:13px;font-weight:700;color:var(--text-primary);margin-top:8px;padding-top:8px;border-top:1px solid var(--border)">Financial Setup</div>' +
-    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">' +
-    '<div><label style="font-size:12px;color:var(--text-secondary);display:block;margin-bottom:4px">Purchase Price ($)</label>' +
-    '<input type="number" id="proj-purchase" class="form-control" placeholder="0" step="0.01" style="width:100%" value="' + (proj ? (proj.purchase_price || proj.purchasePrice || '') : '') + '"></div>' +
-    '<div><label style="font-size:12px;color:var(--text-secondary);display:block;margin-bottom:4px">Down Payment ($)</label>' +
-    '<input type="number" id="proj-down" class="form-control" placeholder="0" step="0.01" style="width:100%" value="' + (proj ? (proj.down_payment || proj.downPayment || '') : '') + '"></div>' +
-    '<div><label style="font-size:12px;color:var(--text-secondary);display:block;margin-bottom:4px">Loan Amount ($)</label>' +
-    '<input type="number" id="proj-loan" class="form-control" placeholder="0" step="0.01" style="width:100%" value="' + (proj ? (proj.loan_amount || proj.loanAmount || '') : '') + '"></div>' +
-    '<div><label style="font-size:12px;color:var(--text-secondary);display:block;margin-bottom:4px">Closing Costs ($)</label>' +
-    '<input type="number" id="proj-closing" class="form-control" placeholder="0" step="0.01" style="width:100%" value="' + (proj ? (proj.closing_costs || proj.closingCosts || '') : '') + '"></div>' +
-    '<div><label style="font-size:12px;color:var(--text-secondary);display:block;margin-bottom:4px">Realtor Fee ($)</label>' +
-    '<input type="number" id="proj-realtor" class="form-control" placeholder="0" step="0.01" style="width:100%" value="' + (proj ? (proj.realtor_fee || proj.realtorFee || '') : '') + '"></div>' +
-    '<div><label style="font-size:12px;color:var(--text-secondary);display:block;margin-bottom:4px">Title Company Fee ($)</label>' +
-    '<input type="number" id="proj-title-fee" class="form-control" placeholder="0" step="0.01" style="width:100%" value="' + (proj ? (proj.title_company_fee || '') : '') + '"></div>' +
-    '<div><label style="font-size:12px;color:var(--text-secondary);display:block;margin-bottom:4px">Inspection Fee ($)</label>' +
-    '<input type="number" id="proj-inspection" class="form-control" placeholder="0" step="0.01" style="width:100%" value="' + (proj ? (proj.inspection_fee || '') : '') + '"></div>' +
-    '<div><label style="font-size:12px;color:var(--text-secondary);display:block;margin-bottom:4px">Insurance ($)</label>' +
-    '<input type="number" id="proj-insurance" class="form-control" placeholder="0" step="0.01" style="width:100%" value="' + (proj ? (proj.insurance || '') : '') + '"></div>' +
-    '<div style="grid-column:1 / span 2"><label style="font-size:12px;color:var(--text-secondary);display:block;margin-bottom:4px">Title Company</label>' +
-    '<input type="text" id="proj-title-co" class="form-control" placeholder="Title company name" style="width:100%" value="' + escHtml(proj ? (proj.title_company || proj.titleCompany) : '') + '"></div>' +
+    '<div><label style="font-size:12px;font-weight:600;color:var(--text-secondary);display:block;margin-bottom:6px">Responsible</label>' +
+    '<input type="text" id="proj-responsible" class="form-control" placeholder="Project manager / owner" style="width:100%;padding:10px;font-size:14px" value="' + escHtml(proj ? proj.responsible : '') + '"></div>' +
+    '</div>' +
+
+    // Financial Setup Group
+    '<div style="background:var(--bg-primary);border:1px solid var(--border);border-radius:8px;padding:16px">' +
+    '<div style="display:flex;align-items:center;gap:6px;margin-bottom:6px"><i data-lucide="calculator" style="width:16px;height:16px;color:var(--text-secondary)"></i><div style="font-size:14px;font-weight:700;color:var(--text-primary);">Financial Setup</div></div>' +
+    '<div style="font-size:11px;color:var(--text-muted);margin-bottom:14px;background:#fff;padding:6px 10px;border-radius:6px;border:1px dashed var(--border-light)">ℹ️ Project financial fields are used for internal financial tracking.</div>' +
+    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">' +
+    '<div><label style="font-size:12px;font-weight:600;color:var(--text-secondary);display:block;margin-bottom:6px">Purchase Price ($)</label>' +
+    '<input type="number" id="proj-purchase" class="form-control" placeholder="0.00" step="0.01" style="width:100%;padding:8px" value="' + (proj ? (proj.purchase_price || proj.purchasePrice || '') : '') + '"></div>' +
+    '<div><label style="font-size:12px;font-weight:600;color:var(--text-secondary);display:block;margin-bottom:6px">Down Payment ($)</label>' +
+    '<input type="number" id="proj-down" class="form-control" placeholder="0.00" step="0.01" style="width:100%;padding:8px" value="' + (proj ? (proj.down_payment || proj.downPayment || '') : '') + '"></div>' +
+    '<div><label style="font-size:12px;font-weight:600;color:var(--text-secondary);display:block;margin-bottom:6px">Loan Amount ($)</label>' +
+    '<input type="number" id="proj-loan" class="form-control" placeholder="0.00" step="0.01" style="width:100%;padding:8px" value="' + (proj ? (proj.loan_amount || proj.loanAmount || '') : '') + '"></div>' +
+    '<div><label style="font-size:12px;font-weight:600;color:var(--text-secondary);display:block;margin-bottom:6px">Closing Costs ($)</label>' +
+    '<input type="number" id="proj-closing" class="form-control" placeholder="0.00" step="0.01" style="width:100%;padding:8px" value="' + (proj ? (proj.closing_costs || proj.closingCosts || '') : '') + '"></div>' +
+    '<div><label style="font-size:12px;font-weight:600;color:var(--text-secondary);display:block;margin-bottom:6px">Realtor Fee ($)</label>' +
+    '<input type="number" id="proj-realtor" class="form-control" placeholder="0.00" step="0.01" style="width:100%;padding:8px" value="' + (proj ? (proj.realtor_fee || proj.realtorFee || '') : '') + '"></div>' +
+    '<div><label style="font-size:12px;font-weight:600;color:var(--text-secondary);display:block;margin-bottom:6px">Title Company Fee ($)</label>' +
+    '<input type="number" id="proj-title-fee" class="form-control" placeholder="0.00" step="0.01" style="width:100%;padding:8px" value="' + (proj ? (proj.title_company_fee || '') : '') + '"></div>' +
+    '<div><label style="font-size:12px;font-weight:600;color:var(--text-secondary);display:block;margin-bottom:6px">Inspection Fee ($)</label>' +
+    '<input type="number" id="proj-inspection" class="form-control" placeholder="0.00" step="0.01" style="width:100%;padding:8px" value="' + (proj ? (proj.inspection_fee || '') : '') + '"></div>' +
+    '<div><label style="font-size:12px;font-weight:600;color:var(--text-secondary);display:block;margin-bottom:6px">Insurance ($)</label>' +
+    '<input type="number" id="proj-insurance" class="form-control" placeholder="0.00" step="0.01" style="width:100%;padding:8px" value="' + (proj ? (proj.insurance || '') : '') + '"></div>' +
+    '<div style="grid-column:1 / span 2"><label style="font-size:12px;font-weight:600;color:var(--text-secondary);display:block;margin-bottom:6px">Title Company</label>' +
+    '<input type="text" id="proj-title-co" class="form-control" placeholder="Title company name" style="width:100%;padding:8px" value="' + escHtml(proj ? (proj.title_company || proj.titleCompany) : '') + '"></div>' +
     '</div></div>' +
-    '<div class="confirm-actions" style="margin-top:16px">' +
-    '<button type="button" class="btn btn-secondary" onclick="closeConfirmModal()">Close</button>' +
-    '<button type="button" class="btn btn-primary" onclick="saveProject()">' + (proj ? 'Update' : 'Create Project') + '</button></div>';
+    '</div>' +
+    '<div class="confirm-actions" style="margin-top:20px;display:flex;justify-content:flex-end;gap:12px;border-top:1px solid var(--border);padding-top:16px">' +
+    '<button type="button" class="btn btn-secondary" onclick="closeConfirmModal()">Cancel</button>' +
+    '<button type="button" class="btn btn-primary" onclick="saveProject()">' + (proj ? 'Update Project' : 'Create Project') + '</button></div>';
+
+  if (typeof lucide !== 'undefined') lucide.createIcons();
 }
 
 async function saveProject() {
