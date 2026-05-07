@@ -43,6 +43,26 @@ WHERE table_schema = 'public'
   AND table_name = 'projects';
 -- Expected: 1 row
 
+-- E. Verify RLS is enabled on projects
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_tables
+    WHERE schemaname = 'public'
+      AND tablename = 'projects'
+      AND rowsecurity = true
+  ) THEN
+    RAISE EXCEPTION 'CRITICAL: RLS is not enabled on projects. Aborting 005 policies.';
+  END IF;
+END $$;
+
+SELECT schemaname, tablename, rowsecurity
+FROM pg_tables
+WHERE schemaname = 'public'
+  AND tablename = 'projects';
+-- Expected: rowsecurity = true
+
 -- ============================================================
 -- 2. DROP LEGACY POLICIES (from Migration 003 MVP)
 -- ============================================================

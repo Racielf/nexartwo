@@ -20,7 +20,7 @@ This plan defines the application of RLS policies and a financial-field protecti
 | 004b user_roles policies | ✅ PASS |
 | owner row confirmed | ✅ `1953318e-ff95-4073-abb5-e418f241b7e5` / `owner` |
 | `projects` table exists in staging | ✅ Confirmed (created by earlier migrations) |
-| RLS enabled on `projects` | Must confirm before execution |
+| RLS enabled on `projects` | ✅ Confirmed manually by owner (script also validates before applying) |
 
 ---
 
