@@ -20,8 +20,8 @@ This plan defines the application of Row Level Security (RLS) policies to the `p
 | 004b User Roles Policies | ✅ PASS | Confirmed in 005 record. |
 | 005 Projects Policies | ✅ PASS | Confirmed in 005 record. |
 | `project_expenses.created_by` | ✅ Confirmed | Applied in schema patch 202605070002. |
-| RLS enabled on `project_expenses` | Must verify | Script includes preflight check. |
-| RLS enabled on `project_refunds` | Must verify | Script includes preflight check. |
+| RLS enabled on `project_expenses` | ✅ Confirmed manually | Hardened check in script validates before applying. |
+| RLS enabled on `project_refunds` | ✅ Confirmed manually | Hardened check in script validates before applying. |
 
 ---
 

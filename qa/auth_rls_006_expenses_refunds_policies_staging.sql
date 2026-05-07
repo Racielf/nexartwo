@@ -20,6 +20,20 @@ BEGIN
 END $$;
 
 -- B. Confirm created_by column exists in project_expenses
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM information_schema.columns
+    WHERE table_schema = 'public'
+      AND table_name = 'project_expenses'
+      AND column_name = 'created_by'
+      AND data_type = 'uuid'
+  ) THEN
+    RAISE EXCEPTION 'CRITICAL: project_expenses.created_by uuid column missing. Aborting 006.';
+  END IF;
+END $$;
+
 SELECT column_name, data_type
 FROM information_schema.columns
 WHERE table_name = 'project_expenses'
@@ -27,12 +41,25 @@ WHERE table_name = 'project_expenses'
 -- Expected: 1 row, created_by, uuid
 
 -- C. Confirm RLS is enabled on target tables
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1
+    FROM pg_tables
+    WHERE schemaname = 'public'
+      AND tablename IN ('project_expenses', 'project_refunds')
+      AND rowsecurity IS DISTINCT FROM true
+  ) THEN
+    RAISE EXCEPTION 'CRITICAL: RLS is not enabled on project_expenses or project_refunds. Aborting 006.';
+  END IF;
+END $$;
+
 SELECT tablename, rowsecurity
 FROM pg_tables
 WHERE schemaname = 'public'
   AND tablename IN ('project_expenses', 'project_refunds');
 -- Expected: 2 rows with rowsecurity = true. 
--- NOTE: If rowsecurity is false, execute: ALTER TABLE [table] ENABLE ROW LEVEL SECURITY;
+-- Do not proceed if any target table has rowsecurity = false.
 
 -- ============================================================
 -- 2. CLEANUP LEGACY POLICIES (Migration 003 MVP)
