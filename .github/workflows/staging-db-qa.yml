@@ -111,16 +111,20 @@ jobs:
 
       # -------------------------------------------------------
       # STEP 7 — Run Phase 1 Financial Smoke Test
-      # Uses STAGING_SUPABASE_POOLER_DB_URL (Supavisor / IPv4 pooler).
-      # Direct DB host is NOT used. Per Incident 1 lesson: always use pooler on GitHub runners.
+      # Uses STAGING_SUPABASE_POOLER_DB_URL via env var (staging pooler ONLY).
+      # Per Incident 1 lesson: always use pooler on GitHub runners. Never direct host.
       # -------------------------------------------------------
       - name: "STEP 7 — Run Phase 1 Financial Smoke Test"
         run: |
           echo "=== PHASE 1 FINANCIAL SMOKE TEST ==="
-          psql "${{ secrets.STAGING_SUPABASE_POOLER_DB_URL }}" \
+          if ! psql "$STAGING_POOLER_DB_URL" \
             -v ON_ERROR_STOP=1 \
             -f qa/financial_system_smoke_test.sql \
-            -A -t > qa_financial_output.txt 2>&1
+            -A -t > qa_financial_output.txt 2>&1; then
+            echo "::error::psql failed while running Phase 1 Financial Smoke Test"
+            cat qa_financial_output.txt
+            exit 1
+          fi
 
           echo "--- Output ---"
           cat qa_financial_output.txt
@@ -131,19 +135,26 @@ jobs:
             exit 1
           fi
           echo "STEP 7 PASS: Phase 1 Financial Smoke Test PASSED"
+        env:
+          # Pooler URL for staging ONLY. Never use production secrets here.
+          STAGING_POOLER_DB_URL: ${{ secrets.STAGING_SUPABASE_POOLER_DB_URL }}
 
       # -------------------------------------------------------
       # STEP 8 — Run Investor Hub Smoke Test
-      # Uses STAGING_SUPABASE_POOLER_DB_URL (Supavisor / IPv4 pooler).
+      # Uses STAGING_SUPABASE_POOLER_DB_URL via env var (staging pooler ONLY).
       # Per Smoke Test Policy: ON_ERROR_STOP=1, pooler endpoint, no hardcoded IDs.
       # -------------------------------------------------------
       - name: "STEP 8 — Run Investor Hub Smoke Test"
         run: |
           echo "=== INVESTOR HUB SMOKE TEST ==="
-          psql "${{ secrets.STAGING_SUPABASE_POOLER_DB_URL }}" \
+          if ! psql "$STAGING_POOLER_DB_URL" \
             -v ON_ERROR_STOP=1 \
             -f qa/investor_hub_smoke_test.sql \
-            -A -t > qa_investor_output.txt 2>&1
+            -A -t > qa_investor_output.txt 2>&1; then
+            echo "::error::psql failed while running Investor Hub Smoke Test"
+            cat qa_investor_output.txt
+            exit 1
+          fi
 
           echo "--- Output ---"
           cat qa_investor_output.txt
@@ -159,6 +170,9 @@ jobs:
             exit 1
           fi
           echo "STEP 8 PASS: Investor Hub Smoke Test PASSED"
+        env:
+          # Pooler URL for staging ONLY. Never use production secrets here.
+          STAGING_POOLER_DB_URL: ${{ secrets.STAGING_SUPABASE_POOLER_DB_URL }}
 
       # -------------------------------------------------------
       # STEP 9 — Verify Phase 1 view project_financial_summaries exists
@@ -166,7 +180,7 @@ jobs:
       # -------------------------------------------------------
       - name: "STEP 9 — Verify Phase 1 view exists"
         run: |
-          VIEW_COUNT=$(psql "${{ secrets.STAGING_SUPABASE_POOLER_DB_URL }}" \
+          VIEW_COUNT=$(psql "$STAGING_POOLER_DB_URL" \
             -v ON_ERROR_STOP=1 -t -A \
             -c "SELECT COUNT(*) FROM information_schema.views
                 WHERE table_schema = 'public'
@@ -179,6 +193,9 @@ jobs:
             exit 1
           fi
           echo "STEP 9 PASS: project_financial_summaries view exists and is intact"
+        env:
+          # Pooler URL for staging ONLY. Never use production secrets here.
+          STAGING_POOLER_DB_URL: ${{ secrets.STAGING_SUPABASE_POOLER_DB_URL }}
 
       # -------------------------------------------------------
       # STEP 10 — Verify Investor Hub tables exist
@@ -186,7 +203,7 @@ jobs:
       # -------------------------------------------------------
       - name: "STEP 10 — Verify Investor Hub tables exist"
         run: |
-          TABLE_COUNT=$(psql "${{ secrets.STAGING_SUPABASE_POOLER_DB_URL }}" \
+          TABLE_COUNT=$(psql "$STAGING_POOLER_DB_URL" \
             -v ON_ERROR_STOP=1 -t -A \
             -c "SELECT COUNT(*) FROM information_schema.tables
                 WHERE table_schema = 'public'
@@ -205,6 +222,9 @@ jobs:
             exit 1
           fi
           echo "STEP 10 PASS: All 5 Investor Hub tables exist in staging"
+        env:
+          # Pooler URL for staging ONLY. Never use production secrets here.
+          STAGING_POOLER_DB_URL: ${{ secrets.STAGING_SUPABASE_POOLER_DB_URL }}
 
       # -------------------------------------------------------
       # STEP 11 — Final summary
