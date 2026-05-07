@@ -6,6 +6,15 @@
 var PROJECTS = [];
 var _currentProject = null;
 
+// ============================================================
+// INVESTOR HUB FEATURE FLAG — Phase 2B
+// Set to true ONLY after:
+//   1. Migration 202605070001_investor_entities.sql confirmed applied in production
+//   2. Manual UI check completed in Projects > Investor Hub
+// DO NOT enable without both checks passing.
+// ============================================================
+var INVESTOR_HUB_ENABLED = false;
+
 var PROJECT_STATUSES = {
   planning:    { label: 'Planning',     color: '#64748b', bg: '#64748b18' },
   active:      { label: 'Active',       color: '#3b82f6', bg: '#3b82f618' },
@@ -328,8 +337,20 @@ function switchProjTab(tab) {
   var tContent = document.getElementById('proj-tab-' + tab);
   if(tContent) tContent.style.display = 'block';
   // Lazy-load Investor Hub when tab is first opened
-  if (tab === 'investorhub' && _currentProject) {
-    renderInvestorHub(_currentProject.id);
+  // Guarded by INVESTOR_HUB_ENABLED feature flag (Phase 2B hotfix)
+  if (tab === 'investorhub') {
+    if (!INVESTOR_HUB_ENABLED) {
+      var blockedEl = document.getElementById('proj-tab-investorhub');
+      if (blockedEl) {
+        blockedEl.innerHTML = '<div style="padding:32px;text-align:center;color:var(--text-muted)">' +
+          '<div style="font-size:32px;margin-bottom:12px">🔒</div>' +
+          '<div style="font-weight:700;font-size:14px;margin-bottom:8px;color:var(--text-primary)">Investor Hub — Coming Soon</div>' +
+          '<div style="font-size:12px">This feature is pending final configuration.<br>Contact your administrator.</div>' +
+          '</div>';
+      }
+      return;
+    }
+    if (_currentProject) renderInvestorHub(_currentProject.id);
   }
 }
 
