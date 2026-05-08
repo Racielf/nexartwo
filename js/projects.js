@@ -1052,21 +1052,24 @@ async function renderWorkOrdersTab() {
 
   if (matchedWOs.length === 0) {
     tab.innerHTML =
-      '<div class="proj-empty" style="color:var(--text-muted);padding:64px 20px">' +
+      '<div class="proj-empty" style="color:var(--text-muted);padding:48px 20px">' +
         '<div style="background:var(--bg-secondary);width:64px;height:64px;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 16px">' +
         '<i data-lucide="clipboard-list" style="width:32px;height:32px;opacity:0.5"></i></div>' +
-        '<p style="font-size:16px;font-weight:700;color:var(--text-primary);margin:0 0 8px">No linked work orders found for this project.</p>' +
-        '<p style="font-size:13px;max-width:380px;margin:0 auto;line-height:1.6">' +
-          'Work Orders created before the project link was available will need to be re-created or manually assigned via the Work Orders module.' +
+        '<p style="font-size:16px;font-weight:700;color:var(--text-primary);margin:0 0 8px">No linked work orders yet.</p>' +
+        '<p style="font-size:13px;max-width:380px;margin:0 auto 20px;line-height:1.6">' +
+          'Link existing unassigned Work Orders to this project.' +
         '</p>' +
+        '<button class="btn btn-primary btn-sm" onclick="openLinkWOModal()" style="gap:6px">' +
+        '<i data-lucide="link" style="width:14px;height:14px"></i> Link Existing Work Orders</button>' +
       '</div>';
     if (typeof lucide !== 'undefined') lucide.createIcons();
     return;
   }
 
   var html = '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">' +
-    '<h4 style="margin:0;font-size:13px;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.5px">Linked Work Orders</h4>' +
-    '<span style="font-size:11px;color:var(--text-muted)">' + matchedWOs.length + ' found</span>' +
+    '<h4 style="margin:0;font-size:13px;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.5px">Linked Work Orders <span style="font-weight:400;font-size:11px;color:var(--text-muted)">(' + matchedWOs.length + ')</span></h4>' +
+    '<button class="btn btn-secondary btn-sm" onclick="openLinkWOModal()" style="gap:6px">' +
+    '<i data-lucide="link" style="width:13px;height:13px"></i> Link Existing</button>' +
     '</div>';
 
   html += '<div style="overflow-x:auto;width:100%"><table class="proj-table"><thead><tr>' +
@@ -1087,6 +1090,168 @@ async function renderWorkOrdersTab() {
   html += '</tbody></table></div>';
   tab.innerHTML = html;
   if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
+// ============================================================
+// LINK EXISTING WORK ORDERS MODAL — Phase 2C
+// Opens the shared confirm-box overlay with a custom checkbox list.
+// Shows: unassigned WOs first, then already-linked WOs (checked/disabled).
+// Excludes WOs linked to other projects.
+// ============================================================
+async function openLinkWOModal() {
+  if (!_currentProject) return;
+
+  var overlay = document.getElementById('confirm-modal-overlay');
+  var box     = document.querySelector('.confirm-box');
+  if (!overlay || !box) return;
+
+  // Show loading state immediately
+  box.innerHTML =
+    '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">' +
+      '<h3 style="margin:0;font-size:16px;font-weight:700">Link Work Orders to Project</h3>' +
+      '<button class="btn btn-ghost btn-sm" onclick="closeConfirmModal()" style="padding:4px 8px">✕</button>' +
+    '</div>' +
+    '<div style="font-size:12px;color:var(--text-muted);margin-bottom:16px">' +
+      'Project: <strong>' + escHtml(_currentProject.name) + '</strong>' +
+    '</div>' +
+    '<div style="padding:24px;text-align:center;color:var(--text-muted);font-size:13px">Loading Work Orders…</div>';
+  overlay.style.display = 'flex';
+
+  // Fetch all WOs
+  var allWOs = [];
+  if (typeof isSupabaseReady === 'function' && isSupabaseReady()) {
+    allWOs = await DB.workOrders.getAll() || [];
+  }
+
+  // Partition: already linked vs unassigned — exclude WOs from other projects
+  var alreadyLinked = allWOs.filter(function(wo) {
+    return wo.project_id === _currentProject.id;
+  });
+  var unassigned = allWOs.filter(function(wo) {
+    return !wo.project_id || wo.project_id === null || wo.project_id === '';
+  });
+
+  var totalEligible = unassigned.length + alreadyLinked.length;
+
+  // ── Build modal HTML ────────────────────────────────────────────────────────
+  var listHtml = '';
+
+  if (totalEligible === 0) {
+    listHtml =
+      '<div style="padding:32px;text-align:center;color:var(--text-muted);font-size:13px">' +
+        '<div style="font-size:28px;margin-bottom:12px">📋</div>' +
+        'No unassigned Work Orders available to link.' +
+      '</div>';
+  } else {
+    // Unassigned WOs — selectable checkboxes
+    if (unassigned.length > 0) {
+      listHtml += '<div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px">Available to Link</div>';
+      unassigned.forEach(function(wo) {
+        var stColor = wo.status === 'completed' ? 'var(--success)' : (wo.status === 'cancelled' ? 'var(--danger)' : 'var(--accent)');
+        listHtml +=
+          '<label style="display:flex;align-items:flex-start;gap:10px;padding:10px;border:1px solid var(--border);border-radius:6px;margin-bottom:6px;cursor:pointer;background:var(--bg-primary)">' +
+            '<input type="checkbox" class="wo-link-check" data-wo-id="' + escHtml(wo.id) + '" style="margin-top:3px;cursor:pointer">' +
+            '<div style="min-width:0;flex:1">' +
+              '<div style="font-weight:600;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + escHtml(wo.title || wo.id) + '</div>' +
+              '<div style="font-size:11px;color:var(--text-muted)">' +
+                escHtml(wo.client || '—') +
+                ' · <span style="font-weight:700;color:' + stColor + '">' + (wo.status || 'pending').toUpperCase() + '</span>' +
+                ' · ' + fmtMoney(wo.total) +
+              '</div>' +
+            '</div>' +
+          '</label>';
+      });
+    }
+
+    // Already-linked WOs — shown checked and disabled so user can see what's already here
+    if (alreadyLinked.length > 0) {
+      listHtml += '<div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;margin:14px 0 8px">Already Linked</div>';
+      alreadyLinked.forEach(function(wo) {
+        var stColor = wo.status === 'completed' ? 'var(--success)' : (wo.status === 'cancelled' ? 'var(--danger)' : 'var(--accent)');
+        listHtml +=
+          '<label style="display:flex;align-items:flex-start;gap:10px;padding:10px;border:1px solid var(--border);border-radius:6px;margin-bottom:6px;background:var(--bg-secondary);opacity:0.7;cursor:default">' +
+            '<input type="checkbox" disabled checked style="margin-top:3px">' +
+            '<div style="min-width:0;flex:1">' +
+              '<div style="font-weight:600;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + escHtml(wo.title || wo.id) + '</div>' +
+              '<div style="font-size:11px;color:var(--text-muted)">' +
+                escHtml(wo.client || '—') +
+                ' · <span style="font-weight:700;color:' + stColor + '">' + (wo.status || 'pending').toUpperCase() + '</span>' +
+                ' · ' + fmtMoney(wo.total) +
+              '</div>' +
+            '</div>' +
+          '</label>';
+      });
+    }
+  }
+
+  box.innerHTML =
+    // Header
+    '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">' +
+      '<h3 style="margin:0;font-size:16px;font-weight:700">Link Work Orders to Project</h3>' +
+      '<button class="btn btn-ghost btn-sm" onclick="closeConfirmModal()" style="padding:4px 10px;font-size:16px;line-height:1">✕</button>' +
+    '</div>' +
+    '<div style="font-size:12px;color:var(--text-muted);margin-bottom:16px">' +
+      'Project: <strong>' + escHtml(_currentProject.name) + '</strong>' +
+    '</div>' +
+    // Scrollable list
+    '<div id="wo-link-list" style="max-height:340px;overflow-y:auto;margin-bottom:16px;padding-right:2px">' +
+      listHtml +
+    '</div>' +
+    // Actions
+    '<div style="display:flex;justify-content:flex-end;gap:10px;border-top:1px solid var(--border);padding-top:14px">' +
+      '<button class="btn btn-secondary" onclick="closeConfirmModal()">Cancel</button>' +
+      (unassigned.length > 0
+        ? '<button id="wo-link-save-btn" class="btn btn-primary" onclick="saveLinkWOs()">Link Selected</button>'
+        : '') +
+    '</div>';
+
+  if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
+// Saves the checked Work Orders from the link modal and links them to _currentProject.
+async function saveLinkWOs() {
+  if (!_currentProject) return;
+
+  var checkboxes = document.querySelectorAll('.wo-link-check:checked');
+  if (checkboxes.length === 0) {
+    showToast('⚠️ No Work Orders selected.');
+    return;
+  }
+
+  var saveBtn = document.getElementById('wo-link-save-btn');
+  if (saveBtn) { saveBtn.disabled = true; saveBtn.textContent = 'Linking…'; }
+
+  var ids = [];
+  checkboxes.forEach(function(cb) { ids.push(cb.getAttribute('data-wo-id')); });
+
+  var successCount = 0;
+  var failIds = [];
+
+  for (var i = 0; i < ids.length; i++) {
+    var woId = ids[i];
+    var ok = false;
+    if (typeof isSupabaseReady === 'function' && isSupabaseReady()) {
+      ok = await DB.workOrders.update(woId, { project_id: _currentProject.id });
+    }
+    if (ok) {
+      successCount++;
+    } else {
+      failIds.push(woId);
+    }
+  }
+
+  closeConfirmModal();
+
+  if (failIds.length > 0) {
+    showToast('⚠️ ' + failIds.length + ' Work Order(s) failed to link. Check console.');
+    console.error('saveLinkWOs: failed WO IDs', failIds);
+  }
+  if (successCount > 0) {
+    showToast('✅ ' + successCount + ' Work Order' + (successCount > 1 ? 's' : '') + ' linked to this project.');
+  }
+
+  // Re-render WO tab with updated data regardless of partial failure
+  await renderWorkOrdersTab();
 }
 
 // ============================================================
