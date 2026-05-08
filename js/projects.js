@@ -39,7 +39,28 @@ function showToast(msg) {
   setTimeout(function() { t.classList.remove('show'); }, 2800);
 }
 
+// Restores the original .confirm-box skeleton so showConfirmModal() always
+// finds its required IDs (confirm-modal-title / msg / btn) after openProjectModal()
+// has replaced the innerHTML wholesale with a custom form.
+function ensureConfirmBoxSkeleton() {
+  if (!document.getElementById('confirm-modal-title') ||
+      !document.getElementById('confirm-modal-msg')   ||
+      !document.getElementById('confirm-modal-btn'))  {
+    var box = document.querySelector('.confirm-box');
+    if (box) {
+      box.innerHTML =
+        '<h3 id="confirm-modal-title">Confirm</h3>' +
+        '<p id="confirm-modal-msg"></p>' +
+        '<div class="confirm-actions">' +
+          '<button class="btn btn-secondary" onclick="closeConfirmModal()">Cancel</button>' +
+          '<button type="button" class="btn btn-danger" id="confirm-modal-btn">Confirm</button>' +
+        '</div>';
+    }
+  }
+}
+
 function showConfirmModal(title, msg, onConfirm) {
+  ensureConfirmBoxSkeleton(); // defensive: guarantee IDs exist before writing to them
   document.getElementById('confirm-modal-title').textContent = title;
   document.getElementById('confirm-modal-msg').innerHTML = msg;
   var btn = document.getElementById('confirm-modal-btn');
@@ -50,6 +71,7 @@ function showConfirmModal(title, msg, onConfirm) {
 
 function closeConfirmModal() {
   document.getElementById('confirm-modal-overlay').style.display = 'none';
+  ensureConfirmBoxSkeleton(); // restore skeleton so next openProjectModal() finds clean DOM
 }
 
 function fmtMoney(val) {
