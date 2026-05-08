@@ -45,7 +45,8 @@ var PROJECT_TYPES = {
     icon: 'house',
     modalTitle: 'New Residential Project',
     showAcquisition: false,
-    showBudgetOnly: true
+    showBudgetOnly: true,
+    hideRealtorTitle: true   // residential: hide Realtor/Title/Inspection/Insurance
   },
   commercial_project: {
     label: 'Commercial Project',
@@ -55,7 +56,8 @@ var PROJECT_TYPES = {
     icon: 'building',
     modalTitle: 'New Commercial Project',
     showAcquisition: false,
-    showBudgetOnly: true
+    showBudgetOnly: true,
+    hideRealtorTitle: true   // commercial: hide Realtor/Title/Inspection/Insurance
   },
   new_construction: {
     label: 'New Construction',
@@ -542,6 +544,8 @@ async function openProjectDetail(projId) {
   document.getElementById('proj-list-view').style.display = 'none';
   document.getElementById('proj-detail-view').style.display = 'block';
   document.getElementById('topbar-title').textContent = _currentProject.name;
+  var _nb = document.getElementById('btn-new-project');
+  if (_nb) _nb.style.display = 'none';  // hide + New Project while in detail
 
   // Set loading flag BEFORE initial render so spinner shows only when Supabase is active
   _currentProject._financialsLoading = (typeof isSupabaseReady === 'function' && isSupabaseReady());
@@ -556,6 +560,8 @@ function showProjectList() {
   document.getElementById('proj-detail-view').style.display = 'none';
   document.getElementById('proj-list-view').style.display = 'block';
   document.getElementById('topbar-title').textContent = 'Projects';
+  var _nb = document.getElementById('btn-new-project');
+  if (_nb) _nb.style.display = '';  // restore + New Project on list view
   renderProjectList();
 }
 
