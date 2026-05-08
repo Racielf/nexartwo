@@ -303,6 +303,7 @@ function navigateTo(page) {
   document.getElementById('topbar-subtitle').textContent = t[1];
 
   // Page-specific init
+  if (page === 'dashboard') renderDashboard();
   if (page === 'settings') populateSettingsForm();
   if (page === 'fieldmode') initFieldMode();
   lucide.createIcons();
@@ -344,15 +345,127 @@ function renderDashboard() {
 
   // Activity feed
   const feed = document.getElementById('activity-feed');
-  feed.innerHTML = ACTIVITIES.map(a => `
-    <div class="activity-item">
-      <div class="activity-dot" style="background:${a.color}"></div>
-      <div>
-        <div class="activity-text">${a.text}</div>
-        <div class="activity-time">${a.time}</div>
+  if (feed) {
+    feed.innerHTML = ACTIVITIES.map(a => `
+      <div class="activity-item">
+        <div class="activity-dot" style="background:${a.color}"></div>
+        <div>
+          <div class="activity-text">${a.text}</div>
+          <div class="activity-time">${a.time}</div>
+        </div>
       </div>
-    </div>
-  `).join('');
+    `).join('');
+  }
+
+  // Dashboard Financial Overview (Phase 2)
+  renderDashboardFinancials();
+}
+
+/**
+ * Renders a compact portfolio-level financial summary on the dashboard
+ * using aggregate data from DB.projects and DB.projectFinancialSummaries
+ */
+async function renderDashboardFinancials() {
+  const container = document.getElementById('dashboard-financial-summary');
+  if (!container) return;
+
+  // Only show if we are on dashboard and Supabase is ready
+  if (currentPage !== 'dashboard' || typeof DB === 'undefined' || !isSupabaseReady()) {
+    container.style.display = 'none';
+    return;
+  }
+
+  // Show compact loading state if it's the first load
+  if (!container.innerHTML) {
+    container.style.display = 'block';
+    container.innerHTML = `
+      <div style="background:var(--bg-card);border:1px dashed var(--border);border-radius:var(--radius-lg);padding:24px;text-align:center;color:var(--text-muted)">
+        <i data-lucide="loader" style="width:18px;height:18px;animation:spin 1s linear infinite;margin-bottom:8px"></i>
+        <div style="font-size:12px">Loading portfolio financials...</div>
+      </div>`;
+    lucide.createIcons();
+  }
+
+  try {
+    const [projects, summaries] = await Promise.all([
+      DB.projects.getAll(),
+      DB.projectFinancialSummaries.getAll()
+    ]);
+
+    if (!projects || projects.length === 0) {
+      container.style.display = 'none';
+      return;
+    }
+
+    // Roll up stats
+    const totalProjects = projects.length;
+    
+    // Create a map for quick lookup
+    const summaryMap = {};
+    if (summaries) {
+      summaries.forEach(s => { summaryMap[s.project_id] = s; });
+    }
+
+    let totalCostBasis = 0;
+    let totalCashPosition = 0;
+    let totalProfit = 0;
+    let projectsWithData = 0;
+
+    projects.forEach(p => {
+      const s = summaryMap[p.id];
+      if (s) {
+        totalCostBasis += parseFloat(s.cost_basis || 0);
+        totalCashPosition += parseFloat(s.project_cash_position || 0);
+        totalProfit += parseFloat(s.profit || 0);
+        projectsWithData++;
+      }
+    });
+
+    if (projectsWithData === 0) {
+      container.style.display = 'none';
+      return;
+    }
+
+    const fmtMoney = (val) => '$' + (val || 0).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+    const profitColor = totalProfit >= 0 ? 'var(--success)' : 'var(--danger)';
+
+    container.style.display = 'block';
+    container.innerHTML = `
+      <div class="card" style="border:1px solid var(--border);border-radius:12px;overflow:hidden;background:var(--gradient-card)">
+        <div style="padding:12px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;background:rgba(255,255,255,0.03)">
+          <div style="display:flex;align-items:center;gap:8px">
+            <i data-lucide="line-chart" style="width:16px;height:16px;color:var(--accent)"></i>
+            <h4 style="margin:0;font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-secondary)">Portfolio Financial Overview</h4>
+          </div>
+          <div style="font-size:10px;font-weight:600;color:var(--text-muted);background:var(--bg-input);padding:2px 8px;border-radius:10px;border:1px solid var(--border)">
+            ${projectsWithData} / ${totalProjects} Projects Reporting
+          </div>
+        </div>
+        <div style="padding:20px;display:grid;grid-template-columns:repeat(auto-fit, minmax(180px, 1fr));gap:24px">
+          <div>
+            <div style="font-size:11px;color:var(--text-muted);margin-bottom:4px;font-weight:600">Total Asset Value</div>
+            <div style="font-size:22px;font-weight:800;color:var(--text-primary)">${fmtMoney(totalCostBasis)}</div>
+            <div style="font-size:10px;color:var(--text-muted);margin-top:4px">Cost basis aggregate</div>
+          </div>
+          <div>
+            <div style="font-size:11px;color:var(--text-muted);margin-bottom:4px;font-weight:600">Net Cash Position</div>
+            <div style="font-size:22px;font-weight:800;color:${totalCashPosition >= 0 ? 'var(--success)' : 'var(--danger)'}">${fmtMoney(totalCashPosition)}</div>
+            <div style="font-size:10px;color:var(--text-muted);margin-top:4px">Liquid position vs expenses</div>
+          </div>
+          <div style="border-left:1px dashed var(--border);padding-left:24px">
+            <div style="font-size:11px;color:var(--text-muted);margin-bottom:4px;font-weight:600">Unrealized Portfolio P&L</div>
+            <div style="font-size:22px;font-weight:800;color:${profitColor}">${totalProfit >= 0 ? '+' : ''}${fmtMoney(totalProfit)}</div>
+            <div style="font-size:10px;color:var(--text-muted);margin-top:4px">Projected final profit</div>
+          </div>
+        </div>
+      </div>`;
+    
+    lucide.createIcons();
+
+  } catch (err) {
+    console.error('Error rendering dashboard financials:', err);
+    container.style.display = 'none';
+  }
 }
 
 // ============ RENDER SERVICE LIBRARY ============
