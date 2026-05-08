@@ -225,6 +225,7 @@ let currentPage = 'dashboard';
 let currentFilter = 'All';
 let currentClientFilter = 'All';
 let currentWO = null;
+var _currentEditingWOId = null; // null = create mode, string = edit mode
 
 // ============ INITIALIZATION ============
 document.addEventListener('DOMContentLoaded', async () => {
@@ -553,6 +554,9 @@ function renderWorkOrders() {
         <div class="action-dropdown" id="wo-menu-${wo.id}">
           <div class="action-dropdown-item" onclick="openWorkOrderDetail('${wo.id}');closeAllWOMenus()">
             <i data-lucide="eye" style="width:14px;height:14px"></i> View Detail
+          </div>
+          <div class="action-dropdown-item" onclick="openEditWOModal('${wo.id}');closeAllWOMenus()">
+            <i data-lucide="pencil" style="width:14px;height:14px"></i> Edit Work Order
           </div>
           <div class="action-dropdown-item" onclick="openWorkOrderDetail('${wo.id}');closeAllWOMenus();setTimeout(function(){switchWOTab('document')},200)">
             <i data-lucide="file-text" style="width:14px;height:14px"></i> Open Document
@@ -3864,6 +3868,12 @@ function closeModal(modalId) {
 }
 
 function openNewWOModal(preselectedClient) {
+  // Always enter create mode
+  _currentEditingWOId = null;
+  document.getElementById('new-wo-modal-title').innerHTML =
+    '<i data-lucide="clipboard-list" style="width:20px;height:20px;margin-right:8px;vertical-align:text-bottom"></i> New Work Order';
+  document.getElementById('new-wo-submit-btn').textContent = 'Create Work Order';
+
   // Populate client dropdown from CLIENTS array (always fresh)
   var sel = document.getElementById('new-wo-client');
   sel.innerHTML = '<option value="">Select client...</option>';
@@ -3892,6 +3902,13 @@ function openNewWOModal(preselectedClient) {
       openNewClientModal();
     }
   };
+
+  // Clear other fields for create mode
+  document.getElementById('new-wo-title').value = '';
+  document.getElementById('new-wo-property').value = '';
+  document.getElementById('new-wo-type').value = 'A';
+  document.getElementById('new-wo-priority').value = 'medium';
+  document.getElementById('new-wo-target').value = '';
 
   // Populate Project dropdown (optional link)
   var projSel = document.getElementById('new-wo-project');
@@ -3924,11 +3941,76 @@ function openNewWOModal(preselectedClient) {
   }
 
   openModal('modal-new-wo');
+  if (typeof lucide !== 'undefined') lucide.createIcons();
 }
+
+// Opens the New WO modal in edit mode, prefilling all fields from an existing WO.
+// Does NOT auto-fill Property Address when the Project dropdown changes (edit mode only).
+function openEditWOModal(woId) {
+  var wo = WORK_ORDERS.find(function(w) { return w.id === woId; });
+  if (!wo) { showToast('⚠️ Work Order not found'); return; }
+
+  _currentEditingWOId = woId;
+
+  // Set modal labels to edit mode
+  document.getElementById('new-wo-modal-title').innerHTML =
+    '<i data-lucide="pencil" style="width:20px;height:20px;margin-right:8px;vertical-align:text-bottom"></i> Edit Work Order';
+  document.getElementById('new-wo-submit-btn').textContent = 'Save Changes';
+
+  // Populate client dropdown
+  var sel = document.getElementById('new-wo-client');
+  sel.innerHTML = '<option value="">Select client...</option>';
+  CLIENTS.forEach(function(c) {
+    var opt = document.createElement('option');
+    opt.value = c.name;
+    opt.textContent = c.name + (c.company ? ' — ' + c.company : '');
+    sel.appendChild(opt);
+  });
+  sel.onchange = null; // no new-client shortcut in edit mode
+
+  // Prefill fields
+  document.getElementById('new-wo-title').value    = wo.title || '';
+  sel.value                                          = wo.client || '';
+  document.getElementById('new-wo-type').value     = wo.type || 'A';
+  document.getElementById('new-wo-property').value = wo.property || '';
+  document.getElementById('new-wo-priority').value = wo.priority || 'medium';
+  document.getElementById('new-wo-target').value   = wo.target || '';
+
+  // Populate Project dropdown and pre-select the WO's current project
+  var projSel = document.getElementById('new-wo-project');
+  if (projSel) {
+    projSel.innerHTML = '<option value="">— No project link —</option>';
+    var projectList = (typeof PROJECTS !== 'undefined' && PROJECTS.length > 0) ? PROJECTS : [];
+
+    function populateAndSelect(list) {
+      list.forEach(function(p) {
+        var o = document.createElement('option');
+        o.value = p.id;
+        o.textContent = p.name + (p.address ? ' — ' + p.address : '');
+        o.dataset.address = p.address || '';
+        projSel.appendChild(o);
+      });
+      projSel.value = wo.project_id || '';
+    }
+
+    if (typeof DB !== 'undefined' && isSupabaseReady() && projectList.length === 0) {
+      DB.projects.getAll().then(function(ps) {
+        populateAndSelect(ps && ps.length > 0 ? ps : []);
+      }).catch(function() { projSel.value = wo.project_id || ''; });
+    } else {
+      populateAndSelect(projectList);
+    }
+  }
+
+  openModal('modal-new-wo');
+  if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
 
 // Called when user selects a project in the New WO modal.
 // Optionally prefills the Property Address if the field is empty.
 function onWOProjectSelected(projectId) {
+  if (_currentEditingWOId) return; // edit mode: never auto-fill property address
   if (!projectId) return;
   var propInput = document.getElementById('new-wo-property');
   if (!propInput || propInput.value.trim() !== '') return; // only prefill if blank
@@ -3948,35 +4030,71 @@ function createWOForClient(clientId) {
 function openNewServiceModal() { openModal('modal-new-service'); }
 
 
-function saveNewWO() {
-  const titleEl = document.getElementById('new-wo-title');
+async function saveNewWO() {
+  const titleEl  = document.getElementById('new-wo-title');
   const clientEl = document.getElementById('new-wo-client');
-  const title = titleEl.value.trim();
-  const client = clientEl.value;
+  const title    = titleEl.value.trim();
+  const client   = clientEl.value;
 
-  // Inline validation — highlight missing fields
+  // Shared validation
   var valid = true;
   if (!title) {
     titleEl.style.borderColor = 'var(--danger)';
-    titleEl.style.boxShadow = '0 0 0 3px rgba(220,38,38,0.12)';
+    titleEl.style.boxShadow   = '0 0 0 3px rgba(220,38,38,0.12)';
     titleEl.focus();
     showToast('⚠️ Work Order Title is required');
     valid = false;
-  } else {
-    titleEl.style.borderColor = '';
-    titleEl.style.boxShadow = '';
-  }
+  } else { titleEl.style.borderColor = ''; titleEl.style.boxShadow = ''; }
   if (!client) {
     clientEl.style.borderColor = 'var(--danger)';
-    clientEl.style.boxShadow = '0 0 0 3px rgba(220,38,38,0.12)';
+    clientEl.style.boxShadow   = '0 0 0 3px rgba(220,38,38,0.12)';
     if (valid) { clientEl.focus(); showToast('⚠️ Please select a Client'); }
     valid = false;
-  } else {
-    clientEl.style.borderColor = '';
-    clientEl.style.boxShadow = '';
-  }
+  } else { clientEl.style.borderColor = ''; clientEl.style.boxShadow = ''; }
   if (!valid) return;
 
+  // ── EDIT path ─────────────────────────────────────────────────────────────
+  if (_currentEditingWOId) {
+    var editId   = _currentEditingWOId;
+    var rawProjVal = document.getElementById('new-wo-project')?.value || '';
+    var changes  = {
+      title:      title,
+      client:     client,
+      clientId:   CLIENTS.find(function(c) { return c.name === client; })?.id || null,
+      property:   document.getElementById('new-wo-property').value || '',
+      type:       document.getElementById('new-wo-type').value || 'A',
+      priority:   document.getElementById('new-wo-priority').value || 'medium',
+      target:     document.getElementById('new-wo-target').value || '',
+      project_id: rawProjVal || null   // empty string → null (clears link)
+    };
+
+    // Update in-memory array first so UI is instant
+    var idx = WORK_ORDERS.findIndex(function(w) { return w.id === editId; });
+    if (idx >= 0) Object.assign(WORK_ORDERS[idx], changes);
+    saveWorkOrders();
+
+    // Persist to Supabase
+    if (typeof DB !== 'undefined' && isSupabaseReady()) {
+      DB.workOrders.update(editId, changes).then(function(ok) {
+        if (!ok) console.warn('WO update to Supabase failed for', editId);
+      });
+    }
+
+    _currentEditingWOId = null;
+    closeModal('modal-new-wo');
+    renderWorkOrders();
+    renderDashboard();
+    showToast('✅ Work Order updated');
+
+    // If the WO detail view is currently open for this WO, refresh it
+    if (currentWO && currentWO.id === editId) {
+      currentWO = WORK_ORDERS.find(function(w) { return w.id === editId; }) || currentWO;
+      openWorkOrderDetail(editId);
+    }
+    return;
+  }
+
+  // ── CREATE path (unchanged) ────────────────────────────────────────────────
   const newWO = {
     id: `WO-${new Date().getFullYear()}-${String(WORK_ORDERS.length + 41).padStart(4, '0')}`,
     title, client,
