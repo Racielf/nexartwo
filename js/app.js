@@ -370,7 +370,11 @@ async function renderDashboardFinancials() {
   if (!container) return;
 
   // Only show if we are on dashboard and Supabase is ready
-  if (currentPage !== 'dashboard' || typeof DB === 'undefined' || !isSupabaseReady()) {
+  if (
+    currentPage !== 'dashboard' ||
+    typeof DB === 'undefined' ||
+    !(typeof isSupabaseReady === 'function' && isSupabaseReady())
+  ) {
     container.style.display = 'none';
     return;
   }
