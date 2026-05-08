@@ -3893,7 +3893,50 @@ function openNewWOModal(preselectedClient) {
     }
   };
 
+  // Populate Project dropdown (optional link)
+  var projSel = document.getElementById('new-wo-project');
+  if (projSel) {
+    projSel.innerHTML = '<option value="">— No project link —</option>';
+    // Load from Supabase if available, otherwise fall back to any cached PROJECTS array
+    var projectList = (typeof PROJECTS !== 'undefined' && PROJECTS.length > 0) ? PROJECTS : [];
+    if (typeof DB !== 'undefined' && isSupabaseReady() && projectList.length === 0) {
+      DB.projects.getAll().then(function(ps) {
+        if (ps && ps.length > 0) {
+          ps.forEach(function(p) {
+            var o = document.createElement('option');
+            o.value = p.id;
+            o.textContent = p.name + (p.address ? ' — ' + p.address : '');
+            o.dataset.address = p.address || '';
+            projSel.appendChild(o);
+          });
+        }
+      }).catch(function() {});
+    } else {
+      projectList.forEach(function(p) {
+        var o = document.createElement('option');
+        o.value = p.id;
+        o.textContent = p.name + (p.address ? ' — ' + p.address : '');
+        o.dataset.address = p.address || '';
+        projSel.appendChild(o);
+      });
+    }
+    projSel.value = '';
+  }
+
   openModal('modal-new-wo');
+}
+
+// Called when user selects a project in the New WO modal.
+// Optionally prefills the Property Address if the field is empty.
+function onWOProjectSelected(projectId) {
+  if (!projectId) return;
+  var propInput = document.getElementById('new-wo-property');
+  if (!propInput || propInput.value.trim() !== '') return; // only prefill if blank
+  var projSel = document.getElementById('new-wo-project');
+  var selectedOpt = projSel ? projSel.options[projSel.selectedIndex] : null;
+  if (selectedOpt && selectedOpt.dataset.address) {
+    propInput.value = selectedOpt.dataset.address;
+  }
 }
 
 // Called from Clients page — opens WO modal with client already selected
@@ -3944,7 +3987,8 @@ function saveNewWO() {
     priority: document.getElementById('new-wo-priority').value || 'medium',
     created: new Date().toISOString().split('T')[0],
     target: document.getElementById('new-wo-target').value || '',
-    items: 0, total: 0, completed: 0
+    items: 0, total: 0, completed: 0,
+    project_id: (document.getElementById('new-wo-project')?.value || '') || null
   };
   WORK_ORDERS.unshift(newWO);
   saveWorkOrders();
@@ -3957,6 +4001,8 @@ function saveNewWO() {
   // Reset form
   titleEl.value = '';
   clientEl.value = '';
+  var projSel = document.getElementById('new-wo-project');
+  if (projSel) projSel.value = '';
   showToast('✅ Work Order ' + newWO.id + ' created');
   navigateTo('workorders');
 }
