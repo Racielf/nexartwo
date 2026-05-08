@@ -70,10 +70,10 @@ GROUP BY p.id, p.name, p.address, p.status, p.property_type;
 -- 3. PERMISSION HARDENING (Lockdown)
 -- ============================================================
 
--- Explicitly revoke from PUBLIC and standard roles
-REVOKE SELECT ON public.project_status_summary FROM PUBLIC;
-REVOKE SELECT ON public.project_status_summary FROM anon;
-REVOKE SELECT ON public.project_status_summary FROM authenticated;
+-- Explicitly revoke all privileges from PUBLIC and standard roles
+REVOKE ALL PRIVILEGES ON TABLE public.project_status_summary FROM PUBLIC;
+REVOKE ALL PRIVILEGES ON TABLE public.project_status_summary FROM anon;
+REVOKE ALL PRIVILEGES ON TABLE public.project_status_summary FROM authenticated;
 
 -- ============================================================
 -- 4. CREATE SECURE RPC (Gateway)
@@ -115,5 +115,5 @@ WHERE routine_name = 'get_project_status_summary';
 SELECT grantee, privilege_type 
 FROM information_schema.role_table_grants 
 WHERE table_name = 'project_status_summary'
-AND grantee IN ('anon', 'authenticated');
+AND grantee IN ('PUBLIC', 'anon', 'authenticated');
 -- Expected: 0 rows

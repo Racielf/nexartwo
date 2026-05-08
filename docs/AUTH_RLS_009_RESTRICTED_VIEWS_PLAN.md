@@ -27,7 +27,7 @@ This plan defines the creation of the `project_status_summary` view in `nexartwo
 This step follows the "Gated View" pattern established in Step 008:
 
 1. **Operational View**: `project_status_summary` aggregates counts and dates from `project_expenses` and `project_refunds`. It explicitly **excludes** all currency/amount fields.
-2. **Access Revocation**: Direct `SELECT` on the view is revoked for all standard roles.
+2. **Access Revocation**: Direct privileges are fully revoked (`ALL PRIVILEGES`) from `PUBLIC`, `anon`, and `authenticated` roles.
 3. **RPC Gateway**: Access is provided only through `get_project_status_summary()`.
 4. **Initial Restriction**: Currently, only `owner` and `admin` roles can retrieve data. This is a deliberate choice until a `project_assignments` system is implemented (planned for 010+).
 
