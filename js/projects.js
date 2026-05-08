@@ -432,10 +432,11 @@ function renderProjectDetail() {
     } else {
       // Fetch complete (or offline) — show clear unavailable state, no spinner
       finTab.innerHTML =
-        '<div class="proj-empty" style="color:var(--text-muted)">' +
-          '<i data-lucide="bar-chart-2" style="width:40px;height:40px"></i>' +
-          '<p style="font-size:14px;margin:12px 0 4px">No financial summary available yet.</p>' +
-          '<p style="font-size:12px;margin:0">Add expenses or disbursements to generate a summary.</p>' +
+        '<div class="proj-empty" style="color:var(--text-muted);padding:64px 20px">' +
+          '<div style="background:var(--bg-secondary);width:64px;height:64px;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 16px">' +
+          '<i data-lucide="bar-chart-2" style="width:32px;height:32px;opacity:0.5"></i></div>' +
+          '<p style="font-size:16px;font-weight:700;color:var(--text-primary);margin:0 0 8px">No financial summary yet</p>' +
+          '<p style="font-size:13px;max-width:300px;margin:0 auto">Add project expenses, refunds, or disbursements to automatically generate this financial summary.</p>' +
         '</div>';
     }
     lucide.createIcons();
@@ -461,20 +462,31 @@ function renderProjectDetail() {
 
   // Financials tab
   document.getElementById('proj-tab-financials').innerHTML =
-    '<div style="background:var(--danger-bg, #fef2f2);color:var(--danger, #ef4444);padding:8px;border-radius:6px;font-size:11px;font-weight:600;margin-bottom:16px;display:flex;align-items:center;gap:6px"><i data-lucide="shield-alert" style="width:14px;height:14px"></i> INTERNAL & ADMIN USE ONLY</div>' +
+    '<div style="background:var(--danger-bg, #fef2f2);color:var(--danger, #ef4444);padding:10px 14px;border-radius:8px;font-size:11px;font-weight:700;margin-bottom:20px;display:flex;align-items:center;gap:8px;border:1px solid #fee2e2">' +
+    '<i data-lucide="shield-alert" style="width:16px;height:16px"></i> INTERNAL & ADMIN USE ONLY</div>' +
+    
     '<div class="proj-summary-cards">' +
-    '<div class="proj-stat-card"><div class="proj-stat-value">' + fmtMoney(costBasis) + '</div><div class="proj-stat-label">Cost Basis (Asset Value)</div></div>' +
-    '<div class="proj-stat-card"><div class="proj-stat-value">' + fmtMoney(cashInvested) + '</div><div class="proj-stat-label">Initial Cash Invested</div></div>' +
-    '<div class="proj-stat-card"><div class="proj-stat-value" style="color:var(--danger)">' + fmtMoney(netExpense) + '</div><div class="proj-stat-label">Net Expenses</div></div>' +
-    '<div class="proj-stat-card"><div class="proj-stat-value" style="color:var(--danger)">' + fmtMoney(disbursements) + '</div><div class="proj-stat-label">Disbursements</div></div>' +
-    '<div class="proj-stat-card"><div class="proj-stat-value" style="color:' + (cashPosition >= 0 ? 'var(--success)' : 'var(--danger)') + '">' + fmtMoney(cashPosition) + '</div><div class="proj-stat-label">Cash Position</div></div>' +
+    '<div class="proj-stat-card"><div style="display:flex;justify-content:center;margin-bottom:8px;color:var(--text-muted)"><i data-lucide="home" style="width:18px;height:18px"></i></div><div class="proj-stat-value">' + fmtMoney(costBasis) + '</div><div class="proj-stat-label">Cost Basis</div></div>' +
+    '<div class="proj-stat-card"><div style="display:flex;justify-content:center;margin-bottom:8px;color:var(--text-muted)"><i data-lucide="wallet" style="width:18px;height:18px"></i></div><div class="proj-stat-value">' + fmtMoney(cashInvested) + '</div><div class="proj-stat-label">Initial Cash</div></div>' +
+    '<div class="proj-stat-card"><div style="display:flex;justify-content:center;margin-bottom:8px;color:var(--danger)"><i data-lucide="trending-down" style="width:18px;height:18px"></i></div><div class="proj-stat-value" style="color:var(--danger)">' + fmtMoney(netExpense) + '</div><div class="proj-stat-label">Net Expenses</div></div>' +
+    '<div class="proj-stat-card"><div style="display:flex;justify-content:center;margin-bottom:8px;color:var(--danger)"><i data-lucide="external-link" style="width:18px;height:18px"></i></div><div class="proj-stat-value" style="color:var(--danger)">' + fmtMoney(disbursements) + '</div><div class="proj-stat-label">Disbursements</div></div>' +
+    '<div class="proj-stat-card" style="background:' + (cashPosition >= 0 ? '#ecfdf5' : '#fff1f2') + ';border-color:' + (cashPosition >= 0 ? '#10b981' : '#f43f5e') + '">' +
+    '<div style="display:flex;justify-content:center;margin-bottom:8px;color:' + (cashPosition >= 0 ? '#059669' : '#e11d48') + '"><i data-lucide="banknote" style="width:18px;height:18px"></i></div>' +
+    '<div class="proj-stat-value" style="color:' + (cashPosition >= 0 ? '#059669' : '#e11d48') + '">' + fmtMoney(cashPosition) + '</div><div class="proj-stat-label" style="color:' + (cashPosition >= 0 ? '#059669' : '#e11d48') + '">Cash Position</div></div>' +
     '</div>' +
-    '<div class="card" style="margin-top:20px"><div class="card-body">' +
-    '<h4 style="margin:0 0 16px">Profit & Loss Metrics</h4>' +
+
+    '<div style="display:grid;grid-template-columns:1fr;gap:20px;margin-top:20px">' +
+    '<div class="card" style="border:1px solid var(--border);border-radius:12px;overflow:hidden">' +
+    '<div style="background:var(--bg-secondary);padding:12px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px">' +
+    '<i data-lucide="pie-chart" style="width:18px;height:18px;color:var(--accent)"></i>' +
+    '<h4 style="margin:0;font-size:14px;font-weight:700">Profit & Loss Metrics</h4></div>' +
+    '<div class="card-body" style="padding:20px">' +
     '<div class="proj-fin-row"><span class="proj-fin-label">Sale Price</span><span class="proj-fin-value">' + fmtMoney(f.sale_price) + '</span></div>' +
     '<div class="proj-fin-row"><span class="proj-fin-label">Net Proceeds</span><span class="proj-fin-value">' + fmtMoney(f.net_proceeds) + '</span></div>' +
-    '<div class="proj-fin-row" style="border-top:2px solid var(--border);margin-top:4px;padding-top:8px"><span class="proj-fin-label" style="font-weight:700">Profit</span><span class="proj-fin-value" style="font-size:18px;color:' + (profit >= 0 ? 'var(--success)' : 'var(--danger)') + '">' + fmtMoney(profit) + '</span></div>' +
-    '</div></div>';
+    '<div class="proj-fin-row" style="border-top:2px dashed var(--border);margin-top:12px;padding-top:16px">' +
+    '<span class="proj-fin-label" style="font-weight:700;font-size:14px">Final Profit</span>' +
+    '<span class="proj-fin-value" style="font-size:24px;color:' + (profit >= 0 ? 'var(--success)' : 'var(--danger)') + '">' + (profit >= 0 ? '+' : '') + fmtMoney(profit) + '</span></div>' +
+    '</div></div></div>';
 
   lucide.createIcons();
 }
@@ -496,7 +508,17 @@ async function fetchProjectFinancials() {
     renderProjectDetail(); // re-render now that we have data
   } else {
     // No summary yet — renderProjectDetail will show the empty state (not spinner)
-    renderProjectDetail();
+    var finTab = document.getElementById('proj-tab-financials');
+    if (finTab) {
+      finTab.innerHTML =
+        '<div class="proj-empty" style="color:var(--text-muted);padding:64px 20px">' +
+          '<div style="background:var(--bg-secondary);width:64px;height:64px;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 16px">' +
+          '<i data-lucide="bar-chart-2" style="width:32px;height:32px;opacity:0.5"></i></div>' +
+          '<p style="font-size:16px;font-weight:700;color:var(--text-primary);margin:0 0 8px">No financial summary yet</p>' +
+          '<p style="font-size:13px;max-width:300px;margin:0 auto">Add project expenses, refunds, or disbursements to automatically generate this financial summary.</p>' +
+        '</div>';
+      lucide.createIcons();
+    }
   }
 
   // Fetch transactional data for expense/disbursement tabs
