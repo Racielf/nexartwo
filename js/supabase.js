@@ -647,9 +647,10 @@ const DB = {
     async getByProject(projectId) {
       var sb = getSupabase();
       if (!sb) return null;
-      var { data, error } = await sb.rpc('get_project_financial_summary', { p_project_id: projectId }).single();
+      var { data, error } = await sb.rpc('get_project_financial_summary', { p_project_id: projectId });
       if (error) { console.error('DB projectFinancialSummaries.getByProject:', error); return null; }
-      return data;
+      // RPC returns SETOF — extract the first row. Returns null if no summary exists yet.
+      return (data && data.length > 0) ? data[0] : null;
     }
   },
 
