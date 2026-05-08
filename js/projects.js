@@ -25,6 +25,70 @@ var PROJECT_STATUSES = {
   sold:        { label: 'Sold',         color: '#8b5cf6', bg: '#8b5cf618' }
 };
 
+// ---- Project Types ----
+var PROJECT_TYPES = {
+  fix_and_flip: {
+    label: 'Fix & Flip',
+    description: 'Buy · Renovate · Sell',
+    color: '#d97706', bg: '#fef3c720',
+    border: '#d9770640',
+    icon: 'home',
+    modalTitle: 'New Fix & Flip Project',
+    showAcquisition: true,
+    showBudgetOnly: false
+  },
+  residential_project: {
+    label: 'Residential Project',
+    description: 'Residential remodel, repair, or service',
+    color: '#0d9488', bg: '#ccfbf120',
+    border: '#0d948840',
+    icon: 'house',
+    modalTitle: 'New Residential Project',
+    showAcquisition: false,
+    showBudgetOnly: true
+  },
+  commercial_project: {
+    label: 'Commercial Project',
+    description: 'Commercial repair, tenant improvement, or business property',
+    color: '#2563eb', bg: '#dbeafe20',
+    border: '#2563eb40',
+    icon: 'building',
+    modalTitle: 'New Commercial Project',
+    showAcquisition: false,
+    showBudgetOnly: true
+  },
+  new_construction: {
+    label: 'New Construction',
+    description: 'Ground-up build, ADU, addition, or major construction',
+    color: '#7c3aed', bg: '#ede9fe20',
+    border: '#7c3aed40',
+    icon: 'hard-hat',
+    modalTitle: 'New Construction Project',
+    showAcquisition: true,
+    showBudgetOnly: false,
+    hideRealtorTitle: true   // hide realtor fee / title co for construction
+  },
+  maintenance: {
+    label: 'Maintenance',
+    description: 'Recurring or scheduled service work',
+    color: '#6b7280', bg: '#f3f4f620',
+    border: '#6b728040',
+    icon: 'wrench',
+    modalTitle: 'New Maintenance Project',
+    showAcquisition: false,
+    showBudgetOnly: false   // hide all financial acquisition fields
+  }
+};
+
+// Returns the type config (or a NULL fallback) for a project
+function getProjTypeCfg(typeKey) {
+  return PROJECT_TYPES[typeKey] || {
+    label: 'Type not set',
+    color: '#9ca3af', bg: '#9ca3af18',
+    border: '#9ca3af40'
+  };
+}
+
 // ---- Helpers ----
 function escHtml(str) {
   if (!str) return '';
@@ -152,7 +216,7 @@ function renderProjectList() {
       '<ul style="font-size:12px;color:var(--text-secondary);margin:0;padding-left:20px;line-height:1.6">' +
       '<li>Financial dashboard</li><li>Expense tracking</li><li>Refund tracking</li><li>Disbursements</li><li>Work Orders linked to projects</li>' +
       '</ul></div>' +
-      '<button class="btn btn-primary" onclick="openProjectModal()">Create First Project</button>' +
+      '<button class="btn btn-primary" onclick="openProjectTypeSelector()">Create First Project</button>' +
       '</div>';
     lucide.createIcons();
     return;
@@ -174,7 +238,10 @@ function renderProjectList() {
         (cashPosition >= 0 ? '↑' : '↓') + ' Cash: ' + fmtMoney(cashPosition) + '</span>';
     }
 
-    return '<div class="proj-card" onclick="openProjectDetail(\'' + p.id + '\')"><span class="proj-status-badge" style="color:' + st.color + ';background:' + st.bg + '">' + st.label + '</span>' +
+    var tc = getProjTypeCfg(p.project_type || null);
+    var typeBadge = '<span style="font-size:10px;font-weight:600;color:' + tc.color + ';background:' + tc.bg + ';border:1px solid ' + (tc.border || tc.color + '40') + ';padding:2px 8px;border-radius:20px;margin-left:6px">' + tc.label + '</span>';
+
+    return '<div class="proj-card" onclick="openProjectDetail(\'' + p.id + '\')"><span class="proj-status-badge" style="color:' + st.color + ';background:' + st.bg + '">' + st.label + '</span>' + typeBadge +
       '<div class="proj-card-header">' +
       '<div class="proj-card-icon"><i data-lucide="building-2" style="width:22px;height:22px"></i></div>' +
       '<div><div class="proj-card-title">' + escHtml(p.name) + '</div>' +
@@ -267,22 +334,51 @@ function renderSummaryStats() {
 }
 
 // ---- Project Modal ----
+// Opens the 5-card type selector. Called instead of openProjectModal() for new projects.
+function openProjectTypeSelector() {
+  showConfirmModal('New Project', '', null);
+  var box = document.querySelector('.confirm-box');
+  var cards = Object.keys(PROJECT_TYPES).map(function(key) {
+    var t = PROJECT_TYPES[key];
+    return '<div onclick="openProjectModal(null,\'' + key + '\')" style="cursor:pointer;border:1px solid ' + t.border + ';border-radius:10px;padding:14px 16px;background:' + t.bg + ';transition:box-shadow 0.15s;display:flex;align-items:flex-start;gap:12px" ' +
+      'onmouseover="this.style.boxShadow=\'0 0 0 2px ' + t.color + '40\'" onmouseout="this.style.boxShadow=\'\'">' +
+      '<div style="width:36px;height:36px;border-radius:8px;background:' + t.color + '18;display:flex;align-items:center;justify-content:center;flex-shrink:0">' +
+      '<i data-lucide="' + t.icon + '" style="width:18px;height:18px;color:' + t.color + '"></i></div>' +
+      '<div><div style="font-size:14px;font-weight:700;color:var(--text-primary);margin-bottom:2px">' + t.label + '</div>' +
+      '<div style="font-size:11px;color:var(--text-muted)">' + t.description + '</div></div></div>';
+  }).join('');
+  box.innerHTML =
+    '<h3 style="margin:0 0 4px;font-size:18px;font-weight:700;color:var(--text-primary)">New Project</h3>' +
+    '<p style="margin:0 0 16px;font-size:12px;color:var(--text-muted)">Select a project type to get started</p>' +
+    '<div style="display:flex;flex-direction:column;gap:10px">' + cards + '</div>' +
+    '<div style="margin-top:16px;display:flex;justify-content:flex-end;border-top:1px solid var(--border);padding-top:14px">' +
+    '<button type="button" class="btn btn-secondary" onclick="closeConfirmModal()">Cancel</button></div>';
+  if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
 var _projEditId = null;
 
-function openProjectModal(editId) {
+function openProjectModal(editId, type) {
   _projEditId = editId || null;
   var proj = _projEditId ? PROJECTS.find(function(p) { return p.id === _projEditId; }) : null;
 
-  showConfirmModal(proj ? 'Edit Project' : 'New Project', '', null);
+  // In edit mode use the project's stored type; in create mode use the chosen type arg
+  var activeType = proj ? (proj.project_type || null) : (type || null);
+  var tc = getProjTypeCfg(activeType);
+
+  var modalTitle = proj ? 'Edit Project' : (tc.modalTitle || 'New Project');
+  showConfirmModal(modalTitle, '', null);
   var box = document.querySelector('.confirm-box');
 
-  box.innerHTML =
+  // ── Type badge header ──────────────────────────────────────────────────────
+  var typeBadgeHtml = '<span style="font-size:11px;font-weight:600;color:' + tc.color + ';background:' + tc.bg + ';border:1px solid ' + (tc.border || tc.color + '40') + ';padding:3px 10px;border-radius:20px;margin-left:10px">' + tc.label + '</span>';
+  var headerHtml =
     '<h3 style="margin:0 0 16px;font-size:18px;font-weight:700;color:var(--text-primary);display:flex;align-items:center;gap:8px">' +
-    '<i data-lucide="building-2" style="width:20px;height:20px;color:var(--accent)"></i> ' +
-    (proj ? 'Edit Project' : 'New Project') + '</h3>' +
-    '<div style="display:flex;flex-direction:column;gap:16px;text-align:left;max-height:70vh;overflow-y:auto;padding:4px 8px 12px 4px">' +
-    
-    // Core Info Group
+    '<i data-lucide="building-2" style="width:20px;height:20px;color:var(--accent)"></i> ' + modalTitle + typeBadgeHtml + '</h3>' +
+    '<div style="display:flex;flex-direction:column;gap:16px;text-align:left;max-height:70vh;overflow-y:auto;padding:4px 8px 12px 4px">';
+
+  // ── Core Info section (always shown) ──────────────────────────────────────
+  var coreHtml =
     '<div style="background:var(--bg-primary);border:1px solid var(--border);border-radius:8px;padding:16px;display:flex;flex-direction:column;gap:12px">' +
     '<div><label style="font-size:12px;font-weight:600;color:var(--text-secondary);display:block;margin-bottom:6px">Project Name *</label>' +
     '<input type="text" id="proj-name" class="form-control" placeholder="e.g. 1234 Oak Street Renovation" style="width:100%;padding:10px;font-size:14px" value="' + escHtml(proj ? proj.name : '') + '"></div>' +
@@ -298,39 +394,87 @@ function openProjectModal(editId) {
     }).join('') + '</select></div></div>' +
     '<div><label style="font-size:12px;font-weight:600;color:var(--text-secondary);display:block;margin-bottom:6px">Responsible</label>' +
     '<input type="text" id="proj-responsible" class="form-control" placeholder="Project manager / owner" style="width:100%;padding:10px;font-size:14px" value="' + escHtml(proj ? proj.responsible : '') + '"></div>' +
-    '</div>' +
+    '</div>';
 
-    // Financial Setup Group
-    '<div style="background:var(--bg-primary);border:1px solid var(--border);border-radius:8px;padding:16px">' +
-    '<div style="display:flex;align-items:center;gap:6px;margin-bottom:6px"><i data-lucide="calculator" style="width:16px;height:16px;color:var(--text-secondary)"></i><div style="font-size:14px;font-weight:700;color:var(--text-primary);">Financial Setup</div></div>' +
-    '<div style="font-size:11px;color:var(--text-muted);margin-bottom:14px;background:#fff;padding:6px 10px;border-radius:6px;border:1px dashed var(--border-light)">ℹ️ Project financial fields are used for internal financial tracking.</div>' +
-    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">' +
-    '<div><label style="font-size:12px;font-weight:600;color:var(--text-secondary);display:block;margin-bottom:6px">Purchase Price ($)</label>' +
-    '<input type="number" id="proj-purchase" class="form-control" placeholder="0.00" step="0.01" style="width:100%;padding:8px" value="' + (proj ? (proj.purchase_price || proj.purchasePrice || '') : '') + '"></div>' +
-    '<div><label style="font-size:12px;font-weight:600;color:var(--text-secondary);display:block;margin-bottom:6px">Down Payment ($)</label>' +
-    '<input type="number" id="proj-down" class="form-control" placeholder="0.00" step="0.01" style="width:100%;padding:8px" value="' + (proj ? (proj.down_payment || proj.downPayment || '') : '') + '"></div>' +
-    '<div><label style="font-size:12px;font-weight:600;color:var(--text-secondary);display:block;margin-bottom:6px">Loan Amount ($)</label>' +
-    '<input type="number" id="proj-loan" class="form-control" placeholder="0.00" step="0.01" style="width:100%;padding:8px" value="' + (proj ? (proj.loan_amount || proj.loanAmount || '') : '') + '"></div>' +
-    '<div><label style="font-size:12px;font-weight:600;color:var(--text-secondary);display:block;margin-bottom:6px">Closing Costs ($)</label>' +
-    '<input type="number" id="proj-closing" class="form-control" placeholder="0.00" step="0.01" style="width:100%;padding:8px" value="' + (proj ? (proj.closing_costs || proj.closingCosts || '') : '') + '"></div>' +
-    '<div><label style="font-size:12px;font-weight:600;color:var(--text-secondary);display:block;margin-bottom:6px">Realtor Fee ($)</label>' +
-    '<input type="number" id="proj-realtor" class="form-control" placeholder="0.00" step="0.01" style="width:100%;padding:8px" value="' + (proj ? (proj.realtor_fee || proj.realtorFee || '') : '') + '"></div>' +
-    '<div><label style="font-size:12px;font-weight:600;color:var(--text-secondary);display:block;margin-bottom:6px">Title Company Fee ($)</label>' +
-    '<input type="number" id="proj-title-fee" class="form-control" placeholder="0.00" step="0.01" style="width:100%;padding:8px" value="' + (proj ? (proj.title_company_fee || '') : '') + '"></div>' +
-    '<div><label style="font-size:12px;font-weight:600;color:var(--text-secondary);display:block;margin-bottom:6px">Inspection Fee ($)</label>' +
-    '<input type="number" id="proj-inspection" class="form-control" placeholder="0.00" step="0.01" style="width:100%;padding:8px" value="' + (proj ? (proj.inspection_fee || '') : '') + '"></div>' +
-    '<div><label style="font-size:12px;font-weight:600;color:var(--text-secondary);display:block;margin-bottom:6px">Insurance ($)</label>' +
-    '<input type="number" id="proj-insurance" class="form-control" placeholder="0.00" step="0.01" style="width:100%;padding:8px" value="' + (proj ? (proj.insurance || '') : '') + '"></div>' +
-    '<div style="grid-column:1 / span 2"><label style="font-size:12px;font-weight:600;color:var(--text-secondary);display:block;margin-bottom:6px">Title Company</label>' +
-    '<input type="text" id="proj-title-co" class="form-control" placeholder="Title company name" style="width:100%;padding:8px" value="' + escHtml(proj ? (proj.title_company || proj.titleCompany) : '') + '"></div>' +
-    '</div></div>' +
-    '</div>' +
+  // ── Determine which financial section to show ──────────────────────────────
+  // showAcquisition = full acquisition block  |  showBudgetOnly = budget-only row
+  // neither = no financial block at all (Maintenance, NULL edit uses full block)
+  var tc_cfg = proj ? getProjTypeCfg(proj.project_type) : (activeType ? getProjTypeCfg(activeType) : null);
+  var showAcq     = !proj ? (tc_cfg && tc_cfg.showAcquisition) : true;  // edit: always show all
+  var showBudget  = !proj ? (tc_cfg && tc_cfg.showBudgetOnly) : true;
+  var showNoFin   = !proj && tc_cfg && !tc_cfg.showAcquisition && !tc_cfg.showBudgetOnly;
+  var hideRealtor = !proj ? (tc_cfg && tc_cfg.hideRealtorTitle) : false;
+  var purchaseLabel = (activeType === 'residential_project' || activeType === 'commercial_project') ? 'Budget ($)' : 'Purchase Price ($)';
+
+  var finHtml = '';
+  if (showAcq || showBudget || proj) {
+    var sectionTitle = activeType === 'new_construction' ? 'Construction Budget & Financing' :
+                       (activeType === 'residential_project' || activeType === 'commercial_project') ? 'Scope & Budget' : 'Financial Setup';
+    finHtml =
+      '<div style="background:var(--bg-primary);border:1px solid var(--border);border-radius:8px;padding:16px">' +
+      '<div style="display:flex;align-items:center;gap:6px;margin-bottom:6px"><i data-lucide="calculator" style="width:16px;height:16px;color:var(--text-secondary)"></i>' +
+      '<div style="font-size:14px;font-weight:700;color:var(--text-primary)">' + sectionTitle + '</div></div>' +
+      '<div style="font-size:11px;color:var(--text-muted);margin-bottom:14px;background:#fff;padding:6px 10px;border-radius:6px;border:1px dashed var(--border-light)">ℹ️ Project financial fields are used for internal financial tracking.</div>' +
+      '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">' +
+      // Purchase Price / Budget always when any finance shown
+      '<div><label style="font-size:12px;font-weight:600;color:var(--text-secondary);display:block;margin-bottom:6px">' + purchaseLabel + '</label>' +
+      '<input type="number" id="proj-purchase" class="form-control" placeholder="0.00" step="0.01" style="width:100%;padding:8px" value="' + (proj ? (proj.purchase_price || proj.purchasePrice || '') : '') + '"></div>';
+
+    // Acquisition-only rows (hidden for budget-only types unless editing)
+    if (showAcq || proj) {
+      finHtml +=
+        '<div><label style="font-size:12px;font-weight:600;color:var(--text-secondary);display:block;margin-bottom:6px">Down Payment ($)</label>' +
+        '<input type="number" id="proj-down" class="form-control" placeholder="0.00" step="0.01" style="width:100%;padding:8px" value="' + (proj ? (proj.down_payment || proj.downPayment || '') : '') + '"></div>' +
+        '<div><label style="font-size:12px;font-weight:600;color:var(--text-secondary);display:block;margin-bottom:6px">Loan Amount ($)</label>' +
+        '<input type="number" id="proj-loan" class="form-control" placeholder="0.00" step="0.01" style="width:100%;padding:8px" value="' + (proj ? (proj.loan_amount || proj.loanAmount || '') : '') + '"></div>' +
+        '<div><label style="font-size:12px;font-weight:600;color:var(--text-secondary);display:block;margin-bottom:6px">Closing Costs ($)</label>' +
+        '<input type="number" id="proj-closing" class="form-control" placeholder="0.00" step="0.01" style="width:100%;padding:8px" value="' + (proj ? (proj.closing_costs || proj.closingCosts || '') : '') + '"></div>';
+    } else {
+      // stub hidden inputs so saveProject() getElementById() doesn't throw
+      finHtml += '<input type="hidden" id="proj-down" value="0"><input type="hidden" id="proj-loan" value="0"><input type="hidden" id="proj-closing" value="0">';
+    }
+
+    // Realtor / Title rows (hidden for new_construction unless editing)
+    if (!hideRealtor || proj) {
+      finHtml +=
+        '<div><label style="font-size:12px;font-weight:600;color:var(--text-secondary);display:block;margin-bottom:6px">Realtor Fee ($)</label>' +
+        '<input type="number" id="proj-realtor" class="form-control" placeholder="0.00" step="0.01" style="width:100%;padding:8px" value="' + (proj ? (proj.realtor_fee || proj.realtorFee || '') : '') + '"></div>' +
+        '<div><label style="font-size:12px;font-weight:600;color:var(--text-secondary);display:block;margin-bottom:6px">Title Company Fee ($)</label>' +
+        '<input type="number" id="proj-title-fee" class="form-control" placeholder="0.00" step="0.01" style="width:100%;padding:8px" value="' + (proj ? (proj.title_company_fee || '') : '') + '"></div>' +
+        '<div><label style="font-size:12px;font-weight:600;color:var(--text-secondary);display:block;margin-bottom:6px">Inspection Fee ($)</label>' +
+        '<input type="number" id="proj-inspection" class="form-control" placeholder="0.00" step="0.01" style="width:100%;padding:8px" value="' + (proj ? (proj.inspection_fee || '') : '') + '"></div>' +
+        '<div><label style="font-size:12px;font-weight:600;color:var(--text-secondary);display:block;margin-bottom:6px">Insurance ($)</label>' +
+        '<input type="number" id="proj-insurance" class="form-control" placeholder="0.00" step="0.01" style="width:100%;padding:8px" value="' + (proj ? (proj.insurance || '') : '') + '"></div>' +
+        '<div style="grid-column:1 / span 2"><label style="font-size:12px;font-weight:600;color:var(--text-secondary);display:block;margin-bottom:6px">Title Company</label>' +
+        '<input type="text" id="proj-title-co" class="form-control" placeholder="Title company name" style="width:100%;padding:8px" value="' + escHtml(proj ? (proj.title_company || proj.titleCompany) : '') + '"></div>';
+    } else {
+      finHtml += '<input type="hidden" id="proj-realtor" value="0"><input type="hidden" id="proj-title-fee" value="0"><input type="hidden" id="proj-inspection" value="0"><input type="hidden" id="proj-insurance" value="0"><input type="hidden" id="proj-title-co" value="">';
+    }
+
+    finHtml += '</div></div>';
+  } else {
+    // Maintenance / no-fin type: stub all hidden inputs so saveProject() doesn't throw
+    finHtml =
+      '<input type="hidden" id="proj-purchase" value="0"><input type="hidden" id="proj-down" value="0">' +
+      '<input type="hidden" id="proj-loan" value="0"><input type="hidden" id="proj-closing" value="0">' +
+      '<input type="hidden" id="proj-realtor" value="0"><input type="hidden" id="proj-title-fee" value="0">' +
+      '<input type="hidden" id="proj-inspection" value="0"><input type="hidden" id="proj-insurance" value="0">' +
+      '<input type="hidden" id="proj-title-co" value="">';
+  }
+
+  // ── Hidden type field (create only; ignored on edit) ─────────────────────
+  var typeFieldHtml = '<input type="hidden" id="proj-type-hidden" value="' + (activeType || '') + '">';
+
+  // ── Actions ───────────────────────────────────────────────────────────────
+  var actionsHtml =
     '<div class="confirm-actions" style="margin-top:20px;display:flex;justify-content:flex-end;gap:12px;border-top:1px solid var(--border);padding-top:16px">' +
     '<button type="button" class="btn btn-secondary" onclick="closeConfirmModal()">Cancel</button>' +
     '<button type="button" class="btn btn-primary" onclick="saveProject()">' + (proj ? 'Update Project' : 'Create Project') + '</button></div>';
 
+  box.innerHTML = headerHtml + coreHtml + finHtml + '</div>' + typeFieldHtml + actionsHtml;
   if (typeof lucide !== 'undefined') lucide.createIcons();
 }
+
 
 async function saveProject() {
   var name = (document.getElementById('proj-name').value || '').trim();
@@ -363,6 +507,11 @@ async function saveProject() {
     }
     showToast('✅ Project updated');
   } else {
+    // Include project_type on create only — cannot change it after creation
+    var typeHiddenEl = document.getElementById('proj-type-hidden');
+    var chosenType = typeHiddenEl ? (typeHiddenEl.value || null) : null;
+    if (chosenType) data.project_type = chosenType;
+
     if (typeof isSupabaseReady === 'function' && isSupabaseReady()) {
       var res = await DB.projects.create(data);
       if(!res) { alert('Error creating. Check logs.'); return; }
@@ -464,8 +613,10 @@ function renderProjectDetail() {
   if (!_currentProject) return;
   var p = _currentProject;
   var st = PROJECT_STATUSES[p.status] || PROJECT_STATUSES.planning;
+  var ptc = getProjTypeCfg(p.project_type || null);
   document.getElementById('proj-detail-title').innerHTML = escHtml(p.name) +
-    ' <span style="font-size:11px;font-weight:600;color:' + st.color + ';background:' + st.bg + ';padding:3px 10px;border-radius:10px;margin-left:8px">' + st.label + '</span>';
+    ' <span style="font-size:11px;font-weight:600;color:' + st.color + ';background:' + st.bg + ';padding:3px 10px;border-radius:10px;margin-left:8px">' + st.label + '</span>' +
+    ' <span style="font-size:10px;font-weight:600;color:' + ptc.color + ';background:' + ptc.bg + ';border:1px solid ' + (ptc.border || ptc.color + '40') + ';padding:2px 8px;border-radius:20px;margin-left:4px">' + ptc.label + '</span>';
 
   // Overview tab - responsive 2-col grid (1-col on mobile via CSS)
   document.getElementById('proj-tab-overview').innerHTML =
