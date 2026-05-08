@@ -399,17 +399,28 @@ function openProjectModal(editId, type) {
     '</div>';
 
   // ── Determine which financial section to show ──────────────────────────────
-  // showAcquisition = full acquisition block  |  showBudgetOnly = budget-only row
-  // neither = no financial block at all (Maintenance, NULL edit uses full block)
+  // tc_cfg is resolved from project_type for BOTH create and edit paths.
+  // NULL / "Type not set" projects: tc_cfg falls back to the null-sentinel which
+  // has no showAcquisition/showBudgetOnly/hideRealtorTitle → treated as "show all"
+  // for backward compatibility.
   var tc_cfg = proj ? getProjTypeCfg(proj.project_type) : (activeType ? getProjTypeCfg(activeType) : null);
-  var showAcq     = !proj ? (tc_cfg && tc_cfg.showAcquisition) : true;  // edit: always show all
-  var showBudget  = !proj ? (tc_cfg && tc_cfg.showBudgetOnly) : true;
-  var showNoFin   = !proj && tc_cfg && !tc_cfg.showAcquisition && !tc_cfg.showBudgetOnly;
-  var hideRealtor = !proj ? (tc_cfg && tc_cfg.hideRealtorTitle) : false;
+  // For null-type projects tc_cfg is the fallback object (no show* flags) → show all
+  var typeKnown = tc_cfg && (tc_cfg.showAcquisition !== undefined || tc_cfg.showBudgetOnly !== undefined);
+
+  var showAcq    = typeKnown ? tc_cfg.showAcquisition : true;   // unknown type → show all
+  var showBudget = typeKnown ? tc_cfg.showBudgetOnly  : true;
+  var showNoFin  = typeKnown && !tc_cfg.showAcquisition && !tc_cfg.showBudgetOnly;
+  var hideRealtor = typeKnown ? !!tc_cfg.hideRealtorTitle : false;
   var purchaseLabel = (activeType === 'residential_project' || activeType === 'commercial_project') ? 'Budget ($)' : 'Purchase Price ($)';
 
+  // Helper: emit a hidden stub that preserves the stored value (edit) or 0 (create).
+  // This prevents saveProject() from overwriting stored data with zeros.
+  function hiddenStub(id, storedVal) {
+    return '<input type="hidden" id="' + id + '" value="' + (storedVal !== undefined && storedVal !== null ? storedVal : 0) + '">';
+  }
+
   var finHtml = '';
-  if (showAcq || showBudget || proj) {
+  if (showAcq || showBudget || !showNoFin) {
     var sectionTitle = activeType === 'new_construction' ? 'Construction Budget & Financing' :
                        (activeType === 'residential_project' || activeType === 'commercial_project') ? 'Scope & Budget' : 'Financial Setup';
     finHtml =
@@ -418,12 +429,12 @@ function openProjectModal(editId, type) {
       '<div style="font-size:14px;font-weight:700;color:var(--text-primary)">' + sectionTitle + '</div></div>' +
       '<div style="font-size:11px;color:var(--text-muted);margin-bottom:14px;background:#fff;padding:6px 10px;border-radius:6px;border:1px dashed var(--border-light)">ℹ️ Project financial fields are used for internal financial tracking.</div>' +
       '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">' +
-      // Purchase Price / Budget always when any finance shown
+      // Purchase Price / Budget — always shown when any finance section is rendered
       '<div><label style="font-size:12px;font-weight:600;color:var(--text-secondary);display:block;margin-bottom:6px">' + purchaseLabel + '</label>' +
       '<input type="number" id="proj-purchase" class="form-control" placeholder="0.00" step="0.01" style="width:100%;padding:8px" value="' + (proj ? (proj.purchase_price || proj.purchasePrice || '') : '') + '"></div>';
 
-    // Acquisition-only rows (hidden for budget-only types unless editing)
-    if (showAcq || proj) {
+    // ── Down Payment / Loan / Closing Costs ───────────────────────────────────
+    if (showAcq) {
       finHtml +=
         '<div><label style="font-size:12px;font-weight:600;color:var(--text-secondary);display:block;margin-bottom:6px">Down Payment ($)</label>' +
         '<input type="number" id="proj-down" class="form-control" placeholder="0.00" step="0.01" style="width:100%;padding:8px" value="' + (proj ? (proj.down_payment || proj.downPayment || '') : '') + '"></div>' +
@@ -432,12 +443,14 @@ function openProjectModal(editId, type) {
         '<div><label style="font-size:12px;font-weight:600;color:var(--text-secondary);display:block;margin-bottom:6px">Closing Costs ($)</label>' +
         '<input type="number" id="proj-closing" class="form-control" placeholder="0.00" step="0.01" style="width:100%;padding:8px" value="' + (proj ? (proj.closing_costs || proj.closingCosts || '') : '') + '"></div>';
     } else {
-      // stub hidden inputs so saveProject() getElementById() doesn't throw
-      finHtml += '<input type="hidden" id="proj-down" value="0"><input type="hidden" id="proj-loan" value="0"><input type="hidden" id="proj-closing" value="0">';
+      // Hidden — preserve stored values so saveProject() doesn't zero them out
+      finHtml += hiddenStub('proj-down',    proj ? (proj.down_payment    || proj.downPayment    || 0) : 0);
+      finHtml += hiddenStub('proj-loan',    proj ? (proj.loan_amount     || proj.loanAmount     || 0) : 0);
+      finHtml += hiddenStub('proj-closing', proj ? (proj.closing_costs   || proj.closingCosts   || 0) : 0);
     }
 
-    // Realtor / Title rows (hidden for new_construction unless editing)
-    if (!hideRealtor || proj) {
+    // ── Realtor Fee / Title Company Fee / Inspection Fee / Insurance / Title Co ─
+    if (!hideRealtor) {
       finHtml +=
         '<div><label style="font-size:12px;font-weight:600;color:var(--text-secondary);display:block;margin-bottom:6px">Realtor Fee ($)</label>' +
         '<input type="number" id="proj-realtor" class="form-control" placeholder="0.00" step="0.01" style="width:100%;padding:8px" value="' + (proj ? (proj.realtor_fee || proj.realtorFee || '') : '') + '"></div>' +
@@ -448,20 +461,29 @@ function openProjectModal(editId, type) {
         '<div><label style="font-size:12px;font-weight:600;color:var(--text-secondary);display:block;margin-bottom:6px">Insurance ($)</label>' +
         '<input type="number" id="proj-insurance" class="form-control" placeholder="0.00" step="0.01" style="width:100%;padding:8px" value="' + (proj ? (proj.insurance || '') : '') + '"></div>' +
         '<div style="grid-column:1 / span 2"><label style="font-size:12px;font-weight:600;color:var(--text-secondary);display:block;margin-bottom:6px">Title Company</label>' +
-        '<input type="text" id="proj-title-co" class="form-control" placeholder="Title company name" style="width:100%;padding:8px" value="' + escHtml(proj ? (proj.title_company || proj.titleCompany) : '') + '"></div>';
+        '<input type="text" id="proj-title-co" class="form-control" placeholder="Title company name" style="width:100%;padding:8px" value="' + escHtml(proj ? (proj.title_company || proj.titleCompany || '') : '') + '"></div>';
     } else {
-      finHtml += '<input type="hidden" id="proj-realtor" value="0"><input type="hidden" id="proj-title-fee" value="0"><input type="hidden" id="proj-inspection" value="0"><input type="hidden" id="proj-insurance" value="0"><input type="hidden" id="proj-title-co" value="">';
+      // Hidden — preserve stored values
+      finHtml += hiddenStub('proj-realtor',    proj ? (proj.realtor_fee       || proj.realtorFee    || 0) : 0);
+      finHtml += hiddenStub('proj-title-fee',  proj ? (proj.title_company_fee || 0) : 0);
+      finHtml += hiddenStub('proj-inspection', proj ? (proj.inspection_fee    || 0) : 0);
+      finHtml += hiddenStub('proj-insurance',  proj ? (proj.insurance         || 0) : 0);
+      finHtml += '<input type="hidden" id="proj-title-co" value="' + escHtml(proj ? (proj.title_company || proj.titleCompany || '') : '') + '">';
     }
 
     finHtml += '</div></div>';
   } else {
-    // Maintenance / no-fin type: stub all hidden inputs so saveProject() doesn't throw
+    // Maintenance (showNoFin = true) — all fields hidden; preserve stored values on edit
     finHtml =
-      '<input type="hidden" id="proj-purchase" value="0"><input type="hidden" id="proj-down" value="0">' +
-      '<input type="hidden" id="proj-loan" value="0"><input type="hidden" id="proj-closing" value="0">' +
-      '<input type="hidden" id="proj-realtor" value="0"><input type="hidden" id="proj-title-fee" value="0">' +
-      '<input type="hidden" id="proj-inspection" value="0"><input type="hidden" id="proj-insurance" value="0">' +
-      '<input type="hidden" id="proj-title-co" value="">';
+      hiddenStub('proj-purchase',   proj ? (proj.purchase_price    || proj.purchasePrice  || 0) : 0) +
+      hiddenStub('proj-down',       proj ? (proj.down_payment      || proj.downPayment    || 0) : 0) +
+      hiddenStub('proj-loan',       proj ? (proj.loan_amount       || proj.loanAmount     || 0) : 0) +
+      hiddenStub('proj-closing',    proj ? (proj.closing_costs     || proj.closingCosts   || 0) : 0) +
+      hiddenStub('proj-realtor',    proj ? (proj.realtor_fee       || proj.realtorFee     || 0) : 0) +
+      hiddenStub('proj-title-fee',  proj ? (proj.title_company_fee || 0) : 0) +
+      hiddenStub('proj-inspection', proj ? (proj.inspection_fee    || 0) : 0) +
+      hiddenStub('proj-insurance',  proj ? (proj.insurance         || 0) : 0) +
+      '<input type="hidden" id="proj-title-co" value="' + escHtml(proj ? (proj.title_company || proj.titleCompany || '') : '') + '">';
   }
 
   // ── Hidden type field (create only; ignored on edit) ─────────────────────
@@ -546,6 +568,18 @@ async function openProjectDetail(projId) {
   document.getElementById('topbar-title').textContent = _currentProject.name;
   var _nb = document.getElementById('btn-new-project');
   if (_nb) _nb.style.display = 'none';  // hide + New Project while in detail
+
+  // ── Always reset to Overview tab so stale WO content from a previous project
+  // cannot persist. proj-tab-workorders is cleared here; it will be repopulated
+  // by renderWorkOrdersTab() only when the user explicitly clicks the WO tab.
+  document.querySelectorAll('.proj-detail-tab').forEach(function(t) { t.classList.remove('active'); });
+  document.querySelectorAll('.proj-tab-content').forEach(function(c) { c.style.display = 'none'; });
+  var overviewBtn = document.querySelector('.proj-detail-tab[data-tab="overview"]');
+  if (overviewBtn) overviewBtn.classList.add('active');
+  var overviewContent = document.getElementById('proj-tab-overview');
+  if (overviewContent) overviewContent.style.display = 'block';
+  var woTab = document.getElementById('proj-tab-workorders');
+  if (woTab) woTab.innerHTML = '';  // clear stale WOs from previous project
 
   // Set loading flag BEFORE initial render so spinner shows only when Supabase is active
   _currentProject._financialsLoading = (typeof isSupabaseReady === 'function' && isSupabaseReady());
