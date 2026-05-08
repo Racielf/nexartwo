@@ -143,9 +143,16 @@ function renderProjectList() {
     var loanAmount = parseFloat(p.loan_amount || p.loanAmount) || 0;
     var closingCosts = parseFloat(p.closing_costs || p.closingCosts) || 0;
     var totalInvestment = p._financials ? parseFloat(p._financials.cost_basis ?? 0) : 0;
+    var cashPosition = p._financials ? parseFloat(p._financials.project_cash_position ?? 0) : null;
+    var cashChip = '';
+    if (cashPosition !== null) {
+      var chipColor = cashPosition >= 0 ? '#059669' : '#e11d48';
+      var chipBg   = cashPosition >= 0 ? '#ecfdf5' : '#fff1f2';
+      cashChip = '<span class="proj-cash-chip" style="color:' + chipColor + ';background:' + chipBg + ';border:1px solid ' + chipColor + '20">' +
+        (cashPosition >= 0 ? '↑' : '↓') + ' Cash: ' + fmtMoney(cashPosition) + '</span>';
+    }
 
-    return '<div class="proj-card" onclick="openProjectDetail(\'' + p.id + '\')">' +
-      '<span class="proj-status-badge" style="color:' + st.color + ';background:' + st.bg + '">' + st.label + '</span>' +
+    return '<div class="proj-card" onclick="openProjectDetail(\'' + p.id + '\')"><span class="proj-status-badge" style="color:' + st.color + ';background:' + st.bg + '">' + st.label + '</span>' +
       '<div class="proj-card-header">' +
       '<div class="proj-card-icon"><i data-lucide="building-2" style="width:22px;height:22px"></i></div>' +
       '<div><div class="proj-card-title">' + escHtml(p.name) + '</div>' +
@@ -157,10 +164,11 @@ function renderProjectList() {
       '<div class="proj-fin-row"><span class="proj-fin-label">Closing Costs</span><span class="proj-fin-value">' + fmtMoney(closingCosts) + '</span></div>' +
       '<div class="proj-fin-row" style="border-top:2px solid var(--border)"><span class="proj-fin-label" style="font-weight:700">Cost Basis</span><span class="proj-fin-value" style="color:var(--accent)">' + (p._financials ? fmtMoney(totalInvestment) : '<span style="color:var(--text-muted);font-weight:normal;font-size:10px">N/A</span>') + '</span></div>' +
       '</div>' +
-      '<div style="margin-top:10px;font-size:11px;color:var(--text-muted)">' +
+      '<div style="display:flex;align-items:center;justify-content:space-between;margin-top:8px;flex-wrap:wrap;gap:6px">' +
+      '<div style="font-size:11px;color:var(--text-muted)">' +
       (p.responsible ? '<span>👤 ' + escHtml(p.responsible) + '</span>' : '') +
-      ((p.purchase_date || p.purchaseDate) ? '<span style="margin-left:12px">📅 ' + fmtDate(p.purchase_date || p.purchaseDate) + '</span>' : '') +
-      '</div></div>';
+      ((p.purchase_date || p.purchaseDate) ? '<span style="margin-left:8px">📅 ' + fmtDate(p.purchase_date || p.purchaseDate) + '</span>' : '') +
+      '</div>' + cashChip + '</div></div>';
   }).join('');
 
   container.innerHTML = html;
@@ -178,6 +186,23 @@ function renderSummaryStats() {
     return s + (p._financials ? parseFloat(p._financials.cost_basis ?? 0) : 0);
   }, 0);
 
+  // Basic counts — always shown
+  container.innerHTML =
+    '<div class="proj-stat-card"><div style="font-size:13px;font-weight:600;color:var(--text-muted);margin-bottom:6px">🏗️</div><div class="proj-stat-value">' + totalProjects + '</div><div class="proj-stat-label">Total Projects</div></div>' +
+    '<div class="proj-stat-card"><div style="font-size:13px;font-weight:600;color:var(--text-muted);margin-bottom:6px">🟢</div><div class="proj-stat-value">' + activeProjects + '</div><div class="proj-stat-label">Active</div></div>' +
+    '<div class="proj-stat-card"><div style="font-size:13px;font-weight:600;color:var(--text-muted);margin-bottom:6px">💰</div><div class="proj-stat-value">' + fmtMoney(totalPurchase) + '</div><div class="proj-stat-label">Total Purchases</div></div>' +
+    '<div class="proj-stat-card"><div style="font-size:13px;font-weight:600;color:var(--text-muted);margin-bottom:6px">📊</div><div class="proj-stat-value">' + fmtMoney(totalInvestment) + '</div><div class="proj-stat-label">Total Cost Basis</div></div>';
+
+  // Portfolio-level P&L bar — shown only when financial data is available via RPC
+  var withFinancials = PROJECTS.filter(function(p) { return !!p._financials; }).length;
+  var pnlContainer = document.getElementById('proj-pnl-bar-container');
+  if (!pnlContainer) return;
+
+  if (withFinancials === 0) {
+    pnlContainer.innerHTML = '';
+    return;
+  }
+
   var totalCashPosition = PROJECTS.reduce(function(s, p) {
     return s + (p._financials ? parseFloat(p._financials.project_cash_position ?? 0) : 0);
   }, 0);
@@ -187,27 +212,36 @@ function renderSummaryStats() {
   var totalNetExpenses = PROJECTS.reduce(function(s, p) {
     return s + (p._financials ? parseFloat(p._financials.net_expense_cost ?? 0) : 0);
   }, 0);
-  var profitPositive = totalProfit >= 0;
 
-  container.innerHTML =
-    '<div class="proj-stat-card"><div class="proj-stat-value">' + totalProjects + '</div><div class="proj-stat-label">Total Projects</div></div>' +
-    '<div class="proj-stat-card"><div class="proj-stat-value">' + activeProjects + '</div><div class="proj-stat-label">Active</div></div>' +
-    '<div class="proj-stat-card"><div class="proj-stat-value">' + fmtMoney(totalPurchase) + '</div><div class="proj-stat-label">Total Purchases</div></div>' +
-    '<div class="proj-stat-card"><div class="proj-stat-value">' + fmtMoney(totalInvestment) + '</div><div class="proj-stat-label">Total Cost Basis</div></div>';
+  var cashColor  = totalCashPosition >= 0 ? '#059669' : '#e11d48';
+  var profitColor = totalProfit >= 0 ? '#059669' : '#e11d48';
 
-  // Portfolio-level P&L summary — shown only when financial data is available via RPC
-  var withFinancials = PROJECTS.filter(function(p) { return !!p._financials; }).length;
-  if (withFinancials > 0) {
-    container.innerHTML +=
-      '<div class="proj-stat-card" style="border-top:2px solid var(--border);grid-column:1/-1;margin-top:4px;background:var(--bg-secondary)">' +
-        '<div style="font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px">Portfolio P&L Summary (' + withFinancials + ' project' + (withFinancials !== 1 ? 's' : '') + ' with data)</div>' +
-        '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px">' +
-          '<div><div style="font-size:14px;font-weight:700;color:var(--danger)">' + fmtMoney(totalNetExpenses) + '</div><div style="font-size:10px;color:var(--text-muted)">Total Net Expenses</div></div>' +
-          '<div><div style="font-size:14px;font-weight:700;color:' + (totalCashPosition >= 0 ? 'var(--success)' : 'var(--danger)') + '">' + fmtMoney(totalCashPosition) + '</div><div style="font-size:10px;color:var(--text-muted)">Total Cash Position</div></div>' +
-          '<div><div style="font-size:14px;font-weight:700;color:' + (profitPositive ? 'var(--success)' : 'var(--danger)') + '">' + fmtMoney(totalProfit) + '</div><div style="font-size:10px;color:var(--text-muted)">Total Profit / Loss</div></div>' +
+  pnlContainer.innerHTML =
+    '<div class="proj-pnl-bar">' +
+      '<div class="proj-pnl-header">' +
+        '<h4><i data-lucide="line-chart" style="width:15px;height:15px"></i> Portfolio P&L Summary</h4>' +
+        '<span class="proj-pnl-badge">' + withFinancials + ' / ' + totalProjects + ' projects reporting</span>' +
+      '</div>' +
+      '<div class="proj-pnl-metrics">' +
+        '<div class="proj-pnl-metric">' +
+          '<div class="proj-pnl-metric-label">Total Net Expenses</div>' +
+          '<div class="proj-pnl-metric-value" style="color:#e11d48">' + fmtMoney(totalNetExpenses) + '</div>' +
+          '<div class="proj-pnl-metric-sub">Operating costs incurred</div>' +
         '</div>' +
-      '</div>';
-  }
+        '<div class="proj-pnl-metric">' +
+          '<div class="proj-pnl-metric-label">Portfolio Cash Position</div>' +
+          '<div class="proj-pnl-metric-value" style="color:' + cashColor + '">' + fmtMoney(totalCashPosition) + '</div>' +
+          '<div class="proj-pnl-metric-sub">Liquid position vs all expenses</div>' +
+        '</div>' +
+        '<div class="proj-pnl-metric">' +
+          '<div class="proj-pnl-metric-label">Total Profit / Loss</div>' +
+          '<div class="proj-pnl-metric-value" style="color:' + profitColor + '">' + (totalProfit >= 0 ? '+' : '') + fmtMoney(totalProfit) + '</div>' +
+          '<div class="proj-pnl-metric-sub">Projected final P&L</div>' +
+        '</div>' +
+      '</div>' +
+    '</div>';
+
+  lucide.createIcons();
 }
 
 // ---- Project Modal ----
@@ -407,16 +441,17 @@ function renderProjectDetail() {
   document.getElementById('proj-detail-title').innerHTML = escHtml(p.name) +
     ' <span style="font-size:11px;font-weight:600;color:' + st.color + ';background:' + st.bg + ';padding:3px 10px;border-radius:10px;margin-left:8px">' + st.label + '</span>';
 
-  // Overview tab
+  // Overview tab - responsive 2-col grid (1-col on mobile via CSS)
   document.getElementById('proj-tab-overview').innerHTML =
-    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:20px">' +
+    '<div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(280px, 1fr));gap:20px">' +
     '<div class="card"><div class="card-body" style="padding:16px">' +
-    '<h4 style="font-size:13px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;margin:0 0 12px">Project Info</h4>' +
+    '<h4 style="font-size:12px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;margin:0 0 14px;display:flex;align-items:center;gap:8px"><i data-lucide="info" style="width:14px;height:14px"></i> Project Info</h4>' +
     '<div class="proj-fin-row"><span class="proj-fin-label">ID</span><span class="proj-fin-value" style="font-size:11px;font-family:monospace">' + escHtml(p.id) + '</span></div>' +
-    '<div class="proj-fin-row"><span class="proj-fin-label">Address</span><span class="proj-fin-value">' + escHtml(p.address || '—') + '</span></div>' +
+    '<div class="proj-fin-row"><span class="proj-fin-label">Address</span><span class="proj-fin-value" style="text-align:right;max-width:60%">' + escHtml(p.address || '—') + '</span></div>' +
     '<div class="proj-fin-row"><span class="proj-fin-label">Purchase Date</span><span class="proj-fin-value">' + fmtDate(p.purchase_date || p.purchaseDate) + '</span></div>' +
     '<div class="proj-fin-row"><span class="proj-fin-label">Responsible</span><span class="proj-fin-value">' + escHtml(p.responsible || '—') + '</span></div>' +
     '<div class="proj-fin-row"><span class="proj-fin-label">Created</span><span class="proj-fin-value">' + fmtDate(p.created_at || p.createdAt) + '</span></div>' +
+    '<div class="proj-fin-row"><span class="proj-fin-label">Status</span><span class="proj-fin-value" style="color:' + st.color + '">' + st.label + '</span></div>' +
     '</div></div></div>';
 
   var f = p._financials;
@@ -450,14 +485,14 @@ function renderProjectDetail() {
   var cashPosition = parseFloat(f.project_cash_position ?? 0);
   var profit = parseFloat(f.profit ?? 0);
 
-  // Append Cash Position Snapshot to overview
+  // Append Cash Position Snapshot to overview (when financials exist)
   document.getElementById('proj-tab-overview').firstChild.innerHTML +=
     '<div class="card"><div class="card-body" style="padding:16px">' +
-    '<h4 style="font-size:13px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;margin:0 0 12px">Cash Position Snapshot</h4>' +
-    '<div class="proj-fin-row"><span class="proj-fin-label">Cash Invested</span><span class="proj-fin-value">' + fmtMoney(cashInvested) + '</span></div>' +
-    '<div class="proj-fin-row"><span class="proj-fin-label">Net Expenses</span><span class="proj-fin-value">' + fmtMoney(netExpense) + '</span></div>' +
-    '<div class="proj-fin-row"><span class="proj-fin-label">Disbursements</span><span class="proj-fin-value">' + fmtMoney(disbursements) + '</span></div>' +
-    '<div class="proj-fin-row" style="border-top:2px solid var(--border);margin-top:4px;padding-top:8px"><span class="proj-fin-label" style="font-weight:700">Project Cash Position</span><span class="proj-fin-value" style="font-size:16px;color:' + (cashPosition >= 0 ? 'var(--success)' : 'var(--danger)') + '">' + fmtMoney(cashPosition) + '</span></div>' +
+    '<h4 style="font-size:12px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;margin:0 0 14px;display:flex;align-items:center;gap:8px"><i data-lucide="bar-chart-2" style="width:14px;height:14px"></i> Cash Position Snapshot</h4>' +
+    '<div class="proj-fin-row"><span class="proj-fin-label">Initial Cash Invested</span><span class="proj-fin-value">' + fmtMoney(cashInvested) + '</span></div>' +
+    '<div class="proj-fin-row"><span class="proj-fin-label">Net Expenses</span><span class="proj-fin-value" style="color:var(--danger)">' + fmtMoney(netExpense) + '</span></div>' +
+    '<div class="proj-fin-row"><span class="proj-fin-label">Disbursements</span><span class="proj-fin-value" style="color:var(--danger)">' + fmtMoney(disbursements) + '</span></div>' +
+    '<div class="proj-fin-row" style="border-top:2px dashed var(--border);margin-top:8px;padding-top:12px"><span class="proj-fin-label" style="font-weight:700;font-size:13px">Project Cash Position</span><span class="proj-fin-value" style="font-size:18px;color:' + (cashPosition >= 0 ? '#059669' : '#e11d48') + '">' + fmtMoney(cashPosition) + '</span></div>' +
     '</div></div>';
 
   // Financials tab

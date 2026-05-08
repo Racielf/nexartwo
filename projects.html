@@ -10,10 +10,10 @@
   <meta name="theme-color" content="#f5f6fa">
   <script src="https://unpkg.com/lucide@latest"></script>
   <style>
-    /* Projects-specific styles */
-    .proj-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 16px; }
+    /* ============ Projects-specific styles ============ */
+    .proj-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 16px; }
     .proj-card { background: var(--bg-primary); border: 1px solid var(--border); border-radius: 12px; padding: 20px; cursor: pointer; transition: all 0.2s; position: relative; }
-    .proj-card:hover { border-color: var(--accent); box-shadow: 0 4px 16px rgba(0,0,0,0.08); transform: translateY(-2px); }
+    .proj-card:hover { border-color: var(--accent); box-shadow: 0 6px 24px rgba(0,0,0,0.10); transform: translateY(-2px); }
     .proj-card-header { display: flex; align-items: flex-start; gap: 12px; margin-bottom: 14px; }
     .proj-card-icon { width: 44px; height: 44px; border-radius: 10px; background: linear-gradient(135deg, var(--accent), #6366f1); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
     .proj-card-icon i { color: #fff; }
@@ -24,14 +24,30 @@
     .proj-fin-row:first-child { border-top: none; }
     .proj-fin-label { color: var(--text-secondary); }
     .proj-fin-value { font-weight: 700; color: var(--text-primary); }
-    .proj-summary-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 12px; margin-bottom: 24px; }
-    .proj-stat-card { background: var(--bg-primary); border: 1px solid var(--border); border-radius: 10px; padding: 16px; text-align: center; }
-    .proj-stat-value { font-size: 24px; font-weight: 800; color: var(--text-primary); }
-    .proj-stat-label { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+    /* Stat cards — header area */
+    .proj-summary-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 12px; margin-bottom: 8px; }
+    .proj-stat-card { background: var(--bg-primary); border: 1px solid var(--border); border-radius: 10px; padding: 16px; text-align: center; transition: box-shadow 0.2s, border-color 0.2s; }
+    .proj-stat-card:hover { border-color: var(--accent); box-shadow: 0 2px 12px rgba(0,0,0,0.06); }
+    .proj-stat-value { font-size: 22px; font-weight: 800; color: var(--text-primary); }
+    .proj-stat-label { font-size: 11px; color: var(--text-muted); margin-top: 3px; }
+    /* Portfolio P&L bar */
+    .proj-pnl-bar { border: 1px solid var(--border); border-radius: 12px; padding: 20px 24px; margin-bottom: 28px; background: var(--bg-primary); display: flex; flex-wrap: wrap; gap: 0; align-items: stretch; }
+    .proj-pnl-header { width: 100%; display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
+    .proj-pnl-header h4 { margin: 0; font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-secondary); display: flex; align-items: center; gap: 8px; }
+    .proj-pnl-badge { font-size: 10px; font-weight: 600; color: var(--text-muted); background: var(--bg-input, #f8f9fa); padding: 2px 10px; border-radius: 10px; border: 1px solid var(--border); }
+    .proj-pnl-metrics { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0; width: 100%; }
+    .proj-pnl-metric { padding: 0 20px; border-right: 1px dashed var(--border); }
+    .proj-pnl-metric:first-child { padding-left: 0; }
+    .proj-pnl-metric:last-child { border-right: none; }
+    .proj-pnl-metric-label { font-size: 11px; font-weight: 600; color: var(--text-muted); margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.3px; }
+    .proj-pnl-metric-value { font-size: 20px; font-weight: 800; }
+    .proj-pnl-metric-sub { font-size: 10px; color: var(--text-muted); margin-top: 2px; }
+    /* Detail tabs */
     .proj-detail-tabs { display: flex; gap: 0; border-bottom: 2px solid var(--border); margin-bottom: 20px; overflow-x: auto; }
     .proj-detail-tab { padding: 10px 18px; font-size: 13px; font-weight: 600; color: var(--text-muted); cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -2px; white-space: nowrap; transition: all 0.15s; }
     .proj-detail-tab:hover { color: var(--text-primary); }
     .proj-detail-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+    /* Misc */
     .proj-empty { text-align: center; padding: 60px 20px; color: var(--text-muted); }
     .proj-empty i { margin-bottom: 16px; opacity: 0.3; }
     .proj-table { width: 100%; border-collapse: collapse; font-size: 13px; }
@@ -40,11 +56,19 @@
     .proj-table tr:hover { background: var(--bg-hover, rgba(0,0,0,0.02)); }
     .proj-table .right { text-align: right; }
     @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
-    .proj-summary-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 12px; margin-bottom: 24px; }
-
+    /* Card cash position chip */
+    .proj-cash-chip { display: inline-flex; align-items: center; gap: 4px; font-size: 11px; font-weight: 700; padding: 3px 10px; border-radius: 20px; margin-top: 10px; }
     /* Detail view */
     #proj-detail-view { display: none; }
     #proj-list-view { display: block; }
+    /* Responsive */
+    @media (max-width: 640px) {
+      .proj-grid { grid-template-columns: 1fr; }
+      .proj-pnl-metrics { grid-template-columns: 1fr; gap: 16px; }
+      .proj-pnl-metric { padding: 0; border-right: none; border-bottom: 1px dashed var(--border); padding-bottom: 16px; }
+      .proj-pnl-metric:last-child { border-bottom: none; padding-bottom: 0; }
+      .proj-summary-cards { grid-template-columns: repeat(2, 1fr); }
+    }
   </style>
 </head>
 <body>
@@ -122,7 +146,9 @@
       <!-- LIST VIEW -->
       <div id="proj-list-view" class="content-area">
         <div id="proj-summary-stats" class="proj-summary-cards"></div>
-        <div id="proj-list" class="proj-grid"></div>
+        <!-- Portfolio P&L bar — rendered by renderSummaryStats() when RPC data exists -->
+        <div id="proj-pnl-bar-container" style="margin-bottom:0"></div>
+        <div id="proj-list" class="proj-grid" style="margin-top:24px"></div>
       </div>
 
       <!-- DETAIL VIEW -->
