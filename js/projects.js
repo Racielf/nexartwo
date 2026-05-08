@@ -432,6 +432,10 @@ function switchProjTab(tab) {
     }
     if (_currentProject) renderInvestorHub(_currentProject.id);
   }
+  
+  if (tab === 'workorders') {
+    if (_currentProject) renderWorkOrdersTab();
+  }
 }
 
 function renderProjectDetail() {
@@ -805,6 +809,71 @@ async function cancelRecord(id, type) {
       alert('Failed to void');
     }
   });
+}
+
+// ============================================================
+// WORK ORDERS TAB
+// ============================================================
+async function renderWorkOrdersTab() {
+  if (!_currentProject) return;
+  var tab = document.getElementById('proj-tab-workorders');
+  if (!tab) return;
+
+  tab.innerHTML = '<div style="padding:20px;color:var(--text-muted);font-size:13px">Loading Work Orders...</div>';
+
+  if (typeof isSupabaseReady !== 'function' || !isSupabaseReady()) {
+    tab.innerHTML = '<div class="proj-empty">Supabase not connected. Work Orders require a live DB.</div>';
+    return;
+  }
+
+  var allWOs = await DB.workOrders.getAll();
+  if (!allWOs) allWOs = [];
+
+  // ── Strict project_id match only ──────────────────────────────────────────
+  // Phase B: work_orders.project_id is now a real FK (TEXT → projects.id).
+  // Property-string heuristic removed. Existing WOs with project_id = null
+  // will NOT appear here until manually assigned via the WO creation modal.
+  var matchedWOs = allWOs.filter(function(wo) {
+    return wo.project_id === _currentProject.id;
+  });
+
+  if (matchedWOs.length === 0) {
+    tab.innerHTML =
+      '<div class="proj-empty" style="color:var(--text-muted);padding:64px 20px">' +
+        '<div style="background:var(--bg-secondary);width:64px;height:64px;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 16px">' +
+        '<i data-lucide="clipboard-list" style="width:32px;height:32px;opacity:0.5"></i></div>' +
+        '<p style="font-size:16px;font-weight:700;color:var(--text-primary);margin:0 0 8px">No linked work orders found for this project.</p>' +
+        '<p style="font-size:13px;max-width:380px;margin:0 auto;line-height:1.6">' +
+          'Work Orders created before the project link was available will need to be re-created or manually assigned via the Work Orders module.' +
+        '</p>' +
+      '</div>';
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+    return;
+  }
+
+  var html = '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">' +
+    '<h4 style="margin:0;font-size:13px;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.5px">Linked Work Orders</h4>' +
+    '<span style="font-size:11px;color:var(--text-muted)">' + matchedWOs.length + ' found</span>' +
+    '</div>';
+
+  html += '<div style="overflow-x:auto;width:100%"><table class="proj-table"><thead><tr>' +
+    '<th>ID</th><th>Title</th><th>Client</th><th>Status</th><th>Total</th>' +
+    '</tr></thead><tbody>';
+
+  matchedWOs.forEach(function(wo) {
+    var stColor = wo.status === 'completed' ? 'var(--success)' : (wo.status === 'cancelled' ? 'var(--danger)' : 'var(--accent)');
+    html += '<tr>' +
+      '<td style="font-family:monospace;font-size:11px">' + escHtml(wo.id) + '</td>' +
+      '<td><div style="font-weight:600">' + escHtml(wo.title) + '</div><div style="font-size:10px;color:var(--text-muted)">' + escHtml(wo.property) + '</div></td>' +
+      '<td>' + escHtml(wo.client || '—') + '</td>' +
+      '<td><span style="font-size:11px;font-weight:700;color:' + stColor + '">' + (wo.status || 'pending').toUpperCase() + '</span></td>' +
+      '<td style="font-weight:700">' + fmtMoney(wo.total) + '</td>' +
+      '</tr>';
+  });
+
+  html += '</tbody></table></div>';
+  tab.innerHTML = html;
+  if (typeof lucide !== 'undefined') lucide.createIcons();
 }
 
 // ============================================================

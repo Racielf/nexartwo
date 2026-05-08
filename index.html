@@ -888,6 +888,12 @@
             </select>
           </div>
         </div>
+        <div class="form-group">
+          <label>Link to Project <span style="font-size:11px;font-weight:400;color:var(--text-muted)">(optional)</span></label>
+          <select class="form-select" id="new-wo-project" onchange="onWOProjectSelected(this.value)">
+            <option value="">— No project link —</option>
+          </select>
+        </div>
         <div class="form-group" style="position:relative">
           <label>Property Address</label>
           <input type="text" class="form-input autocomplete-address" id="new-wo-property" placeholder="e.g., 1234 NE Sandy Blvd, Portland, OR" autocomplete="off">

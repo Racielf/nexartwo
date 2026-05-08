@@ -174,7 +174,8 @@ const DB = {
           created: r.created_date, target: r.target_date || '',
           items: r.items || 0,
           total: parseFloat(r.total) || 0,
-          completed: r.completed || 0
+          completed: r.completed || 0,
+          project_id: r.project_id || null
         };
       });
     },
@@ -191,7 +192,8 @@ const DB = {
         target_date: wo.target || null,
         items: wo.items || 0,
         total: wo.total || 0,
-        completed: wo.completed || 0
+        completed: wo.completed || 0,
+        project_id: wo.project_id || null
       }).select().single();
       if (error) { console.error('DB workOrders.create:', error); return null; }
       return data;
