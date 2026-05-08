@@ -178,11 +178,36 @@ function renderSummaryStats() {
     return s + (p._financials ? parseFloat(p._financials.cost_basis ?? 0) : 0);
   }, 0);
 
+  var totalCashPosition = PROJECTS.reduce(function(s, p) {
+    return s + (p._financials ? parseFloat(p._financials.project_cash_position ?? 0) : 0);
+  }, 0);
+  var totalProfit = PROJECTS.reduce(function(s, p) {
+    return s + (p._financials ? parseFloat(p._financials.profit ?? 0) : 0);
+  }, 0);
+  var totalNetExpenses = PROJECTS.reduce(function(s, p) {
+    return s + (p._financials ? parseFloat(p._financials.net_expense_cost ?? 0) : 0);
+  }, 0);
+  var profitPositive = totalProfit >= 0;
+
   container.innerHTML =
     '<div class="proj-stat-card"><div class="proj-stat-value">' + totalProjects + '</div><div class="proj-stat-label">Total Projects</div></div>' +
     '<div class="proj-stat-card"><div class="proj-stat-value">' + activeProjects + '</div><div class="proj-stat-label">Active</div></div>' +
     '<div class="proj-stat-card"><div class="proj-stat-value">' + fmtMoney(totalPurchase) + '</div><div class="proj-stat-label">Total Purchases</div></div>' +
     '<div class="proj-stat-card"><div class="proj-stat-value">' + fmtMoney(totalInvestment) + '</div><div class="proj-stat-label">Total Cost Basis</div></div>';
+
+  // Portfolio-level P&L summary — shown only when financial data is available via RPC
+  var withFinancials = PROJECTS.filter(function(p) { return !!p._financials; }).length;
+  if (withFinancials > 0) {
+    container.innerHTML +=
+      '<div class="proj-stat-card" style="border-top:2px solid var(--border);grid-column:1/-1;margin-top:4px;background:var(--bg-secondary)">' +
+        '<div style="font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px">Portfolio P&L Summary (' + withFinancials + ' project' + (withFinancials !== 1 ? 's' : '') + ' with data)</div>' +
+        '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px">' +
+          '<div><div style="font-size:14px;font-weight:700;color:var(--danger)">' + fmtMoney(totalNetExpenses) + '</div><div style="font-size:10px;color:var(--text-muted)">Total Net Expenses</div></div>' +
+          '<div><div style="font-size:14px;font-weight:700;color:' + (totalCashPosition >= 0 ? 'var(--success)' : 'var(--danger)') + '">' + fmtMoney(totalCashPosition) + '</div><div style="font-size:10px;color:var(--text-muted)">Total Cash Position</div></div>' +
+          '<div><div style="font-size:14px;font-weight:700;color:' + (profitPositive ? 'var(--success)' : 'var(--danger)') + '">' + fmtMoney(totalProfit) + '</div><div style="font-size:10px;color:var(--text-muted)">Total Profit / Loss</div></div>' +
+        '</div>' +
+      '</div>';
+  }
 }
 
 // ---- Project Modal ----
@@ -313,8 +338,10 @@ async function openProjectDetail(projId) {
   document.getElementById('proj-detail-view').style.display = 'block';
   document.getElementById('topbar-title').textContent = _currentProject.name;
 
+  // Set loading flag BEFORE initial render so spinner shows only when Supabase is active
+  _currentProject._financialsLoading = (typeof isSupabaseReady === 'function' && isSupabaseReady());
   renderProjectDetail();
-  if (typeof isSupabaseReady === 'function' && isSupabaseReady()) {
+  if (_currentProject._financialsLoading) {
     await fetchProjectFinancials();
   }
 }
@@ -393,11 +420,24 @@ function renderProjectDetail() {
     '</div></div></div>';
 
   var f = p._financials;
+  var finTab = document.getElementById('proj-tab-financials');
   if (!f) {
-    var errHtml = '<div class="proj-empty" style="color:var(--danger)"><i data-lucide="alert-triangle" style="width:40px;height:40px"></i>' +
-      '<p style="font-size:14px;margin:12px 0 4px">Financial summary unavailable.</p>' +
-      '<p style="font-size:12px;margin:0">Confirm Supabase migration has been applied.</p></div>';
-    document.getElementById('proj-tab-financials').innerHTML = errHtml;
+    if (p._financialsLoading) {
+      // Actively fetching — show spinner
+      finTab.innerHTML =
+        '<div style="display:flex;align-items:center;justify-content:center;gap:10px;padding:48px;color:var(--text-muted)">' +
+          '<i data-lucide="loader-2" style="width:20px;height:20px;animation:spin 1s linear infinite"></i>' +
+          '<span style="font-size:13px">Loading financial summary…</span>' +
+        '</div>';
+    } else {
+      // Fetch complete (or offline) — show clear unavailable state, no spinner
+      finTab.innerHTML =
+        '<div class="proj-empty" style="color:var(--text-muted)">' +
+          '<i data-lucide="bar-chart-2" style="width:40px;height:40px"></i>' +
+          '<p style="font-size:14px;margin:12px 0 4px">No financial summary available yet.</p>' +
+          '<p style="font-size:12px;margin:0">Add expenses or disbursements to generate a summary.</p>' +
+        '</div>';
+    }
     lucide.createIcons();
     return;
   }
@@ -446,6 +486,20 @@ var _currentDisbursements = [];
 
 async function fetchProjectFinancials() {
   if (!_currentProject) return;
+
+  // Fetch per-project financial summary via RPC and refresh the financials tab
+  var finSummary = await DB.projectFinancialSummaries.getByProject(_currentProject.id);
+  // Mark loading as complete regardless of result
+  _currentProject._financialsLoading = false;
+  if (finSummary) {
+    _currentProject._financials = finSummary;
+    renderProjectDetail(); // re-render now that we have data
+  } else {
+    // No summary yet — renderProjectDetail will show the empty state (not spinner)
+    renderProjectDetail();
+  }
+
+  // Fetch transactional data for expense/disbursement tabs
   _currentExpenses = await DB.projectExpenses.getByProject(_currentProject.id) || [];
   _currentRefunds = await DB.projectRefunds.getByProject(_currentProject.id) || [];
   _currentDisbursements = await DB.projectDisbursements.getByProject(_currentProject.id) || [];
