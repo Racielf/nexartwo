@@ -213,6 +213,7 @@ const DB = {
       if ('items' in changes) row.items = changes.items;
       if ('total' in changes) row.total = changes.total;
       if ('completed' in changes) row.completed = changes.completed;
+      if ('project_id' in changes) row.project_id = changes.project_id ?? null;
       row.updated_at = new Date().toISOString();
       var { error } = await sb.from('work_orders').update(row).eq('id', id);
       if (error) { console.error('DB workOrders.update:', error); return false; }

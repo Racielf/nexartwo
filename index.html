@@ -291,7 +291,7 @@
             </div>
             <h2 id="wo-detail-title"
               style="font-size:18px;font-weight:600;color:var(--text-secondary);cursor:pointer;border-radius:6px;padding:2px 6px;transition:background 0.15s;display:flex;align-items:center;gap:6px"
-              title="Click to edit title"
+              title="Click to rename title"
               onclick="startEditWOTitle(this)">Kitchen Renovation <i data-lucide="edit-2" style="width:14px;height:14px;opacity:0.5"></i></h2>
             <div class="wo-meta-row">
               <div class="wo-meta-item"><i data-lucide="user" style="width:14px;height:14px;margin-right:4px;vertical-align:text-bottom"></i> <strong id="wo-detail-client">—</strong></div>
@@ -863,8 +863,8 @@
   <div class="modal-overlay" id="modal-new-wo">
     <div class="modal">
       <div class="modal-header">
-        <h3><i data-lucide="clipboard-list" style="width:20px;height:20px;margin-right:8px;vertical-align:text-bottom"></i> New Work Order</h3>
-        <button class="modal-close" onclick="closeModal('modal-new-wo')">✕</button>
+        <h3 id="new-wo-modal-title"><i data-lucide="clipboard-list" style="width:20px;height:20px;margin-right:8px;vertical-align:text-bottom"></i> New Work Order</h3>
+        <button class="modal-close" onclick="_currentEditingWOId=null;closeModal('modal-new-wo')">✕</button>
       </div>
       <div class="modal-body">
         <div class="form-group" style="position:relative">
@@ -919,8 +919,8 @@
         </div>
       </div>
       <div class="modal-footer">
-        <button class="btn btn-secondary" onclick="closeModal('modal-new-wo')">Cancel</button>
-        <button class="btn btn-primary" onclick="saveNewWO()">Create Work Order</button>
+        <button class="btn btn-secondary" onclick="_currentEditingWOId=null;closeModal('modal-new-wo')">Cancel</button>
+        <button class="btn btn-primary" id="new-wo-submit-btn" onclick="saveNewWO()">Create Work Order</button>
       </div>
     </div>
   </div>
