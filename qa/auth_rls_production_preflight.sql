@@ -1,5 +1,5 @@
 -- ============================================================
--- NexArtWO Auth/RLS Production Preflight
+-- NexArtWO Auth/RLS Original Database Alignment Review Preflight
 -- Target Project: udaeifoibydcokefcmbg (NexArtWO Original)
 -- Type: READ-ONLY AUDIT
 -- ============================================================

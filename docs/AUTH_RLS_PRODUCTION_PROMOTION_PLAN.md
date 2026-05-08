@@ -1,4 +1,4 @@
-# Auth/RLS Production Promotion Plan — NexArtWO Original
+# Auth/RLS Original Database Alignment Review — NexArtWO Original
 
 ## 1. Context & Objective
 The `nexartwo-staging` environment has been successfully used as a laboratory for hardening the database security layer (Auth/RLS 004a–009). The "original" NexArtWO project (`udaeifoibydcokefcmbg`), which currently serves the GitHub Pages frontend, is currently desynchronized and lacks the latest RPC wrappers and fine-grained RLS policies.
@@ -14,13 +14,13 @@ The `nexartwo-staging` environment has been successfully used as a laboratory fo
 Run [auth_rls_production_preflight.sql](../qa/auth_rls_production_preflight.sql) in the Supabase SQL Editor and confirm:
 - [ ] **Owner Guard:** At least one `owner` exists in `user_roles` (prevents lockout).
 - [ ] **RLS Status:** Verify which tables already have RLS enabled (Phase 004a).
-- [ ] **RPC Availability:** Confirm that `get_all_financial_summaries` returns 404 (needs Phase 008).
+- [ ] **RPC Check:** Confirm whether `get_all_financial_summaries` and `get_project_financial_summary` exist.
 - [ ] **View Integrity:** Confirm `project_financial_summaries` view exists.
 
 ## 4. Execution Roadmap (Phased Approach)
 
 > [!IMPORTANT]
-> Step 004a (Bootstrap) is assumed **PASS** as the base tables already exist in production.
+> Step 004a (Bootstrap) must be verified by preflight before any promotion.
 
 ### Phase A: Role & Core Access
 1. **004b — user_roles Policies:** Lock down the roles table to owner-only edits.
@@ -47,14 +47,31 @@ Run [auth_rls_production_preflight.sql](../qa/auth_rls_production_preflight.sql)
 | Risk | Mitigation |
 | :--- | :--- |
 | **Lockout** | Preflight verifies owner existence before applying 004b policies. |
-| **Data Loss** | None. All changes are structural (Add policies/functions/views). |
+| **Data Regression** | No data migration is planned; risk is access regression if RLS/policies are applied incorrectly. |
 | **Regression** | 100% of these scripts have passed QA in `nexartwo-staging`. |
 
-## 6. Execution Protocol
+## 6. Execution Protocol & Guardrails
+
+> [!IMPORTANT]
+> **Do not apply 004b-009 until the owner reviews the preflight output and explicitly approves a specific step list.**
+
 1. **Backup:** Create a project snapshot in the Supabase Dashboard.
-2. **Authorization:** Obtain explicit approval from the Owner.
-3. **Execution:** Apply scripts via the Supabase SQL Editor in the order specified above.
+2. **Authorization:** Obtain explicit approval from the Owner for the alignment.
+3. **Step-by-Step Execution:**
+   - Run preflight audit.
+   - Compare output against verified `nexartwo-staging` state.
+   - Identify specific missing steps.
+   - Apply only the identified missing scripts.
+   - Verify application after each step (manual/console checks).
+   - **Stop immediately on any first unexpected result.**
 4. **Validation:** Verify the frontend 404s are resolved and data visibility is correct.
+
+## 7. Operational Constraints
+- **No Dump/Restore:** Database alignment is structural only.
+- **No Data Copy:** Production records are preserved; no staging data is imported.
+- **No Frontend Changes:** This plan covers database-only synchronization.
+- **No Investor Hub:** Feature remains disabled (`INVESTOR_HUB_ENABLED = false`).
+
 
 ---
 *Created: 2026-05-07*
