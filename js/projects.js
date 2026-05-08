@@ -338,8 +338,10 @@ async function openProjectDetail(projId) {
   document.getElementById('proj-detail-view').style.display = 'block';
   document.getElementById('topbar-title').textContent = _currentProject.name;
 
+  // Set loading flag BEFORE initial render so spinner shows only when Supabase is active
+  _currentProject._financialsLoading = (typeof isSupabaseReady === 'function' && isSupabaseReady());
   renderProjectDetail();
-  if (typeof isSupabaseReady === 'function' && isSupabaseReady()) {
+  if (_currentProject._financialsLoading) {
     await fetchProjectFinancials();
   }
 }
@@ -420,12 +422,22 @@ function renderProjectDetail() {
   var f = p._financials;
   var finTab = document.getElementById('proj-tab-financials');
   if (!f) {
-    // Show loading state — fetchProjectFinancials will re-render once data arrives
-    finTab.innerHTML =
-      '<div style="display:flex;align-items:center;justify-content:center;gap:10px;padding:48px;color:var(--text-muted)">' +
-        '<i data-lucide="loader-2" style="width:20px;height:20px;animation:spin 1s linear infinite"></i>' +
-        '<span style="font-size:13px">Loading financial summary…</span>' +
-      '</div>';
+    if (p._financialsLoading) {
+      // Actively fetching — show spinner
+      finTab.innerHTML =
+        '<div style="display:flex;align-items:center;justify-content:center;gap:10px;padding:48px;color:var(--text-muted)">' +
+          '<i data-lucide="loader-2" style="width:20px;height:20px;animation:spin 1s linear infinite"></i>' +
+          '<span style="font-size:13px">Loading financial summary…</span>' +
+        '</div>';
+    } else {
+      // Fetch complete (or offline) — show clear unavailable state, no spinner
+      finTab.innerHTML =
+        '<div class="proj-empty" style="color:var(--text-muted)">' +
+          '<i data-lucide="bar-chart-2" style="width:40px;height:40px"></i>' +
+          '<p style="font-size:14px;margin:12px 0 4px">No financial summary available yet.</p>' +
+          '<p style="font-size:12px;margin:0">Add expenses or disbursements to generate a summary.</p>' +
+        '</div>';
+    }
     lucide.createIcons();
     return;
   }
@@ -477,21 +489,14 @@ async function fetchProjectFinancials() {
 
   // Fetch per-project financial summary via RPC and refresh the financials tab
   var finSummary = await DB.projectFinancialSummaries.getByProject(_currentProject.id);
+  // Mark loading as complete regardless of result
+  _currentProject._financialsLoading = false;
   if (finSummary) {
     _currentProject._financials = finSummary;
     renderProjectDetail(); // re-render now that we have data
   } else {
-    // No summary yet — show informative message instead of loading spinner
-    var finTab = document.getElementById('proj-tab-financials');
-    if (finTab) {
-      finTab.innerHTML =
-        '<div class="proj-empty" style="color:var(--text-muted)">' +
-          '<i data-lucide="bar-chart-2" style="width:40px;height:40px"></i>' +
-          '<p style="font-size:14px;margin:12px 0 4px">No financial summary available yet.</p>' +
-          '<p style="font-size:12px;margin:0">Add expenses or disbursements to generate a summary.</p>' +
-        '</div>';
-      lucide.createIcons();
-    }
+    // No summary yet — renderProjectDetail will show the empty state (not spinner)
+    renderProjectDetail();
   }
 
   // Fetch transactional data for expense/disbursement tabs
