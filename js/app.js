@@ -4055,9 +4055,9 @@ async function saveNewWO() {
 
   // ── EDIT path ─────────────────────────────────────────────────────────────
   if (_currentEditingWOId) {
-    var editId   = _currentEditingWOId;
+    var editId     = _currentEditingWOId;
     var rawProjVal = document.getElementById('new-wo-project')?.value || '';
-    var changes  = {
+    var changes    = {
       title:      title,
       client:     client,
       clientId:   CLIENTS.find(function(c) { return c.name === client; })?.id || null,
@@ -4068,16 +4068,23 @@ async function saveNewWO() {
       project_id: rawProjVal || null   // empty string → null (clears link)
     };
 
-    // Update in-memory array first so UI is instant
-    var idx = WORK_ORDERS.findIndex(function(w) { return w.id === editId; });
-    if (idx >= 0) Object.assign(WORK_ORDERS[idx], changes);
-    saveWorkOrders();
-
-    // Persist to Supabase
     if (typeof DB !== 'undefined' && isSupabaseReady()) {
-      DB.workOrders.update(editId, changes).then(function(ok) {
-        if (!ok) console.warn('WO update to Supabase failed for', editId);
-      });
+      // ── Supabase path: await confirmation before updating UI ──────────────
+      var ok = await DB.workOrders.update(editId, changes);
+      if (!ok) {
+        // DB rejected the update — keep modal open, show error, do not modify local state
+        showToast('❌ Error saving. Please try again or check your connection.');
+        return;
+      }
+      // DB confirmed — now commit to local state and close
+      var idx = WORK_ORDERS.findIndex(function(w) { return w.id === editId; });
+      if (idx >= 0) Object.assign(WORK_ORDERS[idx], changes);
+      saveWorkOrders();
+    } else {
+      // ── localStorage-only fallback (Supabase unavailable) ────────────────
+      var idx = WORK_ORDERS.findIndex(function(w) { return w.id === editId; });
+      if (idx >= 0) Object.assign(WORK_ORDERS[idx], changes);
+      saveWorkOrders();
     }
 
     _currentEditingWOId = null;
@@ -4086,7 +4093,7 @@ async function saveNewWO() {
     renderDashboard();
     showToast('✅ Work Order updated');
 
-    // If the WO detail view is currently open for this WO, refresh it
+    // If the WO detail view is currently open for this WO, refresh it in-place
     if (currentWO && currentWO.id === editId) {
       currentWO = WORK_ORDERS.find(function(w) { return w.id === editId; }) || currentWO;
       openWorkOrderDetail(editId);
