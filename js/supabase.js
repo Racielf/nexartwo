@@ -116,10 +116,12 @@ const DB = {
         return {
           id: r.id, name: r.name, nameEs: r.name_es || '',
           category: r.category, sub: r.sub,
+          // Price Book alignment: services.price is operational sell price, equivalent to unit_price in NexArtPro.
           price: parseFloat(r.price) || 0,
           unit: r.unit, desc: r.description || '',
           negotiable: r.negotiable || 'yes',
-          laborHrs: parseFloat(r.labor_hrs) || 1
+          laborHrs: parseFloat(r.labor_hrs) || 1,
+          serviceType: r.service_type || 'residential'
         };
       });
     },
@@ -133,7 +135,8 @@ const DB = {
         price: s.price, unit: s.unit,
         description: s.desc || '',
         negotiable: s.negotiable || 'yes',
-        labor_hrs: s.laborHrs || 1
+        labor_hrs: s.laborHrs || 1,
+        service_type: s.serviceType || s.service_type || 'residential'
       }).select().single();
       if (error) { console.error('DB services.create:', error); return null; }
       return data;
@@ -149,7 +152,8 @@ const DB = {
           price: s.price, unit: s.unit,
           description: s.desc || '',
           negotiable: s.negotiable || 'yes',
-          labor_hrs: s.laborHrs || 1
+          labor_hrs: s.laborHrs || 1,
+          service_type: s.serviceType || s.service_type || 'residential'
         };
       });
       var { error } = await sb.from('services').insert(rows);
