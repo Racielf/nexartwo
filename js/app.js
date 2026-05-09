@@ -4034,6 +4034,24 @@ function createWOForClient(clientId) {
 }
 function openNewServiceModal() { openModal('modal-new-service'); }
 
+// ── WO ID Generation ──────────────────────────────────────────────────────────
+// Scans all existing WO IDs for the current year, finds the highest numeric
+// suffix, and returns the next one. Never collides with existing IDs regardless
+// of array length, deleted records, or gaps in the sequence.
+function generateWOId() {
+  var year = new Date().getFullYear();
+  var prefix = 'WO-' + year + '-';
+  var max = 0;
+  WORK_ORDERS.forEach(function(wo) {
+    if (wo.id && wo.id.startsWith(prefix)) {
+      var n = parseInt(wo.id.slice(prefix.length), 10);
+      if (!isNaN(n) && n > max) max = n;
+    }
+  });
+  // Also check any year-prefixed IDs from prior years to avoid cross-year collisions
+  // (WO IDs from other years won't match prefix, so max stays 0 at year rollover — correct).
+  return prefix + String(max + 1).padStart(4, '0');
+}
 
 async function saveNewWO() {
   const titleEl  = document.getElementById('new-wo-title');
@@ -4106,9 +4124,9 @@ async function saveNewWO() {
     return;
   }
 
-  // ── CREATE path (unchanged) ────────────────────────────────────────────────
+  // ── CREATE path ───────────────────────────────────────────────────────────
   const newWO = {
-    id: `WO-${new Date().getFullYear()}-${String(WORK_ORDERS.length + 41).padStart(4, '0')}`,
+    id: generateWOId(),         // collision-safe: scans existing IDs for max suffix
     title, client,
     clientId: CLIENTS.find(c => c.name === client)?.id || 1,
     property: document.getElementById('new-wo-property').value || 'TBD',
@@ -4119,20 +4137,38 @@ async function saveNewWO() {
     target: document.getElementById('new-wo-target').value || '',
     items: 0, total: 0, completed: 0,
     project_id: (document.getElementById('new-wo-project')?.value || '') || null
+    // Internal notes UI is not persisted until a DB column/migration exists.
   };
-  WORK_ORDERS.unshift(newWO);
-  saveWorkOrders();
+
   if (typeof DB !== 'undefined' && isSupabaseReady()) {
-    DB.workOrders.create(newWO).catch(function(e) { console.warn('Cloud sync WO failed:', e); });
+    // ── Supabase path: await DB confirmation before updating any local state ──
+    var created = await DB.workOrders.create(newWO);
+    if (!created) {
+      // DB rejected the insert (duplicate ID, FK violation, network error, etc.)
+      // Keep modal open so the user can retry. Do not mutate WORK_ORDERS.
+      showToast('❌ Error saving Work Order. Please try again or check your connection.');
+      console.error('saveNewWO: DB.workOrders.create returned null for id', newWO.id);
+      return;
+    }
+    // DB confirmed — use the returned record's id (Supabase may normalise it)
+    if (created.id) newWO.id = created.id;
+    // Commit to local state only after DB success
+    WORK_ORDERS.unshift(newWO);
+    saveWorkOrders();
+  } else {
+    // ── localStorage-only fallback (Supabase unavailable) ────────────────────
+    WORK_ORDERS.unshift(newWO);
+    saveWorkOrders();
   }
-  renderWorkOrders();
-  renderDashboard();
+
   closeModal('modal-new-wo');
   // Reset form
   titleEl.value = '';
   clientEl.value = '';
   var projSel = document.getElementById('new-wo-project');
   if (projSel) projSel.value = '';
+  renderWorkOrders();
+  renderDashboard();
   showToast('✅ Work Order ' + newWO.id + ' created');
   navigateTo('workorders');
 }
