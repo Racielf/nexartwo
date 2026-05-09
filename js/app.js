@@ -291,7 +291,7 @@ function navigateTo(page) {
   // Update top bar
   const titles = {
     dashboard: ['Dashboard', 'Welcome back, Rodolfo'],
-    services: ['Service Library', `${SERVICES.length} services across ${SERVICE_CATEGORIES.length - 1} categories`],
+    services: ['Price Book', 'Service Library & Standard Pricing'],
     workorders: ['Work Orders', `${WORK_ORDERS.length} total orders`],
     clients: ['Client Management', `${CLIENTS.length} clients in your network`],
     wodetail: ['Work Order Detail', ''],
@@ -478,7 +478,10 @@ function renderServiceLibrary() {
   const grid = document.getElementById('service-grid');
   const filtered = currentFilter === 'All' ? SERVICES : SERVICES.filter(s => s.category === currentFilter);
 
-  grid.innerHTML = filtered.map(s => `
+  grid.innerHTML = filtered.map(s => {
+    const typeLabel = s.serviceType === 'commercial' ? '🏢 Commercial' : s.serviceType === 'both' ? '🔀 Both' : '🏠 Residential';
+    const typeBadgeColor = s.serviceType === 'commercial' ? 'var(--accent)' : s.serviceType === 'both' ? '#8b5cf6' : 'var(--success)';
+    return `
     <div class="service-card" onclick="showServiceDetail(${s.id})">
       <div class="service-card-top">
         <span class="service-category">${s.category}</span>
@@ -492,10 +495,12 @@ function renderServiceLibrary() {
       <div class="service-meta">
         <span class="service-tag">🏷️ ${s.sub}</span>
         <span class="service-tag">⏱️ ${s.laborHrs}h</span>
+        <span style="font-size:10px;font-weight:700;color:${typeBadgeColor};background:${typeBadgeColor}18;border:1px solid ${typeBadgeColor}40;padding:2px 7px;border-radius:10px">${typeLabel}</span>
         <span class="negotiable-badge negotiable-${s.negotiable}">${s.negotiable === 'yes' ? '<i data-lucide="check" style="width:12px;height:12px"></i> Negotiable' : s.negotiable === 'no' ? '<i data-lucide="x" style="width:12px;height:12px"></i> Fixed' : '<i data-lucide="help-circle" style="width:12px;height:12px"></i> Ask'}</span>
       </div>
     </div>
-  `).join('');
+  `;
+  }).join('');
 
   // Update count
   document.getElementById('service-count').textContent = `${filtered.length} services`;
@@ -4148,11 +4153,12 @@ function saveNewService() {
     desc: document.getElementById('new-svc-desc').value || '',
     negotiable: document.getElementById('new-svc-negotiable').value || 'yes',
     laborHrs: parseFloat(document.getElementById('new-svc-labor').value) || 1,
+    serviceType: document.getElementById('new-svc-type').value || 'residential'
   };
   SERVICES.push(svcData);
   renderServiceLibrary();
   saveServices();
-  // Sync to Supabase
+  // Sync to Supabase (includes service_type via DB.services.create mapping)
   if (typeof DB !== 'undefined' && isSupabaseReady()) {
     DB.services.create(svcData).catch(function(e) { console.warn('Cloud sync service failed:', e); });
   }

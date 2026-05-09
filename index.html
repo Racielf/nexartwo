@@ -48,7 +48,7 @@
           <span class="nav-badge">4</span>
         </div>
         <div class="nav-item" data-page="services">
-          <i data-lucide="wrench" class="icon"></i> Service Library
+          <i data-lucide="wrench" class="icon"></i> Price Book
         </div>
 
         <div class="nav-section-title">Management</div>
@@ -929,7 +929,7 @@
   <div class="modal-overlay" id="modal-new-service">
     <div class="modal">
       <div class="modal-header">
-        <h3><i data-lucide="wrench" style="width:20px;height:20px;margin-right:8px;vertical-align:text-bottom"></i> Add New Service</h3>
+        <h3><i data-lucide="wrench" style="width:20px;height:20px;margin-right:8px;vertical-align:text-bottom"></i> Add New Service — Price Book</h3>
         <button class="modal-close" onclick="closeModal('modal-new-service')">✕</button>
       </div>
       <div class="modal-body">
@@ -973,6 +973,14 @@
         </div>
         <div class="form-row">
           <div class="form-group">
+            <label>Service Type</label>
+            <select class="form-select" id="new-svc-type">
+              <option value="residential">🏠 Residential</option>
+              <option value="commercial">🏢 Commercial</option>
+              <option value="both">🔀 Both</option>
+            </select>
+          </div>
+          <div class="form-group">
             <label>Negotiable</label>
             <select class="form-select" id="new-svc-negotiable">
               <option value="yes">✅ Yes</option>
@@ -980,6 +988,8 @@
               <option value="ask">🔶 Ask</option>
             </select>
           </div>
+        </div>
+        <div class="form-row">
           <div class="form-group">
             <label>Labor Hours (Est.)</label>
             <input type="number" class="form-input" id="new-svc-labor" placeholder="1" step="0.5">
