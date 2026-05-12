@@ -13,6 +13,7 @@ The page must help the owner decide:
 3. Whether the property has legal, financial, city, title, permit, lien, occupancy, or physical-condition risks.
 4. Whether the property should be visited, negotiated, rejected, or escalated for deeper due diligence.
 5. Whether web-search agents should collect public information and attach it to the property record.
+6. Whether a public client/seller questionnaire link should be generated and sent to an external person so they can submit property data directly into NexArtWO.
 
 This is a planning/specification document only. It must not activate production behavior by itself.
 
@@ -53,6 +54,220 @@ Recommended Spanish UI label:
 ```text
 Cuestionario de Compra Fix & Flip
 ```
+
+---
+
+## Public Questionnaire Link Workflow
+
+The system must support generating a secure public questionnaire link that can be sent to an external person.
+
+Use case:
+
+```text
+I send a questionnaire link to the seller, wholesaler, agent, bank contact, or property source.
+They open the link, fill out the property information, upload photos/documents if available, and submit it.
+The submitted information arrives inside NexArtWO as a new property questionnaire record for review.
+```
+
+### Owner-side flow
+
+From the internal **Cuestionario** page, the owner should be able to:
+
+1. Click **Crear link público**.
+2. Choose the intended recipient type:
+   - seller
+   - wholesaler
+   - real estate agent
+   - bank contact
+   - title contact
+   - other
+3. Optionally pre-fill:
+   - property address
+   - source name
+   - source phone/email
+   - expected asking price
+   - notes
+4. Generate a unique public URL.
+5. Copy the URL or send it by SMS/email manually.
+6. See the link status:
+   - Draft
+   - Sent
+   - Opened
+   - Submitted
+   - Expired
+   - Revoked
+7. Review the submitted questionnaire inside NexArtWO before accepting it into the active property pipeline.
+
+### Public recipient flow
+
+The public user should be able to:
+
+1. Open the unique link without logging into NexArtWO.
+2. See a simple Spanish/English-friendly form.
+3. Fill in all known property information.
+4. Answer legal, title, city, lien, bank, occupancy, and condition questions.
+5. Upload photos, disclosures, title documents, inspection files, or seller notes when available.
+6. Submit the form.
+7. Receive a clear confirmation message.
+
+Suggested confirmation:
+
+```text
+Gracias. Recibimos la información de la propiedad. El equipo revisará los datos y se comunicará si necesita más información.
+```
+
+### Public link security rules
+
+The public link must:
+
+- Use a random, hard-to-guess token.
+- Not expose the internal NexArtWO dashboard.
+- Not require the public user to see other properties.
+- Only allow access to that specific questionnaire.
+- Expire automatically after a configurable period.
+- Support manual revocation.
+- Support one-time submission or controlled resubmission.
+- Store created_at, opened_at, submitted_at, expired_at, and revoked_at timestamps.
+- Track IP/user-agent only if needed and legally acceptable.
+- Treat uploaded files as untrusted until reviewed.
+
+### Public link suggested URL pattern
+
+```text
+/public/questionnaire/{token}
+```
+
+or
+
+```text
+cuestionario-publico.html?token={token}
+```
+
+### Submission handling
+
+When the external person submits the form, the system should:
+
+1. Validate the token.
+2. Validate required fields.
+3. Save the submission as a pending questionnaire.
+4. Store uploaded files in the correct storage bucket/folder.
+5. Mark the public link as Submitted.
+6. Notify the owner inside NexArtWO.
+7. Show the submission in a **Pending Review** section.
+
+The owner must approve, reject, or request more information.
+
+### Public questionnaire minimum fields
+
+The public form should request:
+
+- Property address
+- Asking price
+- Minimum accepted price, if known
+- Seller/source name
+- Seller/source contact
+- Property occupancy status
+- Beds/baths/sqft/year built, if known
+- Known repairs needed
+- Known roof, sewer, foundation, plumbing, electrical, HVAC issues
+- Liens or title issues
+- Bank/mortgage problems
+- Foreclosure/pre-foreclosure status
+- City/code violations
+- Open permits or unpermitted work
+- Taxes or HOA dues owed
+- Tenant/squatter/eviction issues
+- Photos
+- Documents/disclosures
+- Notes
+
+### Public link data model additions
+
+Suggested table:
+
+```text
+property_questionnaire_public_links
+```
+
+Suggested fields:
+
+```text
+id
+created_at
+updated_at
+created_by
+questionnaire_id
+recipient_type
+recipient_name
+recipient_email
+recipient_phone
+token_hash
+status
+expires_at
+opened_at
+submitted_at
+revoked_at
+prefill_address
+prefill_notes
+submission_id
+```
+
+Important: store a token hash, not the raw token, when practical.
+
+Suggested submission table:
+
+```text
+property_questionnaire_public_submissions
+```
+
+Suggested fields:
+
+```text
+id
+created_at
+updated_at
+public_link_id
+status
+submitted_payload_json
+review_status
+reviewed_by
+reviewed_at
+owner_notes
+```
+
+Suggested statuses:
+
+```text
+link_draft
+link_sent
+link_opened
+link_submitted
+link_expired
+link_revoked
+submission_pending_review
+submission_accepted
+submission_rejected
+more_information_requested
+```
+
+### Owner review behavior
+
+A public submission should not automatically become an approved deal.
+
+It should enter the system as:
+
+```text
+Pending Review
+```
+
+The owner should then decide:
+
+- Accept into pipeline
+- Reject
+- Request missing information
+- Generate another public link
+- Schedule visit
+- Run web research agents
 
 ---
 
@@ -290,6 +505,8 @@ property_questionnaire_documents
 property_questionnaire_web_findings
 property_questionnaire_comps
 property_questionnaire_agent_runs
+property_questionnaire_public_links
+property_questionnaire_public_submissions
 ```
 
 ---
@@ -426,7 +643,26 @@ Suggested sections:
 6. Visit Decision
 7. Web Research Findings
 8. Documents and Photos
-9. Notes
+9. Public Link Management
+10. Notes
+
+### Public Form Frontend
+
+Add a separate public-facing form that does not expose the dashboard.
+
+Suggested page:
+
+```text
+cuestionario-publico.html
+```
+
+Suggested behavior:
+
+- Load by token.
+- Show only the questionnaire form.
+- Hide internal navigation.
+- Save as pending submission.
+- Show confirmation after submit.
 
 ### Backend / Data Layer
 
@@ -435,6 +671,8 @@ Do not change Supabase until schema is approved.
 Future implementation should:
 
 - Store questionnaire records
+- Store public questionnaire links
+- Store public submissions
 - Store risk answers separately
 - Store agent findings with source URLs and timestamps
 - Store confidence score per finding
@@ -483,6 +721,10 @@ Problemas con la ciudad
 Problemas con bancos o título
 Ocupada o vacía
 Decisión de visita
+Crear link público
+Copiar link
+Enviar cuestionario
+Pendiente de revisión
 ```
 
 Avoid visible technical labels:
@@ -514,6 +756,8 @@ The page must not:
 - Automatically schedule a visit without owner review
 - Hide unknown risks
 - Treat missing data as safe
+- Allow public links to expose internal dashboard data
+- Accept public submissions as approved deals without owner review
 
 Unknown must always be treated as risk.
 
@@ -524,6 +768,9 @@ Unknown must always be treated as risk.
 MVP should include:
 
 - Manual property intake form
+- Public questionnaire link generator
+- Public questionnaire form by token
+- Pending public submission review list
 - Legal/city/title risk checklist
 - Physical-risk checklist
 - Basic ARV/rehab/profit calculator
@@ -543,6 +790,8 @@ Add:
 - Supabase persistence
 - Property records list
 - Saved questionnaire history
+- Public link status tracking
+- Public document/photo upload storage
 - PDF export
 - Comps table
 - Inspection report attachment
@@ -575,12 +824,15 @@ All agent results must include:
 Known working assumption from current analysis:
 
 ```text
-Target purchase price: $285,000
-Likely ARV range: $450,000 - $475,000
-Recommended rehab style: clean modern starter-home flip, not luxury
-Estimated rehab target: keep under $80,000 if possible
-Primary risks: sewer, crawlspace moisture, roof, electrical, city/permit/title issues
-Visit decision: viable only after required information and risk precheck
+Purchase price: $300,000 plus closing/title costs
+Estimated resale target: $425,000 base case
+Lender cost: 10.5% of borrowed purchase money
+Realtor cost: 6% of resale price
+Closing/title estimate: $15,000 purchase + $15,000 resale
+Recommended rehab style: quick cosmetic resale, not full luxury flip
+Estimated rehab target: $15,000 - $25,000 preferred, $30,000 maximum psychological cap
+Primary risks: sewer, crawlspace moisture, roof, electrical, siding moisture rot, city/permit/title issues
+Visit decision: viable only if inspection confirms low rehab and no major system failures
 ```
 
 This example must remain editable and should not be hard-coded into production logic.
@@ -608,6 +860,7 @@ When this page is implemented later, every PR must clearly state:
 - Whether SQL was touched
 - Whether Supabase was touched
 - Whether any agent automation was activated
+- Whether public questionnaire links were activated
 - Whether production data was touched
 - What QA was performed
 - Remaining blockers
