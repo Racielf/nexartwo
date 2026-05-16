@@ -627,21 +627,12 @@ function switchProjTab(tab) {
   if(tBtn) tBtn.classList.add('active');
   var tContent = document.getElementById('proj-tab-' + tab);
   if(tContent) tContent.style.display = 'block';
+  
   // Lazy-load Investor Hub when tab is first opened
-  // Guarded by INVESTOR_HUB_ENABLED feature flag (Phase 2B hotfix)
   if (tab === 'investorhub') {
-    if (!INVESTOR_HUB_ENABLED) {
-      var blockedEl = document.getElementById('proj-tab-investorhub');
-      if (blockedEl) {
-        blockedEl.innerHTML = '<div style="padding:32px;text-align:center;color:var(--text-muted)">' +
-          '<div style="font-size:32px;margin-bottom:12px">🔒</div>' +
-          '<div style="font-weight:700;font-size:14px;margin-bottom:8px;color:var(--text-primary)">Investor Hub — Coming Soon</div>' +
-          '<div style="font-size:12px">This feature is pending final configuration.<br>Contact your administrator.</div>' +
-          '</div>';
-      }
-      return;
+    if (_currentProject && typeof loadInvestorHubTab === 'function') {
+      loadInvestorHubTab(_currentProject.id);
     }
-    if (_currentProject) renderInvestorHub(_currentProject.id);
   }
   
   if (tab === 'workorders') {
