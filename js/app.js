@@ -4034,6 +4034,21 @@ function createWOForClient(clientId) {
 }
 function openNewServiceModal() { openModal('modal-new-service'); }
 
+// Generate the next WO ID for the current year by scanning existing records.
+// This avoids collisions after deletes, failed syncs, or imported data.
+function generateWOId() {
+  var year = new Date().getFullYear();
+  var prefix = 'WO-' + year + '-';
+  var max = 0;
+  WORK_ORDERS.forEach(function(wo) {
+    if (wo.id && wo.id.startsWith(prefix)) {
+      var n = parseInt(wo.id.slice(prefix.length), 10);
+      if (!isNaN(n) && n > max) max = n;
+    }
+  });
+  return prefix + String(max + 1).padStart(4, '0');
+}
+
 
 async function saveNewWO() {
   const titleEl  = document.getElementById('new-wo-title');
@@ -4106,9 +4121,9 @@ async function saveNewWO() {
     return;
   }
 
-  // ── CREATE path (unchanged) ────────────────────────────────────────────────
+  // ── CREATE path ────────────────────────────────────────────────────────────
   const newWO = {
-    id: `WO-${new Date().getFullYear()}-${String(WORK_ORDERS.length + 41).padStart(4, '0')}`,
+    id: generateWOId(),
     title, client,
     clientId: CLIENTS.find(c => c.name === client)?.id || 1,
     property: document.getElementById('new-wo-property').value || 'TBD',
@@ -4120,10 +4135,19 @@ async function saveNewWO() {
     items: 0, total: 0, completed: 0,
     project_id: (document.getElementById('new-wo-project')?.value || '') || null
   };
-  WORK_ORDERS.unshift(newWO);
-  saveWorkOrders();
   if (typeof DB !== 'undefined' && isSupabaseReady()) {
-    DB.workOrders.create(newWO).catch(function(e) { console.warn('Cloud sync WO failed:', e); });
+    var created = await DB.workOrders.create(newWO);
+    if (!created) {
+      showToast('Error saving Work Order. Please try again or check your connection.');
+      console.error('saveNewWO: DB.workOrders.create returned null for id', newWO.id);
+      return;
+    }
+    if (created.id) newWO.id = created.id;
+    WORK_ORDERS.unshift(newWO);
+    saveWorkOrders();
+  } else {
+    WORK_ORDERS.unshift(newWO);
+    saveWorkOrders();
   }
   renderWorkOrders();
   renderDashboard();
