@@ -3,9 +3,111 @@
 -- ============================================================
 -- SAFETY:
 -- - Adds only the missing capital_calls table and its policies/triggers.
+-- - Repairs partial Investor Hub tables from earlier local/prod drift.
 -- - Does not touch projects, expenses, refunds, disbursements, P&L, or summaries.
--- - Idempotent: safe to run if capital_calls already exists.
+-- - Idempotent: safe to run if these tables/columns already exist.
 -- ============================================================
+
+ALTER TABLE IF EXISTS public.investors
+  ADD COLUMN IF NOT EXISTS company_id UUID REFERENCES public.investor_companies(id) ON DELETE RESTRICT,
+  ADD COLUMN IF NOT EXISTS phone TEXT NOT NULL DEFAULT '',
+  ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'active',
+  ADD COLUMN IF NOT EXISTS notes TEXT NOT NULL DEFAULT '',
+  ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT now();
+
+ALTER TABLE IF EXISTS public.project_investors
+  ADD COLUMN IF NOT EXISTS ownership_percentage NUMERIC(5,2),
+  ADD COLUMN IF NOT EXISTS profit_split_percentage NUMERIC(5,2),
+  ADD COLUMN IF NOT EXISTS agreement_notes TEXT NOT NULL DEFAULT '',
+  ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT now();
+
+ALTER TABLE IF EXISTS public.capital_contributions
+  ADD COLUMN IF NOT EXISTS investor_id UUID REFERENCES public.investors(id) ON DELETE RESTRICT,
+  ADD COLUMN IF NOT EXISTS date DATE,
+  ADD COLUMN IF NOT EXISTS method TEXT NOT NULL DEFAULT 'wire',
+  ADD COLUMN IF NOT EXISTS type TEXT NOT NULL DEFAULT 'initial',
+  ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'pending',
+  ADD COLUMN IF NOT EXISTS evidence_reference TEXT NOT NULL DEFAULT '',
+  ADD COLUMN IF NOT EXISTS notes TEXT NOT NULL DEFAULT '',
+  ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT now();
+
+DO $$
+BEGIN
+  IF to_regclass('public.capital_contributions') IS NOT NULL
+    AND EXISTS (
+      SELECT 1 FROM information_schema.columns
+      WHERE table_schema = 'public'
+        AND table_name = 'capital_contributions'
+        AND column_name = 'project_investor_id'
+    )
+  THEN
+    UPDATE public.capital_contributions cc
+    SET investor_id = pi.investor_id
+    FROM public.project_investors pi
+    WHERE cc.investor_id IS NULL
+      AND cc.project_investor_id = pi.id;
+  END IF;
+
+  IF to_regclass('public.capital_contributions') IS NOT NULL
+    AND EXISTS (
+      SELECT 1 FROM information_schema.columns
+      WHERE table_schema = 'public'
+        AND table_name = 'capital_contributions'
+        AND column_name = 'contribution_date'
+    )
+  THEN
+    UPDATE public.capital_contributions
+    SET date = contribution_date
+    WHERE date IS NULL;
+  END IF;
+END $$;
+
+DO $$
+BEGIN
+  IF to_regclass('public.project_investors') IS NOT NULL THEN
+    ALTER TABLE public.project_investors
+      DROP CONSTRAINT IF EXISTS project_investors_role_check;
+
+    ALTER TABLE public.project_investors
+      ADD CONSTRAINT project_investors_role_check
+      CHECK (role IN ('lead_contractor','equity_partner','silent_partner','private_lender','other'))
+      NOT VALID;
+  END IF;
+END $$;
+
+CREATE OR REPLACE FUNCTION public.prevent_contribution_delete()
+RETURNS TRIGGER AS $$
+BEGIN
+  RAISE EXCEPTION 'RULE 2B-NO-DELETE: Cannot delete capital contributions. Set status to ''cancelled'' instead.';
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE OR REPLACE FUNCTION public.prevent_contribution_update()
+RETURNS TRIGGER AS $$
+BEGIN
+  IF OLD.amount       IS DISTINCT FROM NEW.amount      OR
+     OLD.date         IS DISTINCT FROM NEW.date        OR
+     OLD.investor_id  IS DISTINCT FROM NEW.investor_id OR
+     OLD.project_id   IS DISTINCT FROM NEW.project_id
+  THEN
+    RAISE EXCEPTION 'RULE 2B-IMMUTABLE: Cannot modify historical fields (amount, date, investor_id, project_id) on capital_contributions. Cancel and create a new record instead.';
+  END IF;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS trg_no_delete_capital_contributions ON public.capital_contributions;
+CREATE TRIGGER trg_no_delete_capital_contributions
+BEFORE DELETE ON public.capital_contributions
+FOR EACH ROW EXECUTE FUNCTION public.prevent_contribution_delete();
+
+DROP TRIGGER IF EXISTS trg_no_update_capital_contributions ON public.capital_contributions;
+CREATE TRIGGER trg_no_update_capital_contributions
+BEFORE UPDATE ON public.capital_contributions
+FOR EACH ROW EXECUTE FUNCTION public.prevent_contribution_update();
 
 CREATE TABLE IF NOT EXISTS public.capital_calls (
   id               UUID          PRIMARY KEY DEFAULT gen_random_uuid(),
