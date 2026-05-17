@@ -135,6 +135,12 @@ BEGIN
 
   IF to_regclass('public.project_investors') IS NOT NULL THEN
     ALTER TABLE public.project_investors
+      ALTER COLUMN ownership_percentage DROP NOT NULL;
+
+    ALTER TABLE public.project_investors
+      ALTER COLUMN profit_split_percentage DROP NOT NULL;
+
+    ALTER TABLE public.project_investors
       DROP CONSTRAINT IF EXISTS project_investors_role_check;
 
     ALTER TABLE public.project_investors

@@ -783,12 +783,14 @@ const DB = {
       var sb = getSupabase();
       if (!sb) return null;
       opts = opts || {};
+      var ownership = opts.ownership_percentage;
+      var profitSplit = opts.profit_split_percentage;
       var { data, error } = await sb.from('project_investors').insert({
         project_id:              projectId,
         investor_id:             investorId,
         role:                    role || 'equity_partner',
-        ownership_percentage:    opts.ownership_percentage || null,
-        profit_split_percentage: opts.profit_split_percentage || null,
+        ownership_percentage:    ownership === null || ownership === undefined || ownership === '' ? 0 : ownership,
+        profit_split_percentage: profitSplit === null || profitSplit === undefined || profitSplit === '' ? 0 : profitSplit,
         status:                  'pending',
         agreement_notes:         opts.agreement_notes || ''
       }).select().single();
