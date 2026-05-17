@@ -3695,7 +3695,12 @@ async function sendEmailNow() {
   }
 
   try {
-    var res = await fetch('https://udaeifoibydcokefcmbg.supabase.co/functions/v1/send-email', {
+    var emailFunctionUrl = typeof getSupabaseFunctionUrl === 'function'
+      ? getSupabaseFunctionUrl('send-email')
+      : 'https://udaeifoibydcokefcmbg.supabase.co/functions/v1/send-email';
+    if (!emailFunctionUrl) throw new Error('Email function URL is not configured');
+
+    var res = await fetch(emailFunctionUrl, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
