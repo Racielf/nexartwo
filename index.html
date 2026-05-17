@@ -5,12 +5,12 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>WOIMS — R.C Art Construction LLC</title>
   <meta name="description" content="Work Order & Inspection Management System for R.C Art Construction LLC — Oregon CCB #247277">
-  <link rel="stylesheet" href="css/styles.css">
+  <link rel="stylesheet" href="css/styles.css?v=dashboard-saas-20260516">
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#fbf5e6">
   <script src="https://unpkg.com/lucide@latest"></script>
 </head>
-<body>
+<body class="app-loading">
   <!-- Confirmation Modal -->
   <div id="confirm-modal-overlay" class="confirm-overlay" style="display:none" onclick="closeConfirmModal()">
     <div class="confirm-box" onclick="event.stopPropagation()">
@@ -63,10 +63,14 @@
         <div class="nav-item" data-page="docs">
           <i data-lucide="file-text" class="icon"></i> Documents
         </div>
-        <a href="projects.html" class="nav-item" style="text-decoration:none;color:inherit">
+        <div class="nav-item" data-page="projects" data-route="projects">
           <i data-lucide="building-2" class="icon"></i> Projects
           <span style="font-size:9px;color:var(--success);margin-left:auto;font-weight:700">NEW</span>
-        </a>
+        </div>
+        <div class="nav-item" data-page="investorhub" data-route="investorhub">
+          <i data-lucide="landmark" class="icon"></i> Investor Hub
+          <span style="font-size:9px;color:var(--accent);margin-left:auto;font-weight:700">LIVE</span>
+        </div>
         <div class="nav-item" data-page="fieldmode">
           <i data-lucide="smartphone" class="icon"></i> Field Mode
           <span style="font-size:9px;color:var(--success);margin-left:auto;font-weight:700">NEW</span>
@@ -122,71 +126,120 @@
       </div>
 
       <!-- ============ DASHBOARD PAGE ============ -->
-      <div class="page active" id="page-dashboard">
+      <div class="page" id="page-dashboard">
 
-        <div class="quick-actions">
-          <div class="quick-action" onclick="openNewWOModal()"><i data-lucide="file-plus" class="icon" style="width:18px;height:18px"></i> New Work Order</div>
-          <div class="quick-action" onclick="navigateTo('services')"><i data-lucide="wrench" class="icon" style="width:18px;height:18px"></i> Service Library</div>
-          <div class="quick-action" onclick="openNewServiceModal()"><i data-lucide="plus-circle" class="icon" style="width:18px;height:18px"></i> Add Service</div>
-          <div class="quick-action" onclick="openNewClientModal()"><i data-lucide="user-plus" class="icon" style="width:18px;height:18px"></i> New Client</div>
-          <div class="quick-action" onclick="navigateTo('fieldmode')"><i data-lucide="smartphone" class="icon" style="width:18px;height:18px"></i> Field Mode</div>
+        <section class="dash-command-panel">
+          <div class="dash-command-copy">
+            <div class="dash-eyebrow"><i data-lucide="radio-tower"></i> Operations Command</div>
+            <h1>R.C Art Construction</h1>
+            <div class="dash-command-meta">
+              <span>Oregon CCB #247277</span>
+              <span id="dash-command-date">Live board</span>
+              <span id="dash-command-health">Pipeline active</span>
+            </div>
+          </div>
+          <div class="dash-command-actions">
+            <button class="btn btn-primary" onclick="openNewWOModal()"><i data-lucide="file-plus"></i> New Work Order</button>
+            <button class="btn btn-secondary" onclick="navigateTo('projects')"><i data-lucide="building-2"></i> Projects</button>
+            <button class="btn btn-secondary" onclick="navigateTo('fieldmode')"><i data-lucide="smartphone"></i> Field Mode</button>
+          </div>
+        </section>
+
+        <div class="dash-quick-strip">
+          <button class="dash-action-chip" onclick="navigateTo('services')"><i data-lucide="wrench"></i> Price Book</button>
+          <button class="dash-action-chip" onclick="openNewServiceModal()"><i data-lucide="plus-circle"></i> Add Service</button>
+          <button class="dash-action-chip" onclick="openNewClientModal()"><i data-lucide="user-plus"></i> New Client</button>
+          <button class="dash-action-chip" onclick="navigateTo('docs')"><i data-lucide="file-text"></i> Documents</button>
+          <button class="dash-action-chip" onclick="navigateTo('investorhub')"><i data-lucide="landmark"></i> Investor Hub</button>
         </div>
 
-        <div class="stats-grid">
-          <div class="stat-card accent">
-            <div class="stat-icon"><i data-lucide="clipboard-list" style="width:24px;height:24px"></i></div>
+        <div class="stats-grid dash-kpi-grid">
+          <div class="stat-card dash-kpi accent">
+            <div class="stat-icon"><i data-lucide="clipboard-list" style="width:22px;height:22px"></i></div>
             <div class="stat-value" id="stat-open">0</div>
             <div class="stat-label">Open Work Orders</div>
+            <div class="dash-kpi-meter"><span id="stat-open-meter"></span></div>
             <div class="stat-change up">↑ 2 this week</div>
           </div>
-          <div class="stat-card danger">
-            <div class="stat-icon"><i data-lucide="alert-triangle" style="width:24px;height:24px"></i></div>
+          <div class="stat-card dash-kpi danger">
+            <div class="stat-icon"><i data-lucide="alert-triangle" style="width:22px;height:22px"></i></div>
             <div class="stat-value" id="stat-overdue">0</div>
-            <div class="stat-label">Overdue Orders</div>
+            <div class="stat-label">Risk Watch</div>
+            <div class="dash-kpi-meter"><span id="stat-overdue-meter"></span></div>
             <div class="stat-change down">↑ 1 since last week</div>
           </div>
-          <div class="stat-card success">
-            <div class="stat-icon"><i data-lucide="check-circle" style="width:24px;height:24px"></i></div>
+          <div class="stat-card dash-kpi success">
+            <div class="stat-icon"><i data-lucide="check-circle" style="width:22px;height:22px"></i></div>
             <div class="stat-value" id="stat-completed">0</div>
-            <div class="stat-label">Completed This Month</div>
+            <div class="stat-label">Completed</div>
+            <div class="dash-kpi-meter"><span id="stat-completed-meter"></span></div>
             <div class="stat-change up">↑ On track</div>
           </div>
-          <div class="stat-card info">
-            <div class="stat-icon"><i data-lucide="dollar-sign" style="width:24px;height:24px"></i></div>
+          <div class="stat-card dash-kpi info">
+            <div class="stat-icon"><i data-lucide="dollar-sign" style="width:22px;height:22px"></i></div>
             <div class="stat-value" id="stat-pipeline">$0</div>
             <div class="stat-label">Revenue Pipeline</div>
+            <div class="dash-kpi-meter"><span id="stat-pipeline-meter"></span></div>
             <div class="stat-change up">↑ 12% vs last month</div>
           </div>
-          <div class="stat-card purple">
-            <div class="stat-icon"><i data-lucide="hammer" style="width:24px;height:24px"></i></div>
+          <div class="stat-card dash-kpi purple">
+            <div class="stat-icon"><i data-lucide="hammer" style="width:22px;height:22px"></i></div>
             <div class="stat-value" id="stat-pending">0</div>
             <div class="stat-label">Items Pending</div>
+            <div class="stat-change up">Crew load</div>
+            <div class="dash-kpi-meter"><span id="stat-pending-meter"></span></div>
           </div>
-          <div class="stat-card accent">
-            <div class="stat-icon"><i data-lucide="mail" style="width:24px;height:24px"></i></div>
+          <div class="stat-card dash-kpi accent">
+            <div class="stat-icon"><i data-lucide="mail" style="width:22px;height:22px"></i></div>
             <div class="stat-value" id="stat-docs">0</div>
-            <div class="stat-label">Docs Sent (Not Opened)</div>
+            <div class="stat-label">Docs Pending</div>
+            <div class="stat-change up">Client follow-up</div>
+            <div class="dash-kpi-meter"><span id="stat-docs-meter"></span></div>
           </div>
         </div>
 
         <!-- Dashboard Financial Overview (Phase 2) -->
         <div id="dashboard-financial-summary" style="margin-bottom: 28px; display: none;"></div>
 
-        <div class="dashboard-grid">
-          <div class="card">
+        <div class="dash-analytics-grid">
+          <section class="dash-panel dash-panel-wide">
+            <div class="dash-panel-head">
+              <div>
+                <span>Revenue Cadence</span>
+                <h3>Pipeline by created work order</h3>
+              </div>
+              <button class="btn btn-sm btn-secondary" onclick="navigateTo('workorders')"><i data-lucide="arrow-up-right"></i> View All</button>
+            </div>
+            <div id="dash-revenue-chart" class="dash-revenue-chart"></div>
+          </section>
+
+          <section class="dash-panel">
+            <div class="dash-panel-head">
+              <div>
+                <span>Order Mix</span>
+                <h3>Status distribution</h3>
+              </div>
+            </div>
+            <div id="dash-status-donut" class="dash-status-donut"></div>
+            <div id="dash-status-legend" class="dash-status-legend"></div>
+          </section>
+        </div>
+
+        <div class="dashboard-grid dash-ops-grid">
+          <div class="card dash-table-card">
             <div class="card-header">
               <h3>Recent Work Orders</h3>
               <button class="btn btn-sm btn-secondary" onclick="navigateTo('workorders')">View All</button>
             </div>
             <div class="card-body" style="padding:0">
-              <table class="wo-table">
+              <table class="wo-table dash-wo-table">
                 <thead>
                   <tr>
                     <th>WO #</th>
                     <th>Title</th>
                     <th>Client</th>
                     <th>Status</th>
-                    <th>Priority</th>
+                    <th>Progress</th>
                     <th>Total</th>
                   </tr>
                 </thead>
@@ -195,7 +248,17 @@
             </div>
           </div>
 
-          <div class="card">
+          <section class="dash-panel dash-priority-panel">
+            <div class="dash-panel-head">
+              <div>
+                <span>Priority Load</span>
+                <h3>Field pressure</h3>
+              </div>
+            </div>
+            <div id="dash-priority-bars" class="dash-priority-bars"></div>
+          </section>
+
+          <div class="card dash-activity-card">
             <div class="card-header">
               <h3>Activity Feed</h3>
               <button class="btn btn-sm btn-ghost"><i data-lucide="bell" style="width:16px;height:16px"></i></button>
@@ -592,6 +655,11 @@
           </div>
         </div>
       </div>
+
+      <!-- ============ PROJECTS / INVESTOR HUB PAGES ============ -->
+      <div class="page projects-app-page" id="page-projects"></div>
+
+      <div class="page projects-app-page" id="page-investorhub"></div>
 
       <!-- ============ CLIENTS PAGE ============ -->
       <div class="page" id="page-clients">
@@ -1339,6 +1407,7 @@
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="js/supabase.js"></script>
-  <script src="js/app.js"></script>
+  <script src="js/projects.js?v=dashboard-saas-20260516"></script>
+  <script src="js/app.js?v=dashboard-saas-20260516"></script>
 </body>
 </html>
