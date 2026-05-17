@@ -63,6 +63,54 @@ BEGIN
     SET date = contribution_date
     WHERE date IS NULL;
   END IF;
+
+  IF to_regclass('public.capital_contributions') IS NOT NULL
+    AND EXISTS (
+      SELECT 1 FROM information_schema.columns
+      WHERE table_schema = 'public'
+        AND table_name = 'capital_contributions'
+        AND column_name = 'project_investor_id'
+    )
+  THEN
+    ALTER TABLE public.capital_contributions
+      ALTER COLUMN project_investor_id DROP NOT NULL;
+  END IF;
+
+  IF to_regclass('public.capital_contributions') IS NOT NULL
+    AND EXISTS (
+      SELECT 1 FROM information_schema.columns
+      WHERE table_schema = 'public'
+        AND table_name = 'capital_contributions'
+        AND column_name = 'contribution_date'
+    )
+  THEN
+    ALTER TABLE public.capital_contributions
+      ALTER COLUMN contribution_date DROP NOT NULL;
+  END IF;
+
+  IF to_regclass('public.capital_contributions') IS NOT NULL
+    AND EXISTS (
+      SELECT 1 FROM information_schema.columns
+      WHERE table_schema = 'public'
+        AND table_name = 'capital_contributions'
+        AND column_name = 'contribution_type'
+    )
+  THEN
+    ALTER TABLE public.capital_contributions
+      ALTER COLUMN contribution_type DROP NOT NULL;
+  END IF;
+
+  IF to_regclass('public.capital_contributions') IS NOT NULL
+    AND EXISTS (
+      SELECT 1 FROM information_schema.columns
+      WHERE table_schema = 'public'
+        AND table_name = 'capital_contributions'
+        AND column_name = 'payment_method'
+    )
+  THEN
+    ALTER TABLE public.capital_contributions
+      ALTER COLUMN payment_method DROP NOT NULL;
+  END IF;
 END $$;
 
 DO $$
