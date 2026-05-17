@@ -67,6 +67,24 @@ END $$;
 
 DO $$
 BEGIN
+  IF to_regclass('public.investors') IS NOT NULL THEN
+    ALTER TABLE public.investors
+      DROP CONSTRAINT IF EXISTS investors_type_check;
+
+    ALTER TABLE public.investors
+      ADD CONSTRAINT investors_type_check
+      CHECK (type IN ('person','company'))
+      NOT VALID;
+
+    ALTER TABLE public.investors
+      DROP CONSTRAINT IF EXISTS investors_status_check;
+
+    ALTER TABLE public.investors
+      ADD CONSTRAINT investors_status_check
+      CHECK (status IN ('active','inactive'))
+      NOT VALID;
+  END IF;
+
   IF to_regclass('public.project_investors') IS NOT NULL THEN
     ALTER TABLE public.project_investors
       DROP CONSTRAINT IF EXISTS project_investors_role_check;
@@ -74,6 +92,64 @@ BEGIN
     ALTER TABLE public.project_investors
       ADD CONSTRAINT project_investors_role_check
       CHECK (role IN ('lead_contractor','equity_partner','silent_partner','private_lender','other'))
+      NOT VALID;
+
+    ALTER TABLE public.project_investors
+      DROP CONSTRAINT IF EXISTS project_investors_status_check;
+
+    ALTER TABLE public.project_investors
+      ADD CONSTRAINT project_investors_status_check
+      CHECK (status IN ('pending','confirmed','cancelled'))
+      NOT VALID;
+
+    ALTER TABLE public.project_investors
+      DROP CONSTRAINT IF EXISTS project_investors_ownership_percentage_check;
+
+    ALTER TABLE public.project_investors
+      ADD CONSTRAINT project_investors_ownership_percentage_check
+      CHECK (ownership_percentage IS NULL OR (ownership_percentage >= 0 AND ownership_percentage <= 100))
+      NOT VALID;
+
+    ALTER TABLE public.project_investors
+      DROP CONSTRAINT IF EXISTS project_investors_profit_split_percentage_check;
+
+    ALTER TABLE public.project_investors
+      ADD CONSTRAINT project_investors_profit_split_percentage_check
+      CHECK (profit_split_percentage IS NULL OR (profit_split_percentage >= 0 AND profit_split_percentage <= 100))
+      NOT VALID;
+  END IF;
+
+  IF to_regclass('public.capital_contributions') IS NOT NULL THEN
+    ALTER TABLE public.capital_contributions
+      DROP CONSTRAINT IF EXISTS capital_contributions_amount_check;
+
+    ALTER TABLE public.capital_contributions
+      ADD CONSTRAINT capital_contributions_amount_check
+      CHECK (amount > 0)
+      NOT VALID;
+
+    ALTER TABLE public.capital_contributions
+      DROP CONSTRAINT IF EXISTS capital_contributions_method_check;
+
+    ALTER TABLE public.capital_contributions
+      ADD CONSTRAINT capital_contributions_method_check
+      CHECK (method IN ('cash','wire','check','company_payment'))
+      NOT VALID;
+
+    ALTER TABLE public.capital_contributions
+      DROP CONSTRAINT IF EXISTS capital_contributions_type_check;
+
+    ALTER TABLE public.capital_contributions
+      ADD CONSTRAINT capital_contributions_type_check
+      CHECK (type IN ('initial','additional','closing','reimbursement'))
+      NOT VALID;
+
+    ALTER TABLE public.capital_contributions
+      DROP CONSTRAINT IF EXISTS capital_contributions_status_check;
+
+    ALTER TABLE public.capital_contributions
+      ADD CONSTRAINT capital_contributions_status_check
+      CHECK (status IN ('pending','confirmed','cancelled'))
       NOT VALID;
   END IF;
 END $$;
