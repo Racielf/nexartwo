@@ -942,3 +942,23 @@ const DB = {
   }
 };
 
+// ============================================================
+// INVESTOR HUB — Phase 2B
+// ============================================================
+
+// InvestorManager para gestionar inversores y análisis de flips
+let investorMgr = null;
+
+function getInvestorManager() {
+  if (investorMgr) return investorMgr;
+  var sb = getSupabase();
+  if (!sb) return null;
+  // InvestorManager será importado via script tag en HTML
+  if (typeof InvestorManager === 'undefined') return null;
+  investorMgr = new InvestorManager(sb);
+  return investorMgr;
+}
+
+function isInvestorManagerReady() {
+  return !!getInvestorManager();
+}

@@ -902,23 +902,11 @@ function switchProjTab(tab) {
   if(tBtn) tBtn.classList.add('active');
   var tContent = document.getElementById('proj-tab-' + tab);
   if(tContent) tContent.style.display = 'block';
-  // Lazy-load Investor Hub when tab is first opened
-  // Guarded by INVESTOR_HUB_ENABLED feature flag (Phase 2B hotfix)
-  if (tab === 'investorhub') {
-    if (!INVESTOR_HUB_ENABLED) {
-      var blockedEl = document.getElementById('proj-tab-investorhub');
-      if (blockedEl) {
-        blockedEl.innerHTML = '<div style="padding:32px;text-align:center;color:var(--text-muted)">' +
-          '<div style="font-size:32px;margin-bottom:12px">🔒</div>' +
-          '<div style="font-weight:700;font-size:14px;margin-bottom:8px;color:var(--text-primary)">Investor Hub — Coming Soon</div>' +
-          '<div style="font-size:12px">This feature is pending final configuration.<br>Contact your administrator.</div>' +
-          '</div>';
-      }
-      return;
-    }
-    if (_currentProject) renderInvestorHub(_currentProject.id);
+
+  if (tab === 'investorhub' && _currentProject) {
+    renderInvestorHub(_currentProject.id);
   }
-  
+
   if (tab === 'workorders') {
     if (_currentProject) renderWorkOrdersTab();
   }
@@ -990,7 +978,7 @@ function renderProjectDetail(options) {
   document.getElementById('proj-tab-financials').innerHTML =
     '<div style="background:var(--danger-bg, #fef2f2);color:var(--danger, #ef4444);padding:10px 14px;border-radius:8px;font-size:11px;font-weight:700;margin-bottom:20px;display:flex;align-items:center;gap:8px;border:1px solid #fee2e2">' +
     '<i data-lucide="shield-alert" style="width:16px;height:16px"></i> INTERNAL & ADMIN USE ONLY</div>' +
-    
+
     '<div class="proj-summary-cards">' +
     '<div class="proj-stat-card"><div style="display:flex;justify-content:center;margin-bottom:8px;color:var(--text-muted)"><i data-lucide="home" style="width:18px;height:18px"></i></div><div class="proj-stat-value">' + fmtMoney(costBasis) + '</div><div class="proj-stat-label">Cost Basis</div></div>' +
     '<div class="proj-stat-card"><div style="display:flex;justify-content:center;margin-bottom:8px;color:var(--text-muted)"><i data-lucide="wallet" style="width:18px;height:18px"></i></div><div class="proj-stat-value">' + fmtMoney(cashInvested) + '</div><div class="proj-stat-label">Initial Cash</div></div>' +
@@ -1079,7 +1067,7 @@ function renderExpensesTab() {
       var col = isExp ? 'var(--danger)' : 'var(--success)';
       var sign = isExp ? '-' : '+';
       var stColor = item.status === 'approved' ? 'var(--success)' : (item.status === 'cancelled' || item.status === 'rejected' ? 'var(--danger)' : 'var(--text-muted)');
-      
+
       html += '<tr>' +
         '<td>' + fmtDate(item.receipt_date) + '</td>' +
         '<td><span style="font-size:10px;padding:2px 6px;border-radius:4px;background:' + col + '20;color:' + col + '">' + item._type.toUpperCase() + '</span></td>' +
@@ -1120,7 +1108,7 @@ function renderDisbursementsTab() {
       var col = 'var(--danger)';
       var sign = '-';
       var stColor = (item.status === 'approved' || item.status === 'paid') ? 'var(--success)' : (item.status === 'cancelled' || item.status === 'rejected' ? 'var(--danger)' : 'var(--text-muted)');
-      
+
       html += '<tr>' +
         '<td>' + fmtDate(item.payment_date) + '</td>' +
         '<td><span style="font-size:10px;padding:2px 6px;border-radius:4px;background:var(--bg-secondary);border:1px solid var(--border)">' + (item.payment_type || 'check').toUpperCase() + '</span></td>' +
