@@ -356,12 +356,49 @@ function navigateTo(page, options) {
 
   // Page-specific init
   if (page === 'dashboard') renderDashboard();
-  if (page === 'projects' && typeof initProjectsModule === 'function') initProjectsModule({ route: 'projects' });
-  if (page === 'investorhub' && typeof openInvestorHubRoute === 'function') openInvestorHubRoute();
+  if (page === 'projects' || page === 'investorhub') initProjectsRoute(page);
   if (page === 'settings') populateSettingsForm();
   if (page === 'fieldmode') initFieldMode();
   lucide.createIcons();
 }
+
+function initProjectsRoute(page, attempt) {
+  attempt = attempt || 0;
+  const isInvestorHub = page === 'investorhub';
+  const initReady = isInvestorHub
+    ? typeof openInvestorHubRoute === 'function'
+    : typeof initProjectsModule === 'function';
+
+  if (initReady) {
+    if (isInvestorHub) openInvestorHubRoute();
+    else initProjectsModule({ route: 'projects' });
+    return;
+  }
+
+  if (attempt < 6) {
+    setTimeout(() => initProjectsRoute(page, attempt + 1), 80 * (attempt + 1));
+    return;
+  }
+
+  const pageEl = document.getElementById('page-' + page);
+  if (pageEl && !pageEl.innerHTML.trim()) {
+    pageEl.innerHTML = `
+      <div class="empty-state" style="max-width:520px;margin:44px auto">
+        <div class="icon"><i data-lucide="building-2" style="width:44px;height:44px"></i></div>
+        <h3>${isInvestorHub ? 'Investor Hub' : 'Projects'} is loading</h3>
+        <p>Refresh the app if this workspace does not appear automatically.</p>
+      </div>`;
+    lucide.createIcons();
+  }
+}
+
+window.addEventListener('pageshow', () => {
+  const page = getInitialPageFromUrl();
+  if ((page === 'projects' || page === 'investorhub') &&
+      !document.querySelector('#page-' + page + ' #projects-module-shell')) {
+    navigateTo(page, { replace: true, syncUrl: false });
+  }
+});
 
 function getPageTitles(page) {
   const orderCount = typeof WORK_ORDERS !== 'undefined' ? WORK_ORDERS.length : 0;
