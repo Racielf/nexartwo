@@ -3,207 +3,27 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Projects — R.C Art Construction LLC</title>
-  <meta name="description" content="Project & Financial Control System for R.C Art Construction LLC">
-  <link rel="stylesheet" href="css/styles.css">
-  <link rel="manifest" href="manifest.json">
-  <meta name="theme-color" content="#f5f6fa">
-  <script src="https://unpkg.com/lucide@latest"></script>
-  <style>
-    /* ============ Projects-specific styles ============ */
-    .proj-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 16px; }
-    .proj-card { background: var(--bg-primary); border: 1px solid var(--border); border-radius: 12px; padding: 20px; cursor: pointer; transition: all 0.2s; position: relative; }
-    .proj-card:hover { border-color: var(--accent); box-shadow: 0 6px 24px rgba(0,0,0,0.10); transform: translateY(-2px); }
-    .proj-card-header { display: flex; align-items: flex-start; gap: 12px; margin-bottom: 14px; }
-    .proj-card-icon { width: 44px; height: 44px; border-radius: 10px; background: linear-gradient(135deg, var(--accent), #6366f1); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
-    .proj-card-icon i { color: #fff; }
-    .proj-card-title { font-size: 15px; font-weight: 700; color: var(--text-primary); margin: 0 0 2px; }
-    .proj-card-addr { font-size: 12px; color: var(--text-muted); }
-    .proj-status-badge { font-size: 10px; font-weight: 600; padding: 2px 8px; border-radius: 10px; position: absolute; top: 16px; right: 16px; }
-    .proj-fin-row { display: flex; justify-content: space-between; align-items: center; padding: 6px 0; font-size: 12px; border-top: 1px solid var(--border-light, #f0f0f0); }
-    .proj-fin-row:first-child { border-top: none; }
-    .proj-fin-label { color: var(--text-secondary); }
-    .proj-fin-value { font-weight: 700; color: var(--text-primary); }
-    /* Stat cards — header area */
-    .proj-summary-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 12px; margin-bottom: 8px; }
-    .proj-stat-card { background: var(--bg-primary); border: 1px solid var(--border); border-radius: 10px; padding: 16px; text-align: center; transition: box-shadow 0.2s, border-color 0.2s; }
-    .proj-stat-card:hover { border-color: var(--accent); box-shadow: 0 2px 12px rgba(0,0,0,0.06); }
-    .proj-stat-value { font-size: 22px; font-weight: 800; color: var(--text-primary); }
-    .proj-stat-label { font-size: 11px; color: var(--text-muted); margin-top: 3px; }
-    /* Portfolio P&L bar */
-    .proj-pnl-bar { border: 1px solid var(--border); border-radius: 12px; padding: 20px 24px; margin-bottom: 28px; background: var(--bg-primary); display: flex; flex-wrap: wrap; gap: 0; align-items: stretch; }
-    .proj-pnl-header { width: 100%; display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
-    .proj-pnl-header h4 { margin: 0; font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-secondary); display: flex; align-items: center; gap: 8px; }
-    .proj-pnl-badge { font-size: 10px; font-weight: 600; color: var(--text-muted); background: var(--bg-input, #f8f9fa); padding: 2px 10px; border-radius: 10px; border: 1px solid var(--border); }
-    .proj-pnl-metrics { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0; width: 100%; }
-    .proj-pnl-metric { padding: 0 20px; border-right: 1px dashed var(--border); }
-    .proj-pnl-metric:first-child { padding-left: 0; }
-    .proj-pnl-metric:last-child { border-right: none; }
-    .proj-pnl-metric-label { font-size: 11px; font-weight: 600; color: var(--text-muted); margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.3px; }
-    .proj-pnl-metric-value { font-size: 20px; font-weight: 800; }
-    .proj-pnl-metric-sub { font-size: 10px; color: var(--text-muted); margin-top: 2px; }
-    /* Detail tabs */
-    .proj-detail-tabs { display: flex; gap: 0; border-bottom: 2px solid var(--border); margin-bottom: 20px; overflow-x: auto; }
-    .proj-detail-tab { padding: 10px 18px; font-size: 13px; font-weight: 600; color: var(--text-muted); cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -2px; white-space: nowrap; transition: all 0.15s; }
-    .proj-detail-tab:hover { color: var(--text-primary); }
-    .proj-detail-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
-    /* Misc */
-    .proj-empty { text-align: center; padding: 60px 20px; color: var(--text-muted); }
-    .proj-empty i { margin-bottom: 16px; opacity: 0.3; }
-    .proj-table { width: 100%; border-collapse: collapse; font-size: 13px; }
-    .proj-table th { text-align: left; padding: 10px 12px; font-size: 11px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 2px solid var(--border); }
-    .proj-table td { padding: 10px 12px; border-bottom: 1px solid var(--border-light, #f0f0f0); color: var(--text-primary); }
-    .proj-table tr:hover { background: var(--bg-hover, rgba(0,0,0,0.02)); }
-    .proj-table .right { text-align: right; }
-    @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
-    /* Card cash position chip */
-    .proj-cash-chip { display: inline-flex; align-items: center; gap: 4px; font-size: 11px; font-weight: 700; padding: 3px 10px; border-radius: 20px; margin-top: 10px; }
-    /* Detail view */
-    #proj-detail-view { display: none; }
-    #proj-list-view { display: block; }
-    /* Responsive */
-    @media (max-width: 640px) {
-      .proj-grid { grid-template-columns: 1fr; }
-      .proj-pnl-metrics { grid-template-columns: 1fr; gap: 16px; }
-      .proj-pnl-metric { padding: 0; border-right: none; border-bottom: 1px dashed var(--border); padding-bottom: 16px; }
-      .proj-pnl-metric:last-child { border-bottom: none; padding-bottom: 0; }
-      .proj-summary-cards { grid-template-columns: repeat(2, 1fr); }
-    }
-  </style>
+  <title>Opening Projects - R.C Art Construction LLC</title>
+  <meta name="robots" content="noindex">
+  <meta http-equiv="refresh" content="0;url=index.html?page=projects">
 </head>
 <body>
-  <!-- Confirmation Modal -->
-  <div id="confirm-modal-overlay" class="confirm-overlay" style="display:none" onclick="closeConfirmModal()">
-    <div class="confirm-box" onclick="event.stopPropagation()">
-      <h3 id="confirm-modal-title">Confirm</h3>
-      <p id="confirm-modal-msg"></p>
-      <div class="confirm-actions">
-        <button class="btn btn-secondary" onclick="closeConfirmModal()">Cancel</button>
-        <button type="button" class="btn btn-danger" id="confirm-modal-btn">Confirm</button>
-      </div>
-    </div>
-  </div>
-
-  <div class="app-container">
-
-    <!-- SIDEBAR -->
-    <aside class="sidebar" id="sidebar">
-      <div class="sidebar-logo">
-        <div class="logo-icon">
-          <span>RC</span>
-        </div>
-        <div class="logo-text">
-          <h1>R.C Art Construction</h1>
-          <span>Project Control</span>
-        </div>
-      </div>
-
-      <nav class="sidebar-nav">
-        <div class="nav-section-title">Navigation</div>
-        <a href="index.html" class="nav-item" style="text-decoration:none;color:inherit">
-          <i data-lucide="clipboard-list" class="icon"></i> Work Orders
-        </a>
-        <div class="nav-item active" data-page="projects">
-          <i data-lucide="building-2" class="icon"></i> Projects
-          <span style="font-size:9px;color:var(--success);margin-left:auto;font-weight:700">NEW</span>
-        </div>
-
-        <div class="nav-section-title">Financial</div>
-        <div class="nav-item" style="opacity:0.5;pointer-events:none">
-          <i data-lucide="receipt" class="icon"></i> Expenses
-          <span style="font-size:9px;color:var(--text-muted);margin-left:auto">Inside Project</span>
-        </div>
-        <div class="nav-item" style="opacity:0.5;pointer-events:none">
-          <i data-lucide="refresh-cw" class="icon"></i> Refunds
-          <span style="font-size:9px;color:var(--text-muted);margin-left:auto">Inside Project</span>
-        </div>
-        <div class="nav-item" style="opacity:0.5;pointer-events:none">
-          <i data-lucide="banknote" class="icon"></i> Disbursements
-          <span style="font-size:9px;color:var(--text-muted);margin-left:auto">Inside Project</span>
-        </div>
-
-        <div class="nav-section-title">System</div>
-        <a href="index.html" class="nav-item" style="text-decoration:none;color:inherit">
-          <i data-lucide="arrow-left" class="icon"></i> Back to WOIMS
-        </a>
-      </nav>
-    </aside>
-
-    <!-- MAIN -->
-    <main class="main-content">
-      <div class="topbar">
-        <button class="menu-toggle" onclick="document.getElementById('sidebar').classList.toggle('open')">
-          <i data-lucide="menu" style="width:20px;height:20px"></i>
-        </button>
-        <h2 id="topbar-title">Projects</h2>
-        <div class="topbar-actions">
-          <button id="btn-new-project" class="btn btn-primary btn-sm" onclick="openProjectTypeSelector()" style="gap:6px">
-            <i data-lucide="plus" style="width:14px;height:14px"></i> New Project
-          </button>
-        </div>
-      </div>
-
-      <!-- LIST VIEW -->
-      <div id="proj-list-view" class="content-area">
-        <div id="proj-summary-stats" class="proj-summary-cards"></div>
-        <!-- Portfolio P&L bar — rendered by renderSummaryStats() when RPC data exists -->
-        <div id="proj-pnl-bar-container" style="margin-bottom:0"></div>
-        <div id="proj-list" class="proj-grid" style="margin-top:24px"></div>
-      </div>
-
-      <!-- DETAIL VIEW -->
-      <div id="proj-detail-view" class="content-area">
-        <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px">
-          <button class="btn btn-ghost btn-sm" onclick="showProjectList()" style="gap:4px">
-            <i data-lucide="arrow-left" style="width:14px;height:14px"></i> Back
-          </button>
-          <h3 id="proj-detail-title" style="margin:0;font-size:18px;color:var(--text-primary)"></h3>
-          <div style="margin-left:auto;display:flex;gap:8px">
-            <button class="btn btn-secondary btn-sm" onclick="editCurrentProject()" style="gap:4px">
-              <i data-lucide="edit-3" style="width:13px;height:13px"></i> Edit
-            </button>
-            <button class="btn btn-sm" style="gap:4px;background:#f59e0b;color:#fff;border:none" onclick="cancelCurrentProject()">
-              <i data-lucide="archive" style="width:13px;height:13px"></i> Cancel Project
-            </button>
-          </div>
-        </div>
-
-        <!-- Detail tabs -->
-        <div class="proj-detail-tabs" id="proj-detail-tabs">
-          <div class="proj-detail-tab active" data-tab="overview" onclick="switchProjTab('overview')">Overview</div>
-          <div class="proj-detail-tab" data-tab="financials" onclick="switchProjTab('financials')">Financials</div>
-          <div class="proj-detail-tab" data-tab="expenses" onclick="switchProjTab('expenses')">Expenses</div>
-          <div class="proj-detail-tab" data-tab="disbursements" onclick="switchProjTab('disbursements')">Disbursements</div>
-          <div class="proj-detail-tab" data-tab="workorders" onclick="switchProjTab('workorders')">Work Orders</div>
-          <div class="proj-detail-tab" data-tab="investorhub" onclick="switchProjTab('investorhub')" title="Investor Hub — Phase 2B">🏦 Investor Hub</div>
-        </div>
-
-        <!-- Tab content -->
-        <div id="proj-tab-overview" class="proj-tab-content"></div>
-        <div id="proj-tab-financials" class="proj-tab-content" style="display:none"></div>
-        <div id="proj-tab-expenses" class="proj-tab-content" style="display:none"></div>
-        <div id="proj-tab-disbursements" class="proj-tab-content" style="display:none"></div>
-        <div id="proj-tab-workorders" class="proj-tab-content" style="display:none"></div>
-        <div id="proj-tab-investorhub" class="proj-tab-content" style="display:none"></div>
-      </div>
-
-    </main>
-  </div>
-
-  <div id="toast" class="toast"></div>
-
-  <!-- Supabase -->
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="js/supabase.js"></script>
-  <!-- Investor Hub — Phase 2B -->
-  <script src="js/modules/investor-manager.js"></script>
-  <script src="js/modules/investor-hub-logic.js"></script>
-  <script src="js/modules/investor-hub-modals.js"></script>
-  <!-- Application -->
-  <script src="js/projects.js"></script>
   <script>
-    lucide.createIcons();
-    initProjects();
+    (function() {
+      var route = 'projects';
+      try {
+        var params = new URLSearchParams(window.location.search);
+        if (params.get('tab') === 'investorhub' || params.get('page') === 'investorhub') {
+          route = 'investorhub';
+        }
+      } catch (e) {}
+      window.location.replace('index.html?page=' + route);
+    })();
   </script>
+  <noscript>
+    <p>Projects moved into the main app shell.</p>
+    <p><a href="index.html?page=projects">Open Projects</a></p>
+    <p><a href="index.html?page=investorhub">Open Investor Hub</a></p>
+  </noscript>
 </body>
 </html>

@@ -19,3 +19,8 @@ node_modules/
 # Local dev
 .env
 .env.local
+.vercel/
+dist/
+js/env.js
+
+.vercel

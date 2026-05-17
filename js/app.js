@@ -110,15 +110,14 @@ async function loadData() {
   // Try Supabase first
   if (typeof DB !== 'undefined' && isSupabaseReady()) {
     try {
-      await DB.seedIfEmpty();
       var [svc, cli, wo] = await Promise.all([
         DB.services.getAll(),
         DB.clients.getAll(),
         DB.workOrders.getAll()
       ]);
-      if (svc) SERVICES = svc;
-      if (cli) CLIENTS = cli;
-      if (wo) WORK_ORDERS = wo;
+      if (Array.isArray(svc) && (svc.length > 0 || SERVICES.length === 0)) SERVICES = svc;
+      if (Array.isArray(cli) && (cli.length > 0 || CLIENTS.length === 0)) CLIENTS = cli;
+      if (Array.isArray(wo) && (wo.length > 0 || WORK_ORDERS.length === 0)) WORK_ORDERS = wo;
       ACTIVITIES = JSON.parse(JSON.stringify(_DEFAULT_ACTIVITIES));
       console.log('✓ Data loaded from Supabase');
       return;
@@ -226,25 +225,39 @@ let currentFilter = 'All';
 let currentClientFilter = 'All';
 let currentWO = null;
 var _currentEditingWOId = null; // null = create mode, string = edit mode
+const URL_NAV_PAGES = new Set(['dashboard', 'workorders', 'services', 'clients', 'docs', 'projects', 'investorhub', 'fieldmode', 'settings']);
 
 // ============ INITIALIZATION ============
 document.addEventListener('DOMContentLoaded', async () => {
+  const initialPage = getInitialPageFromUrl();
+  activatePageShell(initialPage);
   // Initialize Supabase connection
   if (typeof getSupabase === 'function') getSupabase();
-  await loadData();
+  loadDataFromLocalStorage();
   loadSettings();
-  renderSidebar();
-  renderDashboard();
-  renderServiceLibrary();
-  renderWorkOrders();
-  renderClients();
+  renderAppViews();
   setupNavigation();
+  navigateTo(initialPage, { replace: true, syncUrl: false });
+  lucide.createIcons();
+  document.body.classList.remove('app-loading');
+
+  await loadData();
+  renderAppViews();
+  navigateTo(getInitialPageFromUrl(), { replace: true, syncUrl: false });
   lucide.createIcons();
   // Show connection status
   if (typeof isSupabaseReady === 'function' && isSupabaseReady()) {
     showToast('☁️ Connected to cloud database');
   }
 });
+
+function renderAppViews() {
+  renderSidebar();
+  renderDashboard();
+  renderServiceLibrary();
+  renderWorkOrders();
+  renderClients();
+}
 
 function setupNavigation() {
   document.querySelectorAll('.nav-item[data-page]').forEach(item => {
@@ -260,6 +273,48 @@ function setupNavigation() {
       }
     });
   });
+}
+
+function getInitialPageFromUrl() {
+  try {
+    const params = new URLSearchParams(window.location.search);
+    const page = params.get('page') || (window.location.hash || '').replace(/^#/, '');
+    return URL_NAV_PAGES.has(page) ? page : 'dashboard';
+  } catch(e) {
+    return 'dashboard';
+  }
+}
+
+function updatePageUrl(page, replace) {
+  if (!URL_NAV_PAGES.has(page) || !window.history || !window.history.pushState) return;
+  const target = page === 'dashboard' ? 'index.html?page=dashboard' : 'index.html?page=' + encodeURIComponent(page);
+  const current = window.location.pathname.split('/').pop() + window.location.search;
+  if (current === target) return;
+  const method = replace ? 'replaceState' : 'pushState';
+  window.history[method]({ page: page }, '', target);
+}
+
+window.addEventListener('popstate', () => {
+  navigateTo(getInitialPageFromUrl(), { syncUrl: false });
+});
+
+function activatePageShell(page) {
+  if (!document.getElementById('page-' + page)) page = 'dashboard';
+  currentPage = page;
+  if (page !== 'projects' && page !== 'investorhub') {
+    document.body.classList.remove('projects-route-projects', 'projects-route-investorhub', 'projects-loading');
+  }
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+
+  const pageEl = document.getElementById('page-' + page);
+  const navEl = document.querySelector(`.nav-item[data-page="${page}"]`);
+  if (pageEl) pageEl.classList.add('active');
+  if (navEl) navEl.classList.add('active');
+
+  const titles = getPageTitles(page);
+  document.getElementById('topbar-title').textContent = titles[0];
+  document.getElementById('topbar-subtitle').textContent = titles[1];
 }
 
 function toggleSidebar() {
@@ -278,8 +333,14 @@ function closeSidebar() {
   document.body.classList.remove('sidebar-open');
 }
 
-function navigateTo(page) {
+function navigateTo(page, options) {
+  options = options || {};
+  if (!document.getElementById('page-' + page)) page = 'dashboard';
   currentPage = page;
+  if (page !== 'projects' && page !== 'investorhub') {
+    document.body.classList.remove('projects-route-projects', 'projects-route-investorhub', 'projects-loading');
+  }
+  if (options.syncUrl !== false) updatePageUrl(page, !!options.replace);
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
 
@@ -289,25 +350,72 @@ function navigateTo(page) {
   if (navEl) navEl.classList.add('active');
 
   // Update top bar
-  const titles = {
-    dashboard: ['Dashboard', 'Welcome back, Rodolfo'],
-    services: ['Price Book', 'Service Library & Standard Pricing'],
-    workorders: ['Work Orders', `${WORK_ORDERS.length} total orders`],
-    clients: ['Client Management', `${CLIENTS.length} clients in your network`],
-    wodetail: ['Work Order Detail', ''],
-    docs: ['Documents & Reports', 'Generate and manage PDFs'],
-    fieldmode: ['Field Mode', 'Mobile-first task completion & photo evidence'],
-    settings: ['Settings', 'Company profile, logo & preferences'],
-  };
-  const t = titles[page] || ['', ''];
+  const t = getPageTitles(page);
   document.getElementById('topbar-title').textContent = t[0];
   document.getElementById('topbar-subtitle').textContent = t[1];
 
   // Page-specific init
   if (page === 'dashboard') renderDashboard();
+  if (page === 'projects' || page === 'investorhub') initProjectsRoute(page);
   if (page === 'settings') populateSettingsForm();
   if (page === 'fieldmode') initFieldMode();
   lucide.createIcons();
+}
+
+function initProjectsRoute(page, attempt) {
+  attempt = attempt || 0;
+  const isInvestorHub = page === 'investorhub';
+  const initReady = isInvestorHub
+    ? typeof openInvestorHubRoute === 'function'
+    : typeof initProjectsModule === 'function';
+
+  if (initReady) {
+    if (isInvestorHub) openInvestorHubRoute();
+    else initProjectsModule({ route: 'projects' });
+    return;
+  }
+
+  if (attempt < 6) {
+    setTimeout(() => initProjectsRoute(page, attempt + 1), 80 * (attempt + 1));
+    return;
+  }
+
+  const pageEl = document.getElementById('page-' + page);
+  if (pageEl && !pageEl.innerHTML.trim()) {
+    pageEl.innerHTML = `
+      <div class="empty-state" style="max-width:520px;margin:44px auto">
+        <div class="icon"><i data-lucide="building-2" style="width:44px;height:44px"></i></div>
+        <h3>${isInvestorHub ? 'Investor Hub' : 'Projects'} is loading</h3>
+        <p>Refresh the app if this workspace does not appear automatically.</p>
+      </div>`;
+    lucide.createIcons();
+  }
+}
+
+window.addEventListener('pageshow', () => {
+  const page = getInitialPageFromUrl();
+  if ((page === 'projects' || page === 'investorhub') &&
+      !document.querySelector('#page-' + page + ' #projects-module-shell')) {
+    navigateTo(page, { replace: true, syncUrl: false });
+  }
+});
+
+function getPageTitles(page) {
+  const orderCount = typeof WORK_ORDERS !== 'undefined' ? WORK_ORDERS.length : 0;
+  const clientCount = typeof CLIENTS !== 'undefined' ? CLIENTS.length : 0;
+  const titles = {
+    dashboard: ['Dashboard', 'Welcome back, Rodolfo'],
+    services: ['Price Book', 'Service Library & Standard Pricing'],
+    workorders: ['Work Orders', `${orderCount} total orders`],
+    clients: ['Client Management', `${clientCount} clients in your network`],
+    projects: ['Projects', 'Project control, financials, and work order links'],
+    investorhub: ['Investor Hub', 'Owner/Admin capital console'],
+    wodetail: ['Work Order Detail', ''],
+    docs: ['Documents & Reports', 'Generate and manage PDFs'],
+    fieldmode: ['Field Mode', 'Mobile-first task completion & photo evidence'],
+    settings: ['Settings', 'Company profile, logo & preferences'],
+  };
+  return titles[page] || ['', ''];
 }
 
 // ============ RENDER SIDEBAR ============
@@ -316,6 +424,150 @@ function renderSidebar() {
 }
 
 // ============ RENDER DASHBOARD ============
+function dashMoney(val) {
+  return '$' + (parseFloat(val) || 0).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+}
+
+function dashSetMeter(id, pct) {
+  var el = document.getElementById(id);
+  if (!el) return;
+  el.style.width = Math.max(4, Math.min(100, pct || 0)) + '%';
+}
+
+function dashSetStatChange(index, text, tone) {
+  var el = document.querySelectorAll('#page-dashboard .dash-kpi .stat-change')[index];
+  if (!el) return;
+  el.textContent = text;
+  el.classList.toggle('down', tone === 'down');
+  el.classList.toggle('up', tone !== 'down');
+}
+
+function dashStatusTone(status) {
+  var tones = {
+    draft: '#8a7b58',
+    open: '#355c7d',
+    progress: '#c99a34',
+    review: '#6752a3',
+    completed: '#246b5b'
+  };
+  return tones[status] || '#8a7b58';
+}
+
+function dashPriorityLabel(priority) {
+  var labels = { emergency: 'Emergency', high: 'High', medium: 'Medium', low: 'Low' };
+  return labels[priority] || capitalize(priority || 'normal');
+}
+
+function renderDashboardRevenueChart(orders) {
+  var el = document.getElementById('dash-revenue-chart');
+  if (!el) return;
+  var sorted = (orders || []).slice().sort(function(a, b) {
+    return new Date(a.created || 0) - new Date(b.created || 0);
+  });
+  if (!sorted.length) {
+    el.innerHTML = '<div class="dash-empty-chart">No work order revenue yet</div>';
+    return;
+  }
+
+  var running = 0;
+  var pointsData = sorted.map(function(wo) {
+    running += parseFloat(wo.total) || 0;
+    return { value: running, label: wo.id, date: wo.created };
+  });
+  var max = Math.max.apply(null, pointsData.map(function(p) { return p.value; })) || 1;
+  var min = Math.min.apply(null, pointsData.map(function(p) { return p.value; }));
+  var w = 720;
+  var h = 230;
+  var padX = 34;
+  var padY = 28;
+  var span = Math.max(1, max - min);
+  var points = pointsData.map(function(p, idx) {
+    var x = padX + (idx * (w - padX * 2) / Math.max(1, pointsData.length - 1));
+    var y = h - padY - ((p.value - min) / span) * (h - padY * 2);
+    return { x: x, y: y, value: p.value, label: p.label };
+  });
+  var line = points.map(function(p) { return p.x.toFixed(1) + ',' + p.y.toFixed(1); }).join(' ');
+  var area = padX + ',' + (h - padY) + ' ' + line + ' ' + (w - padX) + ',' + (h - padY);
+  var first = sorted[0];
+  var last = sorted[sorted.length - 1];
+
+  el.innerHTML =
+    '<div class="dash-chart-meta">' +
+      '<div><span>Total booked</span><strong>' + dashMoney(running) + '</strong></div>' +
+      '<div><span>Avg order</span><strong>' + dashMoney(running / sorted.length) + '</strong></div>' +
+      '<div><span>Latest WO</span><strong>' + escHtml(last.id) + '</strong></div>' +
+    '</div>' +
+    '<svg viewBox="0 0 ' + w + ' ' + h + '" role="img" aria-label="Revenue pipeline chart">' +
+      '<defs>' +
+        '<linearGradient id="dashRevenueFill" x1="0" x2="0" y1="0" y2="1">' +
+          '<stop offset="0%" stop-color="#c99a34" stop-opacity="0.32"/>' +
+          '<stop offset="100%" stop-color="#c99a34" stop-opacity="0.02"/>' +
+        '</linearGradient>' +
+      '</defs>' +
+      [0, 1, 2, 3].map(function(i) {
+        var y = padY + i * ((h - padY * 2) / 3);
+        return '<line x1="' + padX + '" x2="' + (w - padX) + '" y1="' + y + '" y2="' + y + '" class="dash-chart-grid"/>';
+      }).join('') +
+      '<polygon points="' + area + '" fill="url(#dashRevenueFill)"></polygon>' +
+      '<polyline points="' + line + '" class="dash-chart-line"></polyline>' +
+      points.map(function(p, idx) {
+        return '<circle cx="' + p.x.toFixed(1) + '" cy="' + p.y.toFixed(1) + '" r="' + (idx === points.length - 1 ? 4.2 : 3.2) + '" class="dash-chart-dot"></circle>';
+      }).join('') +
+      '<text x="' + padX + '" y="' + (h - 6) + '" class="dash-chart-label">' + escHtml(first.id) + '</text>' +
+      '<text x="' + (w - padX) + '" y="' + (h - 6) + '" text-anchor="end" class="dash-chart-label">' + escHtml(last.id) + '</text>' +
+    '</svg>';
+}
+
+function renderDashboardStatusDonut(orders) {
+  var donut = document.getElementById('dash-status-donut');
+  var legend = document.getElementById('dash-status-legend');
+  if (!donut || !legend) return;
+  var total = (orders || []).length;
+  if (!total) {
+    donut.innerHTML = '<div class="dash-donut-center"><strong>0</strong><span>orders</span></div>';
+    legend.innerHTML = '';
+    return;
+  }
+  var statuses = ['open', 'progress', 'review', 'completed', 'draft'];
+  var counts = {};
+  statuses.forEach(function(s) { counts[s] = 0; });
+  orders.forEach(function(wo) { counts[wo.status] = (counts[wo.status] || 0) + 1; });
+  var cursor = 0;
+  var gradient = statuses.map(function(status) {
+    var count = counts[status] || 0;
+    var start = cursor;
+    var end = cursor + (count / total) * 100;
+    cursor = end;
+    return dashStatusTone(status) + ' ' + start.toFixed(2) + '% ' + end.toFixed(2) + '%';
+  }).join(', ');
+  donut.style.background = 'conic-gradient(' + gradient + ')';
+  donut.innerHTML = '<div class="dash-donut-center"><strong>' + total + '</strong><span>orders</span></div>';
+  legend.innerHTML = statuses.filter(function(status) { return counts[status]; }).map(function(status) {
+    return '<div class="dash-legend-row">' +
+      '<span><i style="background:' + dashStatusTone(status) + '"></i>' + statusLabel(status) + '</span>' +
+      '<strong>' + counts[status] + '</strong>' +
+    '</div>';
+  }).join('');
+}
+
+function renderDashboardPriorityBars(orders) {
+  var el = document.getElementById('dash-priority-bars');
+  if (!el) return;
+  var priorities = ['emergency', 'high', 'medium', 'low'];
+  var counts = {};
+  priorities.forEach(function(p) { counts[p] = 0; });
+  (orders || []).forEach(function(wo) { counts[wo.priority] = (counts[wo.priority] || 0) + 1; });
+  var max = Math.max.apply(null, priorities.map(function(p) { return counts[p] || 0; })) || 1;
+  el.innerHTML = priorities.map(function(priority) {
+    var count = counts[priority] || 0;
+    var pct = Math.max(5, Math.round((count / max) * 100));
+    return '<div class="dash-priority-row">' +
+      '<div class="dash-priority-top"><span>' + dashPriorityLabel(priority) + '</span><strong>' + count + '</strong></div>' +
+      '<div class="dash-priority-track"><span class="priority-' + priority + '" style="width:' + pct + '%"></span></div>' +
+    '</div>';
+  }).join('');
+}
+
 function renderDashboard() {
   const openWOs = WORK_ORDERS.filter(w => ['open', 'progress'].includes(w.status)).length;
   const overdueWOs = WORK_ORDERS.filter(w => w.status !== 'completed' && w.status !== 'draft' && new Date(w.target) < new Date()).length;
@@ -323,32 +575,52 @@ function renderDashboard() {
   const pipeline = WORK_ORDERS.filter(w => w.status !== 'completed').reduce((s, w) => s + w.total, 0);
   const pendingItems = WORK_ORDERS.reduce((s, w) => s + (w.items - w.completed), 0);
   const docsSent = 4;
+  const totalOrders = WORK_ORDERS.length || 1;
+  const totalItems = WORK_ORDERS.reduce((s, w) => s + (w.items || 0), 0) || 1;
+  const totalRevenue = WORK_ORDERS.reduce((s, w) => s + (w.total || 0), 0) || 1;
 
   document.getElementById('stat-open').textContent = openWOs;
   document.getElementById('stat-overdue').textContent = overdueWOs;
   document.getElementById('stat-completed').textContent = completedMonth;
-  document.getElementById('stat-pipeline').textContent = '$' + pipeline.toLocaleString();
+  document.getElementById('stat-pipeline').textContent = dashMoney(pipeline);
   document.getElementById('stat-pending').textContent = pendingItems;
   document.getElementById('stat-docs').textContent = docsSent;
+  dashSetMeter('stat-open-meter', openWOs / totalOrders * 100);
+  dashSetMeter('stat-overdue-meter', overdueWOs / totalOrders * 100);
+  dashSetMeter('stat-completed-meter', completedMonth / totalOrders * 100);
+  dashSetMeter('stat-pipeline-meter', pipeline / totalRevenue * 100);
+  dashSetMeter('stat-pending-meter', pendingItems / totalItems * 100);
+  dashSetMeter('stat-docs-meter', docsSent / Math.max(1, docsSent + completedMonth) * 100);
+  dashSetStatChange(0, openWOs + ' active out of ' + WORK_ORDERS.length, 'up');
+  dashSetStatChange(1, overdueWOs ? overdueWOs + ' need attention' : 'No critical drift', overdueWOs ? 'down' : 'up');
+  dashSetStatChange(2, completedMonth + ' closed this cycle', 'up');
+  dashSetStatChange(3, dashMoney(pipeline) + ' not completed', 'up');
+  dashSetStatChange(4, pendingItems + ' line items left', pendingItems > 12 ? 'down' : 'up');
+  dashSetStatChange(5, docsSent + ' waiting on clients', 'up');
+
+  var dateEl = document.getElementById('dash-command-date');
+  if (dateEl) dateEl.textContent = new Date().toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+  var healthEl = document.getElementById('dash-command-health');
+  if (healthEl) healthEl.textContent = overdueWOs ? overdueWOs + ' risk signals' : 'Pipeline healthy';
 
   // Recent WOs table
   const tbody = document.getElementById('recent-wo-body');
   tbody.innerHTML = WORK_ORDERS.slice(0, 5).map(wo => `
     <tr onclick="openWorkOrderDetail('${wo.id}')">
       <td><strong class="text-accent">${wo.id}</strong></td>
-      <td>${wo.title}</td>
-      <td>${wo.client}</td>
+      <td><div class="dash-wo-title">${escHtml(wo.title)}<span>${escHtml(wo.property || '')}</span></div></td>
+      <td>${escHtml(wo.client)}</td>
       <td><span class="badge badge-${wo.status}">${statusLabel(wo.status)}</span></td>
-      <td><span class="priority-dot priority-${wo.priority}"></span> ${capitalize(wo.priority)}</td>
-      <td>$${wo.total.toLocaleString()}</td>
+      <td><div class="dash-progress-cell"><span>${wo.items ? Math.round((wo.completed / wo.items) * 100) : 0}%</span><div><i style="width:${wo.items ? Math.round((wo.completed / wo.items) * 100) : 0}%"></i></div></div></td>
+      <td>${dashMoney(wo.total)}</td>
     </tr>
   `).join('');
 
   // Activity feed
   const feed = document.getElementById('activity-feed');
   if (feed) {
-    feed.innerHTML = ACTIVITIES.map(a => `
-      <div class="activity-item">
+    feed.innerHTML = ACTIVITIES.slice(0, 7).map(a => `
+      <div class="activity-item dash-activity-item">
         <div class="activity-dot" style="background:${a.color}"></div>
         <div>
           <div class="activity-text">${a.text}</div>
@@ -358,8 +630,13 @@ function renderDashboard() {
     `).join('');
   }
 
+  renderDashboardRevenueChart(WORK_ORDERS);
+  renderDashboardStatusDonut(WORK_ORDERS);
+  renderDashboardPriorityBars(WORK_ORDERS);
+
   // Dashboard Financial Overview (Phase 2)
   renderDashboardFinancials();
+  if (typeof lucide !== 'undefined') lucide.createIcons();
 }
 
 /**
@@ -721,17 +998,22 @@ document.addEventListener('click', function(e) {
 
 // ============ CONFIRMATION MODAL ============
 function showConfirmModal(title, msg, onConfirm, btnText, btnClass) {
+  if (typeof ensureConfirmBoxSkeleton === 'function') ensureConfirmBoxSkeleton();
   var overlay = document.getElementById('confirm-modal-overlay');
   document.getElementById('confirm-modal-title').textContent = title;
-  document.getElementById('confirm-modal-msg').textContent = msg;
+  document.getElementById('confirm-modal-msg').innerHTML = msg || '';
   var btn = document.getElementById('confirm-modal-btn');
-  btn.textContent = btnText || 'Delete';
+  btn.textContent = btnText || (/delete/i.test(title || '') ? 'Delete' : 'Confirm');
   btn.className = 'btn ' + (btnClass || 'btn-danger');
-  btn.onclick = function() { closeConfirmModal(); onConfirm(); };
+  btn.onclick = function() {
+    closeConfirmModal();
+    if (typeof onConfirm === 'function') onConfirm();
+  };
   overlay.style.display = 'flex';
 }
 function closeConfirmModal() {
   document.getElementById('confirm-modal-overlay').style.display = 'none';
+  if (typeof ensureConfirmBoxSkeleton === 'function') ensureConfirmBoxSkeleton();
 }
 
 // Delete Work Order
@@ -3450,7 +3732,12 @@ async function sendEmailNow() {
   }
 
   try {
-    var res = await fetch('https://udaeifoibydcokefcmbg.supabase.co/functions/v1/send-email', {
+    var emailFunctionUrl = typeof getSupabaseFunctionUrl === 'function'
+      ? getSupabaseFunctionUrl('send-email')
+      : 'https://udaeifoibydcokefcmbg.supabase.co/functions/v1/send-email';
+    if (!emailFunctionUrl) throw new Error('Email function URL is not configured');
+
+    var res = await fetch(emailFunctionUrl, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -4034,6 +4321,21 @@ function createWOForClient(clientId) {
 }
 function openNewServiceModal() { openModal('modal-new-service'); }
 
+// Generate the next WO ID for the current year by scanning existing records.
+// This avoids collisions after deletes, failed syncs, or imported data.
+function generateWOId() {
+  var year = new Date().getFullYear();
+  var prefix = 'WO-' + year + '-';
+  var max = 0;
+  WORK_ORDERS.forEach(function(wo) {
+    if (wo.id && wo.id.startsWith(prefix)) {
+      var n = parseInt(wo.id.slice(prefix.length), 10);
+      if (!isNaN(n) && n > max) max = n;
+    }
+  });
+  return prefix + String(max + 1).padStart(4, '0');
+}
+
 
 async function saveNewWO() {
   const titleEl  = document.getElementById('new-wo-title');
@@ -4106,9 +4408,9 @@ async function saveNewWO() {
     return;
   }
 
-  // ── CREATE path (unchanged) ────────────────────────────────────────────────
+  // ── CREATE path ────────────────────────────────────────────────────────────
   const newWO = {
-    id: `WO-${new Date().getFullYear()}-${String(WORK_ORDERS.length + 41).padStart(4, '0')}`,
+    id: generateWOId(),
     title, client,
     clientId: CLIENTS.find(c => c.name === client)?.id || 1,
     property: document.getElementById('new-wo-property').value || 'TBD',
@@ -4120,10 +4422,19 @@ async function saveNewWO() {
     items: 0, total: 0, completed: 0,
     project_id: (document.getElementById('new-wo-project')?.value || '') || null
   };
-  WORK_ORDERS.unshift(newWO);
-  saveWorkOrders();
   if (typeof DB !== 'undefined' && isSupabaseReady()) {
-    DB.workOrders.create(newWO).catch(function(e) { console.warn('Cloud sync WO failed:', e); });
+    var created = await DB.workOrders.create(newWO);
+    if (!created) {
+      showToast('Error saving Work Order. Please try again or check your connection.');
+      console.error('saveNewWO: DB.workOrders.create returned null for id', newWO.id);
+      return;
+    }
+    if (created.id) newWO.id = created.id;
+    WORK_ORDERS.unshift(newWO);
+    saveWorkOrders();
+  } else {
+    WORK_ORDERS.unshift(newWO);
+    saveWorkOrders();
   }
   renderWorkOrders();
   renderDashboard();

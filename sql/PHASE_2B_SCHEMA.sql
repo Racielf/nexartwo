@@ -12,22 +12,22 @@
 
 CREATE TABLE IF NOT EXISTS investors (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  
+
   -- Identidad
   name TEXT NOT NULL,                    -- "Rodolfo Fernandez" o "John Doe"
   type TEXT NOT NULL CHECK (type IN ('person', 'company')),  -- 'person' | 'company'
-  
+
   -- Contacto
   email TEXT,
   phone TEXT,
-  
+
   -- Información tax/legal
   tax_id TEXT,                          -- EIN (empresa) o SSN (persona)
   tax_notes TEXT,                       -- Notas para accountant
-  
+
   -- Estado
   status TEXT DEFAULT 'active' CHECK (status IN ('active', 'inactive')),  -- 'active' | 'inactive'
-  
+
   -- Auditoría
   created_at TIMESTAMP DEFAULT now(),
   updated_at TIMESTAMP DEFAULT now()
@@ -45,20 +45,20 @@ CREATE INDEX IF NOT EXISTS idx_investors_email ON investors(email);
 
 CREATE TABLE IF NOT EXISTS investor_companies (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  
+
   -- Identidad
   company_name TEXT NOT NULL,           -- "R.C Art Construction LLC"
   state TEXT NOT NULL,                  -- "Oregon"
-  
+
   -- Contacto
   contact_person TEXT,
   email TEXT,
   phone TEXT,
-  
+
   -- Acreditación legal
   license_number TEXT,                  -- CCB #247277
   tax_id TEXT,                          -- EIN
-  
+
   -- Registro
   notes TEXT,
   created_at TIMESTAMP DEFAULT now(),
@@ -76,23 +76,23 @@ CREATE INDEX IF NOT EXISTS idx_investor_companies_tax_id ON investor_companies(t
 
 CREATE TABLE IF NOT EXISTS project_investors (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  
+
   -- Foreign Keys
   project_id UUID NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
   investor_id UUID NOT NULL REFERENCES investors(id) ON DELETE CASCADE,
-  
+
   -- Rol y participación
   role TEXT NOT NULL CHECK (role IN ('investor', 'owner', 'manager')),  -- 'investor' | 'owner' | 'manager'
   ownership_percentage DECIMAL(5,2) NOT NULL DEFAULT 0 CHECK (ownership_percentage >= 0 AND ownership_percentage <= 100),
   profit_split_percentage DECIMAL(5,2) NOT NULL DEFAULT 0 CHECK (profit_split_percentage >= 0 AND profit_split_percentage <= 100),
-  
+
   -- Estado
   status TEXT DEFAULT 'active' CHECK (status IN ('active', 'inactive', 'exited')),  -- 'active' | 'inactive' | 'exited'
-  
+
   -- Auditoría
   created_at TIMESTAMP DEFAULT now(),
   updated_at TIMESTAMP DEFAULT now(),
-  
+
   UNIQUE(project_id, investor_id)
 );
 
@@ -108,25 +108,25 @@ CREATE INDEX IF NOT EXISTS idx_project_investors_status ON project_investors(sta
 
 CREATE TABLE IF NOT EXISTS capital_contributions (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  
+
   -- Foreign Keys
   project_id UUID NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
   project_investor_id UUID NOT NULL REFERENCES project_investors(id) ON DELETE CASCADE,
-  
+
   -- Fondos
   amount DECIMAL(12,2) NOT NULL CHECK (amount > 0),        -- $6,600, $10,000, etc
   contribution_date DATE NOT NULL,      -- Cuándo se depositó
-  
+
   -- Tipo
   contribution_type TEXT NOT NULL CHECK (contribution_type IN ('initial', 'mid-project', 'closing')),
-  
+
   -- Evidencia
   reference TEXT,                       -- "Cheque #12345", "Wire XXX"
   notes TEXT,
-  
+
   -- Estado
   status TEXT DEFAULT 'received' CHECK (status IN ('pending', 'received', 'refunded')),  -- 'pending' | 'received' | 'refunded'
-  
+
   -- Auditoría
   created_at TIMESTAMP DEFAULT now(),
   updated_at TIMESTAMP DEFAULT now()
@@ -145,39 +145,39 @@ CREATE INDEX IF NOT EXISTS idx_capital_date ON capital_contributions(contributio
 
 CREATE TABLE IF NOT EXISTS flip_analyses (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  
+
   -- Foreign Key
   project_id UUID NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
-  
+
   -- Versioning
   version INT NOT NULL DEFAULT 1,       -- v1, v2, v3...
   analysis_date DATE NOT NULL,
-  
+
   -- ===== ACQUISITION PHASE =====
   purchase_price DECIMAL(12,2),
   earnest_deposit DECIMAL(12,2),
   closing_costs_entry DECIMAL(12,2),
-  
+
   -- ===== HARD MONEY LOAN =====
   loan_amount DECIMAL(12,2),
   loan_rate_annual DECIMAL(4,2),        -- 10.00 (10%)
   loan_months INT,                      -- 6, 12, etc
   calculated_interest DECIMAL(12,2),
-  
+
   -- ===== HOLDING COSTS =====
   property_taxes_6m DECIMAL(12,2),
   insurance_6m DECIMAL(12,2),
-  
+
   -- ===== REHAB / REPAIRS =====
   estimated_repairs DECIMAL(12,2),
   contingency_percent DECIMAL(4,2),     -- 10.00 (10%)
   contingency_amount DECIMAL(12,2),
-  
+
   -- ===== SALE PHASE =====
   arv DECIMAL(12,2),                    -- After Repair Value
   realtor_commission_percent DECIMAL(4,2),  -- 5.50 (5.5%)
   title_escrow_exit DECIMAL(12,2),
-  
+
   -- ===== CALCULATED RESULTS =====
   total_all_in_cost DECIMAL(12,2),
   realtor_commission DECIMAL(12,2),
@@ -186,11 +186,11 @@ CREATE TABLE IF NOT EXISTS flip_analyses (
   net_profit DECIMAL(12,2),
   roi_percent DECIMAL(8,2),             -- 320.00 (320%)
   profit_margin DECIMAL(5,2),           -- 4.70 (4.70%)
-  
+
   -- Status
   status TEXT DEFAULT 'draft' CHECK (status IN ('draft', 'submitted', 'approved', 'final')),
   notes TEXT,
-  
+
   -- Auditoría
   created_at TIMESTAMP DEFAULT now(),
   updated_at TIMESTAMP DEFAULT now()
@@ -248,18 +248,18 @@ DECLARE
 BEGIN
   -- ===== CÁLCULO 1: Interés del Préstamo =====
   -- Interest = Loan Amount × (Annual Rate / 100) × (Months / 12)
-  v_calculated_interest := COALESCE(p_loan_amount, 0) * 
-                           COALESCE(p_loan_rate_annual, 0) / 100 * 
+  v_calculated_interest := COALESCE(p_loan_amount, 0) *
+                           COALESCE(p_loan_rate_annual, 0) / 100 *
                            COALESCE(p_loan_months, 0) / 12.0;
-  
+
   -- ===== CÁLCULO 2: Contingency (10% de repairs) =====
-  v_contingency := COALESCE(p_estimated_repairs, 0) * 
+  v_contingency := COALESCE(p_estimated_repairs, 0) *
                    COALESCE(p_contingency_percent, 0) / 100;
-  
+
   -- ===== CÁLCULO 3: Comisión Realtor =====
-  v_realtor_commission := COALESCE(p_arv, 0) * 
+  v_realtor_commission := COALESCE(p_arv, 0) *
                           COALESCE(p_realtor_commission_percent, 0) / 100;
-  
+
   -- ===== CÁLCULO 4: TOTAL ALL-IN COST =====
   -- Suma TODOS los costos del proyecto
   v_total_cost := COALESCE(p_purchase_price, 0)
@@ -271,17 +271,17 @@ BEGIN
                 + COALESCE(p_estimated_repairs, 0)
                 + v_contingency
                 + COALESCE(p_title_escrow_exit, 0);
-  
+
   -- ===== CÁLCULO 5: NET PROCEEDS (sale price - comisión) =====
   v_net_proceeds := COALESCE(p_arv, 0) - v_realtor_commission;
-  
+
   -- ===== CÁLCULO 6: GROSS PROFIT (net proceeds - all-in cost) =====
   v_gross_profit := v_net_proceeds - v_total_cost;
-  
+
   -- ===== CÁLCULO 7: NET PROFIT (gross - earnest deposit) =====
   -- Este es el profit que recibe el inversor después de restar su capital inicial
   v_net_profit := v_gross_profit - COALESCE(p_earnest_deposit, 0);
-  
+
   -- ===== CÁLCULO 8: ROI (%) =====
   -- ROI = (Net Profit / Earnest Deposit) × 100
   IF COALESCE(p_earnest_deposit, 0) != 0 THEN
@@ -289,7 +289,7 @@ BEGIN
   ELSE
     v_roi := 0;
   END IF;
-  
+
   -- ===== CÁLCULO 9: PROFIT MARGIN (%) =====
   -- Margin = (Gross Profit / Sale Price) × 100
   IF COALESCE(p_arv, 0) != 0 THEN
@@ -297,7 +297,7 @@ BEGIN
   ELSE
     v_margin := 0;
   END IF;
-  
+
   -- ===== RETURN RESULTS =====
   RETURN QUERY SELECT
     v_total_cost,
@@ -333,7 +333,7 @@ RETURNS TABLE (
 AS $$
 BEGIN
   RETURN QUERY
-  SELECT 
+  SELECT
     fa.id,
     fa.version,
     fa.analysis_date,
@@ -370,7 +370,7 @@ RETURNS TABLE (
 AS $$
 BEGIN
   RETURN QUERY
-  SELECT 
+  SELECT
     i.name,
     COALESCE(SUM(cc.amount), 0::DECIMAL),
     COUNT(cc.id)::INT,
@@ -404,7 +404,7 @@ RETURNS TABLE (
 AS $$
 BEGIN
   RETURN QUERY
-  SELECT 
+  SELECT
     i.name,
     i.id,
     pi.role,

@@ -1,7 +1,7 @@
 # PHASE 2B — Investor Entities + Capital Contributions
-**Especificación Detallada**  
-**Proyecto:** NexArtWO  
-**Fase:** 2B (Septiembre 2026)  
+**Especificación Detallada**
+**Proyecto:** NexArtWO
+**Fase:** 2B (Septiembre 2026)
 **Estado:** SPECIFICATION
 
 ---
@@ -21,22 +21,22 @@ Registrar inversionistas, empresas, participación en proyectos, y aportes de ca
 ```sql
 CREATE TABLE investors (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  
+
   -- Identidad
   name TEXT NOT NULL,                    -- "Rodolfo Fernandez" o "John Doe"
   type TEXT NOT NULL,                    -- 'person' | 'company'
-  
+
   -- Contacto
   email TEXT,
   phone TEXT,
-  
+
   -- Información tax/legal
   tax_id TEXT,                          -- EIN (empresa) o SSN (persona)
   tax_notes TEXT,                       -- Notas para accountant
-  
+
   -- Estado
   status TEXT DEFAULT 'active',         -- 'active' | 'inactive'
-  
+
   -- Auditoria
   created_at TIMESTAMP DEFAULT now(),
   updated_at TIMESTAMP DEFAULT now()
@@ -58,20 +58,20 @@ CREATE INDEX idx_investors_status ON investors(status);
 ```sql
 CREATE TABLE investor_companies (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  
+
   -- Identidad
   company_name TEXT NOT NULL,           -- "R.C Art Construction LLC"
   state TEXT NOT NULL,                  -- "Oregon"
-  
+
   -- Contacto
   contact_person TEXT,
   email TEXT,
   phone TEXT,
-  
+
   -- Acreditación legal
   license_number TEXT,                  -- CCB #247277
   tax_id TEXT,                          -- EIN
-  
+
   -- Registro
   notes TEXT,
   created_at TIMESTAMP DEFAULT now(),
@@ -88,23 +88,23 @@ CREATE TABLE investor_companies (
 ```sql
 CREATE TABLE project_investors (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  
+
   -- Foreign Keys
   project_id UUID NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
   investor_id UUID NOT NULL REFERENCES investors(id) ON DELETE CASCADE,
-  
+
   -- Rol y participación
   role TEXT NOT NULL,                   -- 'investor' | 'owner' | 'manager'
   ownership_percentage DECIMAL(5,2),    -- 25.00, 50.00, 100.00
   profit_split_percentage DECIMAL(5,2), -- % de ganancias que recibe
-  
+
   -- Estatus
   status TEXT DEFAULT 'active',         -- 'active' | 'inactive' | 'exited'
-  
+
   -- Auditoría
   created_at TIMESTAMP DEFAULT now(),
   updated_at TIMESTAMP DEFAULT now(),
-  
+
   UNIQUE(project_id, investor_id)
 );
 ```
@@ -124,25 +124,25 @@ CREATE INDEX idx_project_investors_investor ON project_investors(investor_id);
 ```sql
 CREATE TABLE capital_contributions (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  
+
   -- Foreign Keys
   project_id UUID NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
   project_investor_id UUID NOT NULL REFERENCES project_investors(id) ON DELETE CASCADE,
-  
+
   -- Fondos
   amount DECIMAL(12,2) NOT NULL,        -- $6,600, $10,000, etc
   contribution_date DATE NOT NULL,      -- Cuándo se depositó
-  
+
   -- Tipo
   contribution_type TEXT NOT NULL,      -- 'initial' | 'mid-project' | 'closing'
-  
+
   -- Evidencia
   reference TEXT,                       -- "Cheque #12345", "Wire XXX"
   notes TEXT,
-  
+
   -- Estado
   status TEXT DEFAULT 'received',       -- 'pending' | 'received' | 'refunded'
-  
+
   -- Auditoría
   created_at TIMESTAMP DEFAULT now(),
   updated_at TIMESTAMP DEFAULT now()
@@ -164,38 +164,38 @@ CREATE INDEX idx_capital_investor ON capital_contributions(project_investor_id);
 ```sql
 CREATE TABLE flip_analyses (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  
+
   -- Foreign Key
   project_id UUID NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
-  
+
   -- Versioning
   version INT NOT NULL DEFAULT 1,       -- v1, v2, v3...
   analysis_date DATE NOT NULL,
-  
+
   -- ACQUISITION
   purchase_price DECIMAL(12,2),
   earnest_deposit DECIMAL(12,2),
   closing_costs_entry DECIMAL(12,2),
-  
+
   -- HARD MONEY LOAN
   loan_amount DECIMAL(12,2),
   loan_rate_annual DECIMAL(4,2),        -- 10.00 (10%)
   loan_months INT,                      -- 6, 12, etc
   calculated_interest DECIMAL(12,2),
-  
+
   -- HOLDING
   property_taxes_6m DECIMAL(12,2),
   insurance_6m DECIMAL(12,2),
-  
+
   -- REHAB
   estimated_repairs DECIMAL(12,2),
   contingency_percent DECIMAL(4,2),     -- 10.00 (10%)
-  
+
   -- SALE
   arv DECIMAL(12,2),                    -- After Repair Value
   realtor_commission_percent DECIMAL(4,2),  -- 5.50 (5.5%)
   title_escrow_exit DECIMAL(12,2),
-  
+
   -- CALCULATED FIELDS
   total_all_in_cost DECIMAL(12,2),
   realtor_commission DECIMAL(12,2),
@@ -204,11 +204,11 @@ CREATE TABLE flip_analyses (
   net_profit DECIMAL(12,2),
   roi_percent DECIMAL(6,2),             -- 320.00 (320%)
   profit_margin DECIMAL(5,2),
-  
+
   -- Status
   status TEXT DEFAULT 'draft',          -- 'draft' | 'submitted' | 'approved' | 'final'
   notes TEXT,
-  
+
   -- Auditoría
   created_at TIMESTAMP DEFAULT now(),
   updated_at TIMESTAMP DEFAULT now()
@@ -270,15 +270,15 @@ DECLARE
 BEGIN
   -- Calculo de interés
   v_calculated_interest := p_loan_amount * (p_loan_rate_annual / 100) * (p_loan_months / 12.0);
-  
+
   -- Contingency (10% de repairs)
   v_contingency := p_estimated_repairs * (p_contingency_percent / 100);
-  
+
   -- Comisión realtor
   v_realtor_commission := p_arv * (p_realtor_commission_percent / 100);
-  
+
   -- TOTAL ALL-IN COST
-  v_total_cost := p_purchase_price 
+  v_total_cost := p_purchase_price
                 + p_earnest_deposit
                 + p_closing_costs_entry
                 + v_calculated_interest
@@ -287,30 +287,30 @@ BEGIN
                 + p_estimated_repairs
                 + v_contingency
                 + p_title_escrow_exit;
-  
+
   -- NET PROCEEDS (sale price - comisión)
   v_net_proceeds := p_arv - v_realtor_commission;
-  
+
   -- GROSS PROFIT
   v_gross_profit := v_net_proceeds - v_total_cost;
-  
+
   -- NET PROFIT (gross - earnest deposit investor)
   v_net_profit := v_gross_profit - p_earnest_deposit;
-  
+
   -- ROI (net profit / earnest deposit)
   IF p_earnest_deposit != 0 THEN
     v_roi := (v_net_profit / p_earnest_deposit) * 100;
   ELSE
     v_roi := 0;
   END IF;
-  
+
   -- PROFIT MARGIN (gross / sale price)
   IF p_arv != 0 THEN
     v_margin := (v_gross_profit / p_arv) * 100;
   ELSE
     v_margin := 0;
   END IF;
-  
+
   RETURN QUERY SELECT
     v_total_cost,
     v_calculated_interest,
@@ -348,7 +348,7 @@ RETURNS TABLE (
 AS $$
 BEGIN
   RETURN QUERY
-  SELECT 
+  SELECT
     fa.id,
     fa.version,
     fa.analysis_date,
@@ -388,7 +388,7 @@ RETURNS TABLE (
 AS $$
 BEGIN
   RETURN QUERY
-  SELECT 
+  SELECT
     i.name,
     COALESCE(SUM(cc.amount), 0),
     COUNT(cc.id),
@@ -541,7 +541,7 @@ Result: flip_analyses v2 guardado
 
 ### Query 1: Capital Total del Proyecto
 ```sql
-SELECT 
+SELECT
   p.name,
   SUM(cc.amount) as total_capital,
   COUNT(DISTINCT pi.investor_id) as investor_count
@@ -562,7 +562,7 @@ ORDER BY project_id, version DESC;
 
 ### Query 3: Resumen de Inversiones por Investor
 ```sql
-SELECT 
+SELECT
   i.name,
   p.name as project,
   pi.ownership_percentage,
@@ -627,5 +627,5 @@ Qué se agrega:
 
 ---
 
-**PHASE 2B READY FOR IMPLEMENTATION**  
+**PHASE 2B READY FOR IMPLEMENTATION**
 **Próximo paso:** Crear SQL y deployar en Supabase
