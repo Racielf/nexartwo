@@ -794,7 +794,20 @@ const DB = {
         status:                  'pending',
         agreement_notes:         opts.agreement_notes || ''
       }).select().single();
-      if (error) { console.error('DB projectInvestors.attach:', error); return null; }
+      if (error) {
+        if (error.code === '23505') {
+          var existing = await sb.from('project_investors')
+            .select('*')
+            .eq('project_id', projectId)
+            .eq('investor_id', investorId)
+            .eq('role', role || 'equity_partner')
+            .neq('status', 'cancelled')
+            .maybeSingle();
+          if (!existing.error && existing.data) return existing.data;
+        }
+        console.error('DB projectInvestors.attach:', error);
+        return null;
+      }
       return data;
     },
     async confirm(id) {
