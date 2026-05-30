@@ -556,6 +556,8 @@ function openProjectModal(editId, type) {
   var modalTitle = proj ? 'Edit Project' : (tc.modalTitle || 'New Project');
   showConfirmModal(modalTitle, '', null);
   var box = document.querySelector('.confirm-box');
+  box.style.maxWidth = '780px';
+  box.style.width = 'calc(100% - 32px)';
 
   // ── Type badge header ──────────────────────────────────────────────────────
   var typeBadgeHtml = '<span style="font-size:11px;font-weight:600;color:' + tc.color + ';background:' + tc.bg + ';border:1px solid ' + (tc.border || tc.color + '40') + ';padding:3px 10px;border-radius:20px;margin-left:10px">' + tc.label + '</span>';
@@ -613,7 +615,7 @@ function openProjectModal(editId, type) {
       '<div style="display:flex;align-items:center;gap:6px;margin-bottom:6px"><i data-lucide="calculator" style="width:16px;height:16px;color:var(--text-secondary)"></i>' +
       '<div style="font-size:14px;font-weight:700;color:var(--text-primary)">' + sectionTitle + '</div></div>' +
       '<div style="font-size:11px;color:var(--text-muted);margin-bottom:14px;background:#fff;padding:6px 10px;border-radius:6px;border:1px dashed var(--border-light)">ℹ️ Project financial fields are used for internal financial tracking.</div>' +
-      '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">' +
+      '<div class="proj-fin-grid">' +
       // Purchase Price / Budget — always shown when any finance section is rendered
       '<div><label style="font-size:12px;font-weight:600;color:var(--text-secondary);display:block;margin-bottom:6px">' + purchaseLabel + '</label>' +
       '<input type="number" id="proj-purchase" class="form-control" placeholder="0.00" step="0.01" style="width:100%;padding:8px" value="' + (proj ? (proj.purchase_price || proj.purchasePrice || '') : '') + '"></div>';
