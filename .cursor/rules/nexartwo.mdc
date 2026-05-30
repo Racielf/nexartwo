@@ -1,0 +1,22 @@
+---
+description: NexArtWO controlled development rules
+globs:
+  - "**/*"
+alwaysApply: true
+---
+
+# NexArtWO Rules
+
+Read `AGENTS.md` and `memory/CURRENT_TASK.md` before edits.
+
+Never change protected files unless the active task explicitly allows it.
+
+Protected:
+- `js/supabase.js`
+- `supabase/**`
+- `sql/**`
+- financial formulas
+- Auth/RLS
+- Investor Hub
+
+Always provide a plan before code.

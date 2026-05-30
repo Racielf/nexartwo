@@ -1,0 +1,31 @@
+# Cursor Rules — NexArtWO
+
+You are working in NexArtWO, a controlled SaaS/project operations app.
+
+Read first:
+- AGENTS.md
+- memory/PROJECT_STATE.md
+- memory/CURRENT_TASK.md
+- docs/00-governance/STOP_CONDITIONS.md
+
+Before editing:
+- propose plan
+- list files
+- list risks
+- wait for confirmation
+
+Do not:
+- touch Supabase URL
+- run SQL
+- modify Auth/RLS
+- enable Investor Hub
+- change financial formulas
+- rewrite large JS files
+- fix unrelated issues
+
+When editing JavaScript:
+- identify the exact function
+- avoid global side effects
+- preserve existing event handlers
+- do not duplicate functions
+- do not change state shape without docs update
