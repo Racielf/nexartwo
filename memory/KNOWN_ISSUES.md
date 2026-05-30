@@ -36,17 +36,22 @@ Status: Locked.
 
 ### ISSUE-001 — Dual Investor Hub implementation
 
-Severity: P1
+Severity: P1 → RESOLVED (investigation complete 2026-05-29)
 Area: js/projects.js + js/modules/investor-hub-logic.js + js/modules/investor-hub-modals.js
-Description: The Investor Hub has TWO parallel implementations. One lives inside `projects.js` (functions prefixed `ih*`). A second lives in `js/modules/investor-hub-logic.js` and `investor-hub-modals.js`. Functions with identical names exist in both:
-- `openAddInvestorModal()` — defined in projects.js:2017, investor-hub-logic.js:344, investor-hub-modals.js:10
-- `openRecordCapitalModal()` — defined in investor-hub-logic.js:351, investor-hub-modals.js:177
-- `openCreateAnalysisModal()` — defined in investor-hub-logic.js:358, investor-hub-modals.js:354
-- `renderInvestorHub()` — defined in projects.js:1829
 
-Risk: It is unclear which implementation is active in production. Any change to one may not affect the other.
-Action needed: Owner to determine which implementation is canonical before any Investor Hub work.
-Status: OPEN — do not touch Investor Hub JS until resolved.
+VERDICT: **`js/projects.js` is the active implementation.**
+The `js/modules/` files are dead code — never loaded in index.html.
+
+Evidence:
+- `index.html` loads only: env.js, supabase.js, projects.js, app.js
+- `js/modules/investor-hub-logic.js`, `investor-hub-modals.js`, `investor-manager.js` have NO script tags
+- `supabase.js:986` comment confirms InvestorManager requires a script tag that was never added
+- Active call chain: navigateTo('investorhub') → initProjectsRoute → initProjectsModule → renderInvestorHub (projects.js:1829)
+
+See `docs/03-modules/INVESTOR_HUB.md` for full evidence and call chain.
+
+Action needed: Owner to decide what to do with `js/modules/` — delete, keep as draft, or activate in a future planned task.
+Status: INVESTIGATION RESOLVED. Pending owner decision on dead code.
 
 ### ISSUE-002 — showToast() declared 5 times
 

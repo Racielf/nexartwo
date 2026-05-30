@@ -18,6 +18,19 @@ Next step:
 
 ---
 
+## 2026-05-29 — Claude Code (Session 3)
+
+Tool: Claude Code (claude-sonnet-4-6)
+Goal: Investigate which Investor Hub implementation is active in production
+Files read: index.html (script tags), projects.html, js/supabase.js (lines 970–995), js/projects.js (grep renderInvestorHub/investorhub), js/app.js (grep investorhub)
+Files changed: docs/03-modules/INVESTOR_HUB.md (added full investigation results), memory/KNOWN_ISSUES.md (ISSUE-001 resolved), memory/AGENT_HANDOFF.md, memory/SESSION_LOG.md
+Validation: No code modified. All changes are doc/memory only.
+Problems found: None new — ISSUE-001 resolved with clear verdict.
+Verdict: js/projects.js is canonical. js/modules/ is dead code (never loaded in index.html).
+Next step: Owner decides what to do with dead modules and sets next task.
+
+---
+
 ## 2026-05-29 — Claude Code (Session 2)
 
 Tool: Claude Code (claude-sonnet-4-6)
