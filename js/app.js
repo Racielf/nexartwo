@@ -3858,16 +3858,6 @@ function markEmailViewed() {
   showToast('👁 Email marked as viewed');
 }
 
-// ============ TOAST NOTIFICATIONS ============
-function showToast(message) {
-  var existing = document.querySelector('.toast');
-  if (existing) existing.remove();
-  var toast = document.createElement('div');
-  toast.className = 'toast success';
-  toast.textContent = message;
-  document.body.appendChild(toast);
-  setTimeout(function() { toast.remove(); }, 4000);
-}
 
 function addLineItem() {
   // Store WO context so we can return

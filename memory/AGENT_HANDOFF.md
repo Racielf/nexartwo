@@ -2,30 +2,36 @@
 
 ## Last completed action
 
-ISSUE-001 investigated — active Investor Hub implementation identified.
-Documented in docs/03-modules/INVESTOR_HUB.md and memory/KNOWN_ISSUES.md.
+ISSUE-002 + ISSUE-003 implementation QA PASSED (2026-05-29).
+3 new unrelated issues documented from QA session.
+Commit pending — owner has not yet approved commit.
 
-## Verdict — Investor Hub active implementation
+## Code changes staged (not committed)
 
-**CANONICAL: `js/projects.js`** (functions prefixed `ih*`, lines ~1559–2170, renderInvestorHub at line 1829)
+| File | Change |
+|------|--------|
+| js/app.js | Removed dead showToast(message) lines 3862–3870 (-10 lines) |
+| js/projects.js | Removed dead showToast(msg) lines 98–104 (-7 lines) |
+| js/projects.js | Removed dead showConfirmModal + closeConfirmModal lines 128–141 (-14 lines) |
 
-**Dead code: `js/modules/`** — investor-hub-logic.js, investor-hub-modals.js, investor-manager.js are NOT loaded anywhere.
+## Open issues
 
-## Current task
+### P2 — ISSUE-008: Work Order delete failure
+Supabase/database error when attempting WO delete.
+"Delete failed — database error. Try again." / "0 deleted, 1 failed"
+NOT a regression. Separate investigation required.
+Must read STOP_CONDITIONS and skills/codex-fix/SKILL.md before touching Supabase.
 
-Awaiting owner decision on next action.
+### P2 — ISSUE-010: No safe project archive/cancel action
+Project cards have no visible delete/archive/cancel.
+Business rule: hard delete PROHIBITED for projects with history.
+Requires owner spec on Archive/Cancel/Void workflow before implementation.
 
-## Open decisions for owner
-
-1. What to do with `js/modules/` dead code: delete, keep as draft, or activate with a planned task?
-2. Next priority: clean up P2/P3 duplicates (showToast, showConfirmModal), or start a feature task?
-
-## Open P2/P3 issues (from Phase A)
-
-- ISSUE-002: showToast() defined 5 times
-- ISSUE-003: showConfirmModal() duplicated with different signatures
-- ISSUE-004: escHtml / escapeHtml naming split
+### P3 — ISSUE-009: New Project modal too narrow
+CSS-only issue. Separate task. Do not touch JS or financial formulas.
 
 ## Do not do next
 
-Do not modify js/**, css/**, sql/**, supabase/** without an approved CURRENT_TASK.md update.
+Do not commit js/app.js and js/projects.js changes until owner gives explicit commit GO.
+Do not investigate ISSUE-008 (Supabase) without reading STOP_CONDITIONS first.
+Do not implement archive/delete for projects without owner spec.

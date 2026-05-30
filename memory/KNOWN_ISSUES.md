@@ -55,26 +55,23 @@ Status: INVESTIGATION RESOLVED. Pending owner decision on dead code.
 
 ### ISSUE-002 — showToast() declared 5 times
 
-Severity: P2
-Area: app.js, projects.js, investor-hub-logic.js, investor-hub-modals.js
-Description: `showToast()` is defined in 5 locations including TWICE within app.js (lines 3862 and 5311). The last definition in scope wins at runtime, but this creates ambiguity and maintenance risk.
-Locations:
-- app.js:3862
-- app.js:5311 (second definition in same file)
-- projects.js:98
-- investor-hub-logic.js:426
-- investor-hub-modals.js:570
-Action needed: Consolidate to one shared utility. Low priority until Investor Hub work begins.
-Status: OPEN.
+Severity: P2 → ✅ QA PASSED
+Area: app.js, projects.js
+
+Implementation: Removed app.js:3862–3870 and projects.js:98–104 (2026-05-29).
+QA result: Toast notifications confirmed working — appearing and auto-dismissing correctly.
+Unrelated failures observed during QA session: see ISSUE-008, ISSUE-009, ISSUE-010.
+Status: CLOSED.
 
 ### ISSUE-003 — showConfirmModal() / closeConfirmModal() duplicated
 
-Severity: P2
+Severity: P2 → ✅ QA PASSED
 Area: app.js, projects.js
-Description: Both `app.js:1000` and `projects.js:128` define `showConfirmModal()`. Both `app.js:1014` and `projects.js:138` define `closeConfirmModal()`. They have different signatures (`btnText, btnClass` in app.js vs. not in projects.js).
-Risk: A call to `showConfirmModal()` may behave differently depending on which definition the JS engine uses last.
-Action needed: Determine which is actually called and remove the dead one.
-Status: OPEN.
+
+Implementation: Removed projects.js:128–141 (showConfirmModal + closeConfirmModal) (2026-05-29).
+QA result: Confirm dialog behavior confirmed working — Delete WO modal shows correctly with "Delete" button. New Project modal opens (form-injection pattern). Skeleton restoration between modal types confirmed working.
+Unrelated failures observed during QA session: see ISSUE-008, ISSUE-009, ISSUE-010.
+Status: CLOSED.
 
 ### ISSUE-004 — escHtml / escapeHtml naming inconsistency
 
@@ -108,3 +105,40 @@ Area: Documentation
 Description: A `dist/` directory exists with copies of the app files (likely Vercel build output). Not documented. Edits should be made to source files, not dist.
 Resolution: CURRENT_REPO_MAP updated 2026-05-29.
 Status: RESOLVED.
+
+---
+
+## QA session findings — 2026-05-29
+
+### ISSUE-008 — Work Order delete failure (Supabase/database error)
+
+Severity: P2
+Area: js/app.js — woDeleteSelected() / deleteWorkOrder()
+Observed: When attempting to delete a Work Order, the app shows:
+  "Delete failed — database error. Try again."
+  or "0 deleted, 1 failed — check connection"
+Likely cause: Supabase delete operation failing — could be RLS policy blocking delete, network issue, or missing DB permission. NOT a regression from ISSUE-002/003 cleanup.
+Action needed: Separate investigation task. Must read STOP_CONDITIONS before touching Supabase/RLS.
+Do not fix in current task.
+Status: OPEN — separate task required.
+
+### ISSUE-009 — New Project modal layout too narrow
+
+Severity: P3
+Area: projects.js — openProjectModal() — CSS/UI only
+Observed: When opening "+ New Project", the modal appears too narrow/cramped, especially for financial fields.
+Likely cause: CSS modal width constraint not accounting for financial input layout.
+Action needed: Separate CSS-only task. Must not touch JS logic or financial formulas.
+Do not fix in current task.
+Status: OPEN — separate CSS task required.
+
+### ISSUE-010 — Projects have no safe delete/archive/cancel action visible
+
+Severity: P2
+Area: projects.js — renderProjectList() / project cards UI
+Observed: Project cards/list do not show a visible way to delete, archive, or cancel projects.
+Business rule confirmed by owner: Projects with financials, work orders, investors, documents, or history must use Archive/Cancel/Void workflow — NOT hard delete. Hard delete is prohibited.
+Action needed: Design and implement a safe Archive/Cancel UI. Requires owner spec before implementation — must define what "archived" means in terms of visibility, reporting, and data retention.
+Do not implement hard delete under any circumstances.
+Do not fix in current task.
+Status: OPEN — requires owner spec and separate task.

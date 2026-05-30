@@ -95,13 +95,6 @@ function escHtml(str) {
   return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
-function showToast(msg) {
-  var t = document.getElementById('toast');
-  if (!t) return;
-  t.textContent = msg;
-  t.classList.add('show');
-  setTimeout(function() { t.classList.remove('show'); }, 2800);
-}
 
 // Restores the original .confirm-box skeleton so showConfirmModal() always
 // finds its required IDs (confirm-modal-title / msg / btn) after openProjectModal()
@@ -125,20 +118,6 @@ function ensureConfirmBoxSkeleton() {
   }
 }
 
-function showConfirmModal(title, msg, onConfirm) {
-  ensureConfirmBoxSkeleton(); // defensive: guarantee IDs exist before writing to them
-  document.getElementById('confirm-modal-title').textContent = title;
-  document.getElementById('confirm-modal-msg').innerHTML = msg;
-  var btn = document.getElementById('confirm-modal-btn');
-  btn.textContent = 'Confirm';
-  btn.onclick = function() { closeConfirmModal(); if (onConfirm) onConfirm(); };
-  document.getElementById('confirm-modal-overlay').style.display = 'flex';
-}
-
-function closeConfirmModal() {
-  document.getElementById('confirm-modal-overlay').style.display = 'none';
-  ensureConfirmBoxSkeleton(); // restore skeleton so next openProjectModal() finds clean DOM
-}
 
 function fmtMoney(val) {
   var n = parseFloat(val) || 0;
