@@ -19,27 +19,77 @@ class InvestorManager {
   // ===========================================================================
 
   /**
-   * Crear nuevo inversor
-   * @param {Object} data - {name, type, email, phone, tax_id, tax_notes}
-   * @returns {Object} - Investor object con id
+   * Crear nuevo inversor (Phase 2B+KYC fields)
    */
   async createInvestor(data) {
+    const payload = {
+      name: data.name,
+      type: data.type || 'person',
+      company_id: data.company_id || null,
+      email: data.email || '',
+      phone: data.phone || '',
+      status: data.status || 'active',
+      notes: data.notes || '',
+      // KYC / registration fields (added in migration 20260606)
+      first_name: data.first_name || '',
+      last_name: data.last_name || '',
+      address: data.address || '',
+      city: data.city || '',
+      state_addr: data.state_addr || '',
+      zip: data.zip || '',
+      entity_type: data.entity_type || 'individual',
+      investment_profile: data.investment_profile || 'individual',
+      accredited_investor: data.accredited_investor || false,
+      capital_source: data.capital_source || '',
+      tax_id: data.tax_id || '',
+      signed_agreement: data.signed_agreement || false,
+      first_contact_date: data.first_contact_date || null,
+      owner_notes: data.owner_notes || ''
+    };
+
     const { data: investor, error } = await this.supabase
       .from('investors')
-      .insert([{
-        name: data.name,
-        type: data.type, // 'person' | 'company'
-        email: data.email || null,
-        phone: data.phone || null,
-        tax_id: data.tax_id || null,
-        tax_notes: data.tax_notes || null,
-        status: 'active'
-      }])
+      .insert([payload])
       .select()
       .single();
 
     if (error) throw new Error(`Failed to create investor: ${error.message}`);
     return investor;
+  }
+
+  /**
+   * Crear nueva empresa (investor_companies)
+   */
+  async createCompany(data) {
+    const { data: company, error } = await this.supabase
+      .from('investor_companies')
+      .insert([{
+        company_name: data.company_name,
+        contact_person: data.contact_person || '',
+        email: data.email || '',
+        phone: data.phone || '',
+        license_number: data.license_number || '',
+        state: data.state || '',
+        notes: data.notes || ''
+      }])
+      .select()
+      .single();
+
+    if (error) throw new Error(`Failed to create company: ${error.message}`);
+    return company;
+  }
+
+  /**
+   * Listar todas las empresas registradas
+   */
+  async listCompanies() {
+    const { data, error } = await this.supabase
+      .from('investor_companies')
+      .select('id, company_name, state')
+      .order('company_name', { ascending: true });
+
+    if (error) throw new Error(`Failed to list companies: ${error.message}`);
+    return data || [];
   }
 
   /**
@@ -154,28 +204,57 @@ class InvestorManager {
   // ===========================================================================
 
   /**
-   * Registrar aporte de capital
-   * @param {Object} data - {project_investor_id, amount, contribution_date, contribution_type, reference, notes}
-   * @returns {Object} - capital_contributions entry
+   * Registrar aporte de capital — usa nombres de columna exactos del schema 2B
+   * DB columns: project_id, investor_id, amount, date, method, type, status, evidence_reference, notes
    */
   async recordCapitalContribution(data) {
     const { data: contribution, error } = await this.supabase
       .from('capital_contributions')
       .insert([{
-        project_investor_id: data.project_investor_id,
-        project_id: data.project_id, // Necesario para integridad
+        project_id: data.project_id,
+        investor_id: data.investor_id,
         amount: data.amount,
-        contribution_date: data.contribution_date,
-        contribution_type: data.contribution_type, // 'initial' | 'mid-project' | 'closing'
-        reference: data.reference || null,
-        notes: data.notes || null,
-        status: 'received'
+        date: data.date,
+        method: data.method || 'wire',
+        type: data.type || 'initial',
+        status: data.status || 'pending',
+        evidence_reference: data.evidence_reference || '',
+        notes: data.notes || ''
       }])
       .select()
       .single();
 
     if (error) throw new Error(`Failed to record contribution: ${error.message}`);
     return contribution;
+  }
+
+  /**
+   * Obtener capital calls de un proyecto
+   */
+  async getCapitalCalls(projectId) {
+    const { data, error } = await this.supabase
+      .from('capital_calls')
+      .select('*')
+      .eq('project_id', projectId)
+      .order('created_at', { ascending: false });
+
+    if (error) throw new Error(`Failed to fetch capital calls: ${error.message}`);
+    return data || [];
+  }
+
+  /**
+   * Anular participación de un inversor en un proyecto (status → cancelled)
+   */
+  async voidProjectInvestor(projectInvestorId) {
+    const { data, error } = await this.supabase
+      .from('project_investors')
+      .update({ status: 'cancelled' })
+      .eq('id', projectInvestorId)
+      .select()
+      .single();
+
+    if (error) throw new Error(`Failed to void project investor: ${error.message}`);
+    return data;
   }
 
   /**
