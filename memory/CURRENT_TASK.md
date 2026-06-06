@@ -2,16 +2,17 @@
 
 ## Task
 
-ISSUE-013: Document Investor Hub separation — Investor Directory vs Project Capital Workspace.
+ISSUE-013 Phase B: Design implementation plan — Investor Hub separation.
 
 ## Phase
 
-Phase A — Documentation only (no code changes).
+Phase A — Design documentation only (no code changes).
 
 ## Objective
 
-Record the business requirement, current observed state, required future model (two surfaces),
-UX rules, and Add Investor requirements. No code until owner approves design.
+Produce a complete technical implementation plan covering current state map,
+target architecture, routing design, data model, 5 implementation phases,
+file impact, risk analysis, and QA checklist. No code until owner approves.
 
 ## Allowed files to modify
 
@@ -19,6 +20,7 @@ UX rules, and Add Investor requirements. No code until owner approves design.
 - `memory/KNOWN_ISSUES.md`
 - `memory/SESSION_LOG.md`
 - `memory/AGENT_HANDOFF.md`
+- `docs/03-modules/INVESTOR_HUB.md`
 
 ## Forbidden files
 
@@ -30,14 +32,15 @@ UX rules, and Add Investor requirements. No code until owner approves design.
 
 ## Done when
 
-ISSUE-013 documented in KNOWN_ISSUES.md with:
-- Current state (QA observations)
-- Future model A: Global Investor Directory
-- Future model B: Project Capital Workspace
-- UX rules for Edit actions
-- Add Investor requirements (Person + Company)
-- Constraints and dependencies noted
+`docs/03-modules/INVESTOR_HUB.md` updated with full ISSUE-013 Phase B plan including:
+- Current state map (routing + active functions)
+- Target architecture (two surfaces)
+- Routing change design (renderInvestorDirectory vs openInvestorHubEntry)
+- Data model gaps identified (DB.investors.update, getByInvestor, investorCompanies.update)
+- 5 implementation phases with file impact per phase
+- Risk table
+- Manual QA checklist (8 areas)
 
 ## Previous task completed
 
-ISSUE-012 documented — committed edf2407 (2026-06-05)
+ISSUE-013 documented — committed bf6b6e6 (2026-06-05)

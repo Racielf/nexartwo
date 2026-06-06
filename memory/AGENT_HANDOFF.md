@@ -2,10 +2,15 @@
 
 ## Last completed action
 
-ISSUE-013 documented (2026-06-05).
-P1: Investor Hub must split into Global Investor Directory (sidebar) and Project Capital Workspace (project tab).
-QA observations, future model A/B, UX rules, and Add Investor requirements recorded.
-No code modified. Memory update only. No commit yet.
+ISSUE-013 Phase B design plan complete (2026-06-05).
+Full technical implementation plan in docs/03-modules/INVESTOR_HUB.md:
+- Current state map with full call chain and active functions table
+- Target architecture (Global Directory + Project Capital Workspace)
+- Routing design: renderInvestorDirectory() replaces openInvestorHubEntry() for sidebar path
+- Data model gaps identified: DB.investors.update(), DB.investorCompanies.update(), DB.projectInvestors.getByInvestor()
+- 5 phases with file impact matrix and risk table
+- Manual QA checklist (8 areas)
+No code modified. Design documentation only. No commit yet.
 
 ## Code changes staged (not committed)
 
@@ -13,11 +18,16 @@ None. Last code commit: f124e11 (ISSUE-009 modal width fix, pushed).
 
 ## Open issues
 
-### P1 — ISSUE-013: Investor Hub separation — Directory vs Project Capital Workspace
-Two surfaces required: Global Investor Directory (sidebar, all investors, CRUD) and Project Capital Workspace (project tab, capital stack, roles).
-Edit button context rule documented. Add Investor Person + Company requirements documented.
-No code. No Supabase changes. No refactor. Awaiting design approval.
-Dependencies: ISSUE-012 (WO investor recipient) needs global directory to exist first.
+### P1 — ISSUE-013: Investor Hub separation — DESIGN PLAN COMPLETE
+Full plan in docs/03-modules/INVESTOR_HUB.md. 5 phases:
+  Phase 1: Global Investor Directory shell (renderInvestorDirectory in projects.js)
+  Phase 2: Create/Edit investor + DB.investors.update() + DB.investorCompanies.update()
+  Phase 3: Attach flow refactor (separate from create)
+  Phase 4: Edit Project label fix (1 word, zero logic)
+  Phase 5: WO recipient integration (depends on Phase 1-2)
+Key routing change: intercept initProjectsModule(route='investorhub') to call directory, not openInvestorHubEntry().
+Data model gaps: investors.update(), investorCompanies.update(), projectInvestors.getByInvestor() needed.
+Awaiting owner GO for Phase 1.
 
 ### P2 — ISSUE-012: WO recipient must support Client or Investor
 Business requirement documented. Future model: recipient_type / recipient_id / recipient_name.

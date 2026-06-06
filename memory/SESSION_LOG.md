@@ -18,6 +18,18 @@ Next step:
 
 ---
 
+## 2026-06-05 — Claude Code (Session 10)
+
+Tool: Claude Code (claude-sonnet-4-6)
+Goal: ISSUE-013 Phase B — design implementation plan for Investor Hub separation
+Files read: AGENTS.md, memory/PROJECT_STATE.md, memory/CURRENT_TASK.md, memory/KNOWN_ISSUES.md, docs/03-modules/INVESTOR_HUB.md, js/projects.js (L1-20, L1507-1666, L1737-2097, L268-395, L896-916), js/supabase.js (L684-870), index.html (investorhub grep)
+Files changed: docs/03-modules/INVESTOR_HUB.md (full Phase B plan), memory/CURRENT_TASK.md, memory/KNOWN_ISSUES.md, memory/AGENT_HANDOFF.md, memory/SESSION_LOG.md
+Validation: No code modified. Design documentation only. No commit.
+Key findings: investor_companies table already exists in supabase.js but unused in active IH; DB.investors missing update(); DB.projectInvestors missing getByInvestor(); routing change is a single intercept in initProjectsModule(); Edit button fix is 1 word.
+Next step: Owner reviews Phase B plan, approves Phase 1 (Global Investor Directory shell).
+
+---
+
 ## 2026-06-05 — Claude Code (Session 9)
 
 Tool: Claude Code (claude-sonnet-4-6)

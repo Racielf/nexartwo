@@ -309,7 +309,7 @@ Business context: Investor Hub is currently mixed with the Project Workspace. It
 - ISSUE-012 (open): WO recipient investor support — will need global investor directory to exist first.
 - Cash-In model (pending spec): Capital Workspace financial logic depends on approved Cash-In definition.
 
-Status: OPEN — documented. Requires design approval and owner spec before any implementation.
+Status: OPEN — Phase B design plan complete (2026-06-05). See `docs/03-modules/INVESTOR_HUB.md` for full technical plan. Awaiting owner approval before Phase 1 implementation.
 
 ---
 
