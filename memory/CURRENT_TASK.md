@@ -2,25 +2,16 @@
 
 ## Task
 
-ISSUE-011: INP performance audit — read-only investigation of nav-item click path.
+ISSUE-012: Document Work Order recipient model — Client or Investor support required.
 
 ## Phase
 
-Phase A — Read-only audit (no code changes in this phase).
+Phase A — Documentation only (no code changes).
 
 ## Objective
 
-Identify the root cause of ISSUE-011: ~3719ms INP on div.nav-item.
-Read code only. Document findings. Propose minimum fix for a future task.
-
-## Scope
-
-Read-only audit of:
-- js/app.js: navigateTo() (L336), setupNavigation() (L262), initProjectsRoute() (L365),
-  renderDashboard() (L571), renderDashboardRevenueChart() (L461), renderDashboardStatusDonut() (L521),
-  renderDashboardPriorityBars() (L553)
-- js/projects.js: initProjectsModule() (L268), ensureProjectsModuleShell() (L245),
-  loadProjectsLocal() (L170), renderProjectList() (L391)
+Record the business requirement, current state, future data model, and implementation
+scope for adding Investor as a valid WO recipient. No code until owner approves.
 
 ## Allowed files to modify
 
@@ -31,19 +22,22 @@ Read-only audit of:
 
 ## Forbidden files
 
-- `js/**` (read only — no edits)
+- `js/**`
 - `css/**`
+- `index.html`
 - `sql/**`, `supabase/**`
-- Auth/RLS, Financial formulas, Investor Hub
+- Auth/RLS, Financial formulas, Investor Hub activation
 
 ## Done when
 
-Findings documented in KNOWN_ISSUES.md with:
-- Confirmed call chain
-- Number of lucide.createIcons() calls per nav
-- Primary cause identified
-- Minimum fix plan proposed (not implemented)
+ISSUE-012 documented in KNOWN_ISSUES.md with:
+- Current state description
+- Required future behavior
+- Future data model (recipient_type, recipient_id, recipient_name)
+- Backward-compat fields listed
+- Implementation scope itemized
+- Constraints and dependencies noted
 
 ## Previous task completed
 
-ISSUE-002 + ISSUE-003 cleanup — QA PASSED, committed f124e11 (2026-05-29)
+ISSUE-011 read-only audit — root cause documented, committed d0199b7 (2026-06-05)

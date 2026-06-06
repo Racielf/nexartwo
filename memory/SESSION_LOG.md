@@ -18,6 +18,18 @@ Next step:
 
 ---
 
+## 2026-06-05 — Claude Code (Session 8)
+
+Tool: Claude Code (claude-sonnet-4-6)
+Goal: Document ISSUE-012 — WO recipient must support Client or Investor
+Files read: none (documentation task from owner-provided business requirement)
+Files changed: memory/KNOWN_ISSUES.md, memory/CURRENT_TASK.md, memory/AGENT_HANDOFF.md, memory/SESSION_LOG.md
+Validation: No code modified. Memory update only. No commit.
+Key decision: Future model uses recipient_type + recipient_id + recipient_name; legacy wo.client/wo.clientId kept for backward compat. No Supabase changes until formal migration approved.
+Next step: Owner approves implementation plan for ISSUE-012, or selects another open issue.
+
+---
+
 ## 2026-06-05 — Claude Code (Session 7)
 
 Tool: Claude Code (claude-sonnet-4-6)

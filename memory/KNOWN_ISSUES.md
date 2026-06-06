@@ -224,6 +224,68 @@ Requires manual QA of all 8 pages after change.
 
 Status: OPEN — audit complete. Fix 1 plan ready for owner approval.
 
+### ISSUE-012 — Work Order recipient must support Client or Investor
+
+Severity: P2
+Area: index.html (modal-new-wo), js/app.js — openNewWOModal(), openEditWOModal(), saveNewWO(), renderWorkOrders()
+Business context: Fix-and-flip / investor workflows require Work Orders to be directed to an Investor, not only a Client.
+
+#### Current state
+
+- Modal `#modal-new-wo` has a single "Client *" field: `<select id="new-wo-client">` populated from CLIENTS.
+- `saveNewWO()` stores the selected value as `wo.client` / `wo.clientId`.
+- `renderWorkOrders()` displays the client name in the WO list.
+- Work Order PDFs/documents may read `wo.client` directly.
+- No concept of recipient type exists anywhere in the data model.
+
+#### Required behavior
+
+| Recipient Type | Dropdown source |
+|---|---|
+| Client | CLIENTS array (current behavior) |
+| Investor | Investor Hub investor records (new) |
+
+User selects Recipient Type first (Client / Investor), then the dropdown refreshes to show the correct list.
+
+#### Future data model
+
+New fields to add when implemented:
+- `recipient_type` — `'client'` or `'investor'`
+- `recipient_id` — ID of the selected client or investor
+- `recipient_name` — display name (denormalized for rendering/PDFs)
+
+Legacy fields to keep for backward compatibility:
+- `wo.client` — keep populated (set to `recipient_name`) until formal migration
+- `wo.clientId` — keep populated (set to `recipient_id`) until formal migration
+
+Do NOT remove legacy fields without a separate approved migration task.
+
+#### Implementation scope (future — DO NOT implement until owner approval)
+
+1. `index.html` — `#modal-new-wo`: add Recipient Type radio/select above the existing client field.
+2. `js/app.js` — `openNewWOModal()`: default Recipient Type to `'client'`, populate dropdown from CLIENTS.
+3. `js/app.js` — `openEditWOModal()`: restore saved `recipient_type` and populate correct dropdown.
+4. `js/app.js` — `saveNewWO()`: write `recipient_type`, `recipient_id`, `recipient_name` + keep legacy `client`/`clientId`.
+5. `js/app.js` — `renderWorkOrders()`: display `recipient_name` (falls back to `wo.client` for old records).
+6. Investor Hub investor list: read from existing `ihGetInvestors()` or equivalent in projects.js.
+
+#### Constraints
+
+- Do not touch Supabase schema until owner approves a formal migration plan.
+- Do not touch Investor Hub logic or activation status.
+- Do not touch financial formulas.
+- Do not break existing Client workflow — backward compatibility is required.
+- PDF/document generation must be audited before migration to ensure it doesn't hardcode `wo.client`.
+
+#### Dependencies
+
+- ISSUE-001 (resolved): active IH implementation confirmed as `js/projects.js` — investor list source known.
+- ISSUE-010 (open): project archive/cancel — unrelated but shares the projects.js module scope.
+
+Status: OPEN — documented. Awaiting owner approval before implementation plan.
+
+---
+
 ### ISSUE-010 — Projects have no safe delete/archive/cancel action visible
 
 Severity: P2
