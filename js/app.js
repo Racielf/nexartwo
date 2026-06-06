@@ -359,7 +359,6 @@ function navigateTo(page, options) {
   if (page === 'projects' || page === 'investorhub') initProjectsRoute(page);
   if (page === 'settings') populateSettingsForm();
   if (page === 'fieldmode') initFieldMode();
-  lucide.createIcons();
 }
 
 function initProjectsRoute(page, attempt) {
