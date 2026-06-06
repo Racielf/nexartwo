@@ -2,7 +2,7 @@
 
 ## Task
 
-ISSUE-012: Document Work Order recipient model — Client or Investor support required.
+ISSUE-013: Document Investor Hub separation — Investor Directory vs Project Capital Workspace.
 
 ## Phase
 
@@ -10,8 +10,8 @@ Phase A — Documentation only (no code changes).
 
 ## Objective
 
-Record the business requirement, current state, future data model, and implementation
-scope for adding Investor as a valid WO recipient. No code until owner approves.
+Record the business requirement, current observed state, required future model (two surfaces),
+UX rules, and Add Investor requirements. No code until owner approves design.
 
 ## Allowed files to modify
 
@@ -30,14 +30,14 @@ scope for adding Investor as a valid WO recipient. No code until owner approves.
 
 ## Done when
 
-ISSUE-012 documented in KNOWN_ISSUES.md with:
-- Current state description
-- Required future behavior
-- Future data model (recipient_type, recipient_id, recipient_name)
-- Backward-compat fields listed
-- Implementation scope itemized
+ISSUE-013 documented in KNOWN_ISSUES.md with:
+- Current state (QA observations)
+- Future model A: Global Investor Directory
+- Future model B: Project Capital Workspace
+- UX rules for Edit actions
+- Add Investor requirements (Person + Company)
 - Constraints and dependencies noted
 
 ## Previous task completed
 
-ISSUE-011 read-only audit — root cause documented, committed d0199b7 (2026-06-05)
+ISSUE-012 documented — committed edf2407 (2026-06-05)

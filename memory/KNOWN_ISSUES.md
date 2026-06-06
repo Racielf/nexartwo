@@ -224,6 +224,95 @@ Requires manual QA of all 8 pages after change.
 
 Status: OPEN — audit complete. Fix 1 plan ready for owner approval.
 
+### ISSUE-013 — Investor Hub needs separation: Investor Directory vs Project Capital Workspace
+
+Severity: P1
+Area: js/projects.js — renderInvestorHub(), ihRenderInvestorHubShell(), switchProjTab(), openAddInvestorModal()
+Business context: Investor Hub is currently mixed with the Project Workspace. It must split into two distinct surfaces with different purposes, scopes, and actions.
+
+#### Current state (observed from QA)
+
+1. Sidebar "Investor Hub" navigates to `switchProjTab('investorhub')` which calls `renderInvestorHub(_currentProject.id)` — always project-scoped, even from the global sidebar entry.
+2. Project header context (project name, status, project type, project tabs) is visible inside Investor Hub.
+3. The top-right "Edit" button appears in Investor Hub context but triggers `editCurrentProject()` — edits the project, not an investor.
+4. `openAddInvestorModal()` supports selecting an existing investor or creating a new one, but company creation fields are too limited/ambiguous.
+5. There is no global investor list — investors can only be viewed per project.
+6. No concept of Investor Directory or CRM exists.
+
+#### Required future model
+
+##### A — Global Investor Directory (sidebar entry: "Investor Hub")
+
+- Accessible from the sidebar Investor Hub nav item.
+- Shows ALL investors across all projects (not scoped to one project).
+- Actions:
+  - Create Person investor (full name, email, phone)
+  - Create Company investor (legal company name, contact person, email, phone, optional address / website / notes)
+  - Edit investor (name, contact info — NOT project role)
+  - View investor status and contact info
+  - View linked projects and capital summary per investor
+- "Edit" in this context means **Edit Investor** — never edits a project.
+- No project header, no project tabs, no project-scoped context.
+
+##### B — Project Capital Workspace (tab inside a project)
+
+- Accessible from a project detail view tab: "Investor Hub" tab.
+- Shows capital stack for the selected project only.
+- Actions:
+  - Attach existing investor to this project (from global investor directory)
+  - Define role in project (role belongs to `project_investors`, NOT the global investor record)
+  - Manage contributions / capital calls for this project
+  - Void project-investor link instead of delete (hard delete prohibited)
+- "Edit" in this context must be labeled **Edit Project** or **Cancel Project** — never generic "Edit".
+- Project header and project tabs remain visible here.
+
+#### UX rules
+
+| Context | "Edit" label | "Edit" action |
+|---|---|---|
+| Global Investor Directory | Edit Investor | edits investor record |
+| Project Capital Workspace | Edit Project | edits project record |
+| Project Capital Workspace | Cancel Project | cancels project |
+
+- Role in Project (e.g., equity partner, lender, co-owner) belongs to `project_investors` join record, NOT the global investor record.
+- A single investor may have different roles in different projects.
+
+#### Add Investor future requirements
+
+**Person investor:**
+- Full name (required)
+- Email (required)
+- Phone (optional)
+
+**Company investor:**
+- Legal company name (required)
+- Contact person / name (required)
+- Email (required)
+- Phone (optional)
+- Address (optional)
+- Website (optional)
+- Notes (optional)
+
+**Existing investor attach:** must remain — attach from global directory to a project.
+
+#### Constraints
+
+- Do not change Supabase schema until owner approves a formal migration plan.
+- Do not refactor Investor Hub code yet.
+- Do not activate or expand Investor Hub until separation design is approved.
+- Do not touch financial formulas.
+- Hard delete of project-investor links is prohibited — use Void/Archive.
+
+#### Dependencies
+
+- ISSUE-001 (resolved): active IH is `js/projects.js` — all ih* functions are the scope.
+- ISSUE-012 (open): WO recipient investor support — will need global investor directory to exist first.
+- Cash-In model (pending spec): Capital Workspace financial logic depends on approved Cash-In definition.
+
+Status: OPEN — documented. Requires design approval and owner spec before any implementation.
+
+---
+
 ### ISSUE-012 — Work Order recipient must support Client or Investor
 
 Severity: P2

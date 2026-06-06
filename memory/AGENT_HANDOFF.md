@@ -2,9 +2,9 @@
 
 ## Last completed action
 
-ISSUE-012 documented (2026-06-05).
-Business requirement: WO recipient must support Client or Investor.
-Future data model (recipient_type / recipient_id / recipient_name) and implementation scope recorded.
+ISSUE-013 documented (2026-06-05).
+P1: Investor Hub must split into Global Investor Directory (sidebar) and Project Capital Workspace (project tab).
+QA observations, future model A/B, UX rules, and Add Investor requirements recorded.
 No code modified. Memory update only. No commit yet.
 
 ## Code changes staged (not committed)
@@ -12,6 +12,12 @@ No code modified. Memory update only. No commit yet.
 None. Last code commit: f124e11 (ISSUE-009 modal width fix, pushed).
 
 ## Open issues
+
+### P1 — ISSUE-013: Investor Hub separation — Directory vs Project Capital Workspace
+Two surfaces required: Global Investor Directory (sidebar, all investors, CRUD) and Project Capital Workspace (project tab, capital stack, roles).
+Edit button context rule documented. Add Investor Person + Company requirements documented.
+No code. No Supabase changes. No refactor. Awaiting design approval.
+Dependencies: ISSUE-012 (WO investor recipient) needs global directory to exist first.
 
 ### P2 — ISSUE-012: WO recipient must support Client or Investor
 Business requirement documented. Future model: recipient_type / recipient_id / recipient_name.

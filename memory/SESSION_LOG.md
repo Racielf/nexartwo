@@ -18,6 +18,18 @@ Next step:
 
 ---
 
+## 2026-06-05 — Claude Code (Session 9)
+
+Tool: Claude Code (claude-sonnet-4-6)
+Goal: Document ISSUE-013 — Investor Hub separation: Investor Directory vs Project Capital Workspace
+Files read: none (documentation task from owner-provided QA observations and business requirement)
+Files changed: memory/KNOWN_ISSUES.md, memory/CURRENT_TASK.md, memory/AGENT_HANDOFF.md, memory/SESSION_LOG.md
+Validation: No code modified. Memory update only. No commit.
+Key decisions documented: two surfaces (Global Directory + Project Workspace), Edit context rules, Person/Company investor fields, role-in-project belongs to project_investors not global record.
+Next step: Owner approves design for ISSUE-013 before any implementation, or selects another open issue.
+
+---
+
 ## 2026-06-05 — Claude Code (Session 8)
 
 Tool: Claude Code (claude-sonnet-4-6)
