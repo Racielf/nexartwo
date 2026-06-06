@@ -2,19 +2,22 @@
 
 ## Last completed action
 
-ISSUE-002 + ISSUE-003 implementation QA PASSED (2026-05-29).
-3 new unrelated issues documented from QA session.
-Commit pending — owner has not yet approved commit.
+ISSUE-011 read-only audit complete (2026-06-05).
+Root cause identified: synchronous render pipeline + redundant lucide.createIcons() × 2–3 per nav.
+Fix 1 plan documented: remove app.js:362 lucide.createIcons() (1 line, near-zero risk).
+No code modified. Memory/docs update only.
 
 ## Code changes staged (not committed)
 
-| File | Change |
-|------|--------|
-| js/app.js | Removed dead showToast(message) lines 3862–3870 (-10 lines) |
-| js/projects.js | Removed dead showToast(msg) lines 98–104 (-7 lines) |
-| js/projects.js | Removed dead showConfirmModal + closeConfirmModal lines 128–141 (-14 lines) |
+None. Last code commit: f124e11 (ISSUE-009 modal width fix, pushed).
 
 ## Open issues
+
+### P2 — ISSUE-011: INP ~3719ms on nav-item — AUDIT COMPLETE
+Root cause: synchronous render pipeline + lucide.createIcons() called 3× (projects) / 2× (dashboard) per nav.
+Redundant call at app.js:362 confirmed. Full findings in KNOWN_ISSUES.md.
+Fix 1 (safe): delete app.js:362 lucide.createIcons() — awaiting owner approval.
+Fix 2 (medium risk): defer render in setTimeout — only if Fix 1 insufficient.
 
 ### P2 — ISSUE-008: Work Order delete failure
 Supabase/database error when attempting WO delete.
@@ -32,6 +35,6 @@ CSS-only issue. Separate task. Do not touch JS or financial formulas.
 
 ## Do not do next
 
-Do not commit js/app.js and js/projects.js changes until owner gives explicit commit GO.
+Do not implement ISSUE-011 Fix 1 or Fix 2 without explicit owner GO.
 Do not investigate ISSUE-008 (Supabase) without reading STOP_CONDITIONS first.
 Do not implement archive/delete for projects without owner spec.

@@ -18,6 +18,32 @@ Next step:
 
 ---
 
+## 2026-06-05 — Claude Code (Session 7)
+
+Tool: Claude Code (claude-sonnet-4-6)
+Goal: ISSUE-011 read-only audit — identify INP root cause in nav-item click path
+Files read: js/app.js (navigateTo L336, setupNavigation L262, initProjectsRoute L365, renderDashboard L571, renderDashboardRevenueChart L461, renderDashboardStatusDonut L521, renderDashboardPriorityBars L553), js/projects.js (initProjectsModule L268, ensureProjectsModuleShell L245, loadProjectsLocal L170, renderProjectList L391), index.html (nav-item HTML)
+Files changed: memory/KNOWN_ISSUES.md (full audit results), memory/CURRENT_TASK.md (updated task), memory/AGENT_HANDOFF.md (updated status), memory/SESSION_LOG.md
+Validation: No code modified. Read-only audit + memory update only. No commit.
+Key finding: 3 lucide.createIcons() calls per projects nav, 2 per dashboard nav — all synchronous, no yield to browser. Redundant call at app.js:362 confirmed.
+Root cause: entire render pipeline synchronous in click handler + redundant lucide.createIcons().
+Fix 1 proposed: delete app.js:362 (1 line, near-zero risk) — awaiting owner GO.
+Next step: Owner approves Fix 1 for ISSUE-011, or moves to ISSUE-008/ISSUE-010.
+
+---
+
+## 2026-06-05 — Claude Code (Session 6)
+
+Tool: Claude Code (claude-sonnet-4-6)
+Goal: Document ISSUE-011 INP performance finding from Vercel Toolbar
+Files read: none
+Files changed: memory/KNOWN_ISSUES.md, memory/AGENT_HANDOFF.md, memory/SESSION_LOG.md
+Validation: No code modified. Memory update only. No commit.
+Finding: Vercel Toolbar reports div.nav-item blocking UI for ~3719.9ms on feat/activate-investor-hub-local. Likely nav/route switching path in app.js.
+Next step: Owner decides whether to open investigation task for ISSUE-011.
+
+---
+
 ## 2026-05-29 — Claude Code (Session 5)
 
 Tool: Claude Code (claude-sonnet-4-6)
