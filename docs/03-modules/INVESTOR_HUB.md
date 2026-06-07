@@ -68,6 +68,236 @@ Before any Investor Hub work:
 
 ---
 
+## Business Model — Investor in NexArtWO
+
+*Authored: 2026-06-06. Status: Approved business model — no code yet.*
+
+---
+
+### 1. Investor — global entity
+
+An investor is a real-world person or company that provides capital to one or more projects.
+An investor record exists globally — independent of any project.
+The same investor can be linked to many projects with different roles each time.
+
+**Person investor:**
+
+| Field | Required | Notes |
+|---|---|---|
+| `name` | ✅ | Full legal name |
+| `email` | ✅ | Primary contact email |
+| `phone` | optional | Contact phone |
+| `notes` | optional | Internal notes |
+| `status` | auto | `'active'` or `'inactive'` — never deleted |
+| `type` | auto | Always `'person'` — immutable after create |
+| `company_id` | auto | Always `null` for person type |
+| `address`, `city`, `state_addr`, `zip` | optional | `investors` — applied Phase 2A.2 |
+
+**Company investor:**
+
+| Field | Required | Table | Notes |
+|---|---|---|---|
+| `company_name` | ✅ | `investor_companies` | Legal company name |
+| `contact_person` | ✅ | `investor_companies` | Primary contact name |
+| `email` | ✅ | `investor_companies` | Company contact email |
+| `phone` | optional | `investor_companies` | Company phone |
+| `license_number` | optional | `investor_companies` | Contractor/company license if applicable |
+| `state` | optional | `investor_companies` | State of registration |
+| `notes` | optional | `investor_companies` | Internal notes |
+| `address`, `address2`, `city`, `zip` | optional | `investor_companies` | Applied Phase 2A.2 |
+| `website` | optional | `investor_companies` | Applied Phase 2A.2 |
+| `contact_role` | optional | `investor_companies` | Applied Phase 2A.2 |
+| `ein_tax_id` | optional | `investor_companies` | Applied Phase 2A.2 — company EIN, distinct from `investors.tax_id` (personal SSN) |
+| `type` | auto | `investors` | Always `'company'` — immutable after create |
+| `company_id` | auto | `investors` | FK → `investor_companies.id` — set at create |
+| `status` | auto | `investors` | Lives on the linked `investors` row |
+
+**Status model:**
+
+- `active` — investor available for linking to projects (default at create)
+- `inactive` — investor retired; no new attachments; existing project links unchanged
+- No hard delete. Use `DB.investors.updateStatus('inactive')` instead.
+
+---
+
+### 2. Project investor relationship
+
+When an investor is linked to a project the link is stored in `project_investors`.
+
+**Role belongs to the relationship, not the investor.**
+The same person can be an equity partner in Project A and a private lender in Project B.
+The investor's global record stores their identity — the project link stores their role.
+
+**`project_investors` join record fields:**
+
+| Field | Description |
+|---|---|
+| `project_id` | FK → projects |
+| `investor_id` | FK → investors |
+| `role` | Role in THIS project (`equity_partner`, `private_lender`, `co_owner`, etc.) |
+| `ownership_percentage` | % ownership in THIS project — defaults to 0 |
+| `profit_split_percentage` | Profit distribution % in THIS project — defaults to 0 |
+| `status` | `pending` → `confirmed` → `cancelled` (no delete) |
+| `agreement_notes` | Optional notes about terms for this project link |
+
+**Void instead of delete:**
+Never hard-delete a `project_investors` row with capital history.
+Use `DB.projectInvestors.cancel(id)` — sets `status = 'cancelled'`.
+
+**Status lifecycle:**
+
+```
+attach()     → status: 'pending'
+confirm(id)  → status: 'confirmed'
+cancel(id)   → status: 'cancelled'  ← terminal, no recovery
+```
+
+---
+
+### 3. Capital behavior
+
+**Capital contributions** — money the investor puts into the project:
+
+| Field | Description |
+|---|---|
+| `project_id` | Scoped to a project |
+| `investor_id` | Which investor provided it |
+| `amount` | Must be > 0 |
+| `date` | Date of contribution |
+| `method` | `wire`, `check`, etc. |
+| `type` | `initial`, `follow_on`, etc. |
+| `status` | `pending` → `confirmed` → `cancelled` |
+| `evidence_reference` | Bank ref, doc link, etc. |
+
+**Capital calls** — project-level funding requests to investors.
+Tracked separately from contributions.
+Outstanding calls = capital calls where `status != 'confirmed'`.
+
+**Confirmed capital** — sum of `capital_contributions` where `status = 'confirmed'`.
+**Pending capital** — sum where `status = 'pending'` (awaiting bank confirmation).
+
+**Capital does NOT affect the following financial formulas:**
+
+| Formula | Uses capital data? |
+|---|---|
+| Repair cost / cost basis | ❌ Never |
+| Project expenses (labor, materials) | ❌ Never |
+| ROI / net profit | ❌ Never |
+| P&L summary | ❌ Never |
+| Work Order totals / revenue pipeline | ❌ Never |
+| Sale revenue / resale value | ❌ Never |
+
+Capital is a **funding view** — it shows how the project is financed.
+It is NOT an operating expense and must not feed into cost or profit calculations.
+All capital reads are isolated in `ih*` functions in `js/projects.js`.
+No capital table is referenced in expense, ROI, or WO formula functions.
+
+---
+
+### 4. UI surfaces
+
+#### A — Global Investor Directory (sidebar "Investor Hub")
+
+- Entry point: sidebar nav-item `data-page="investorhub"`
+- Scope: ALL investors across all projects — no project required
+- Actions: Create investor, Edit investor, View linked projects, Change status
+- "Edit" in this view = **Edit Investor** — never edits a project
+- No project header, no project tabs, no project financials visible
+- Renders inside `#page-investorhub` without `_currentProject`
+
+**Current state:** Not yet implemented. Sidebar click still opens project-scoped view via `openInvestorHubEntry()`. Routing change requires Phase 3 GO.
+
+**Rule:** Global Directory must NOT replace the Project Capital Workspace until explicitly approved with a separate GO. Both surfaces must coexist independently.
+
+#### B — Project Capital Workspace (project tab "Investor Hub")
+
+- Entry point: project detail → "Investor Hub" tab → `switchProjTab('investorhub')`
+- Scope: Capital stack for ONE selected project only
+- Actions: Attach investor from directory, record contributions/calls, confirm/void links
+- "Edit" in this view = **Edit Project** — label fix is Phase 1, pending commit
+- Project header and project tabs remain visible
+- Renders via `renderInvestorHub(_currentProject.id)`
+
+**Current state:** Implemented and active. Phase 1 label fix uncommitted.
+
+#### C — Investor profile / detail view (future)
+
+- View a single investor's global record: name, contact info, linked projects, capital summary
+- Entry point: click investor in Global Directory
+- Not implemented. Requires Phase 2 (Edit) + Phase 3 (Directory) to exist first.
+
+---
+
+### 5. Permissions and actions
+
+| Action | Who |
+|---|---|
+| Create investor (person or company) | Owner / Admin |
+| Edit investor contact info | Owner / Admin |
+| Deactivate investor (`status = 'inactive'`) | Owner / Admin |
+| Attach investor to project | Owner / Admin |
+| Set role in project | Owner / Admin |
+| Record capital contribution | Owner / Admin |
+| Issue capital call | Owner / Admin |
+| Confirm contribution / link | Owner / Admin |
+| Void / cancel project investor link | Owner / Admin |
+| Hard delete any investor or capital record | **Prohibited** — use cancel/void |
+
+No hard delete for records with financial or project history.
+Applies to: `investors`, `investor_companies`, `project_investors`, `capital_contributions`, `capital_calls`.
+
+---
+
+### 6. Future Work Order connection
+
+Work Orders can be directed to a **Client** or an **Investor** as recipient.
+
+**Dependency chain (must complete in order):**
+
+1. Global Investor Directory must exist (Phase 3) — WO modal needs the investor list source.
+2. `recipient_type / recipient_id / recipient_name` fields added to WO data model (ISSUE-012).
+3. Legacy `wo.client / wo.clientId` kept until formal migration approved.
+
+**Future WO recipient model:**
+
+| Field | Values |
+|---|---|
+| `recipient_type` | `'client'` or `'investor'` |
+| `recipient_id` | ID of selected client or investor |
+| `recipient_name` | Display name (denormalized for rendering/PDFs) |
+
+Do NOT implement until ISSUE-012 is formally approved and Investor Hub Phases 1–3 are stable.
+
+---
+
+### 7. How current pending code changes relate to this model
+
+**`js/projects.js` — Phase 1 Non-Destructive UI Alignment (3 label changes, uncommitted):**
+
+Compatible with this model. No behavior changed.
+- `"Edit" → "Edit Project"` — correctly distinguishes Project Capital Workspace action from Investor Directory action (model rule: Edit in project context = Edit Project).
+- `openAddInvestorModal()` label/placeholder changes — align form copy with model. Person vs Company distinction is Phase 2.
+- Modal note with project name — confirms to user they are operating in project scope, not global scope.
+
+**`js/supabase.js` — Phase 2A.1 DB methods (3 new methods, uncommitted):**
+
+Infrastructure only. No UI calls these methods yet.
+- `DB.investors.update()` — will support Edit Investor modal (Phase 2).
+- `DB.investorCompanies.update()` — will support Edit Company modal (Phase 2).
+- `DB.projectInvestors.getByInvestor()` — will support Global Directory linked-projects view (Phase 3).
+
+No model behavior changed. No routing changed. No schema changed.
+
+**Schema migration Phase 2A.2 — APPLIED to staging and production (2026-06-06):**
+
+`investors` canonical columns applied: `address`, `city`, `state_addr`, `zip`, `capital_source`, `tax_id` (personal SSN/ITIN), plus KYC fields `first_name`, `last_name`, `entity_type`, `investment_profile`, `accredited_investor`, `signed_agreement`, `first_contact_date`, `owner_notes`.
+`investor_companies` canonical columns applied: `address`, `address2`, `city`, `zip`, `website`, `contact_role`, `ein_tax_id` (company EIN — distinct from `investors.tax_id`).
+`project_investors` canonical column applied: `capital_commitment` NUMERIC(12,2) NOT NULL DEFAULT 0.
+`DB.investors.update()` and `DB.investorCompanies.update()` allowlists expand in Phase 2B GO to include all new canonical fields.
+Do NOT create: `address_line1`, `state` on investors, `source_of_capital`, or `ein_tax_id` on investors — use canonical names above.
+
+---
+
 ## ISSUE-013 Phase B — Implementation Design Plan
 
 *Authored: 2026-06-05. Status: DESIGN ONLY — no code yet.*
