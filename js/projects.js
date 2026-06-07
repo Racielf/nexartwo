@@ -217,7 +217,7 @@ function projectsModuleShellHtml() {
           '</div>' +
           '<div class="proj-title-actions">' +
             '<button class="btn btn-secondary btn-sm" onclick="editCurrentProject()" style="gap:4px">' +
-              '<i data-lucide="edit-3" style="width:13px;height:13px"></i> Edit' +
+              '<i data-lucide="edit-3" style="width:13px;height:13px"></i> Edit Project' +
             '</button>' +
             '<button class="btn btn-sm" style="gap:4px;background:#f59e0b;color:#fff;border:none" onclick="cancelCurrentProject()">' +
               '<i data-lucide="archive" style="width:13px;height:13px"></i> Cancel Project' +
@@ -2006,14 +2006,14 @@ async function openAddInvestorModal() {
   var box = document.querySelector('.confirm-box');
   ihSetWideModal(box);
   box.innerHTML = '<h3 style="margin:0 0 6px;font-size:16px">Add Investor</h3>'
-    + '<div class="ih-modal-note">Owner/Admin action - this creates or attaches an investor for the selected project.</div>'
+    + '<div class="ih-modal-note">Attaches an investor to project: ' + escHtml(_currentProject ? projectDisplayName(_currentProject) : 'selected project') + '.</div>'
     + '<div class="ih-modal-form">'
     + '<div><label>Select Existing Investor</label>'
     + '<select id="ih-inv-sel" class="form-control"><option value="">Select existing...</option>'
     + allInvestors.map(function(i) { return '<option value="' + escHtml(i.id) + '">' + escHtml(i.name) + '</option>'; }).join('')
     + '</select></div>'
     + '<div class="ih-modal-divider">or create new</div>'
-    + '<div><label>New Investor Name</label><input type="text" id="ih-inv-name" class="form-control" placeholder="Full name or company"></div>'
+    + '<div><label>Name</label><input type="text" id="ih-inv-name" class="form-control" placeholder="Full name"></div>'
     + '<div class="ih-modal-grid">'
     + '<div><label>Type</label><select id="ih-inv-type" class="form-control"><option value="person">Person</option><option value="company">Company</option></select></div>'
     + '<div><label>Role in Project</label><select id="ih-inv-role" class="form-control">'
