@@ -18,6 +18,36 @@ Next step:
 
 ---
 
+## 2026-06-06 — Claude Code (Session 12)
+
+Tool: Claude Code (claude-sonnet-4-6)
+Goal: BUG-005 RPC fallback + ISSUE-013 Phase 2A.2 schema migration (staging + production)
+Files read: js/supabase.js (projectFinancialSummaries block), supabase/drafts/auth-rls/008_rls_financial_summaries.sql, supabase/migrations/202605070001_investor_entities.sql, supabase/migrations/202605170001_repair_capital_calls.sql, memory/CURRENT_TASK.md, memory/AGENT_HANDOFF.md, memory/SESSION_LOG.md, memory/KNOWN_ISSUES.md
+Files changed (code, uncommitted): js/supabase.js — BUG-005 PGRST202 fallback added to getAll() and getByProject()
+Files changed (migration, uncommitted): supabase/migrations/20260606_phase2a2_schema_alignment.sql — new file created to record applied migration
+Files changed (memory): memory/CURRENT_TASK.md, memory/AGENT_HANDOFF.md, memory/SESSION_LOG.md
+Supabase changes applied: Phase 2A.2 migration applied to staging (nexartwo-staging) and production (NexArtWO). Pre-flight Q1-Q4 passed on both. Post-flight Q5-Q8 passed on both.
+Validation: node --check js/supabase.js PASS. Production 4 confirmed rows untouched. Schema reconciliation audit completed before migration.
+Key findings: Production project_investors.status had wrong default 'active' — corrected to 'pending'. investor_companies missing 7 address/contact columns — added. capital_commitment added to project_investors. Unauthorized prior migration applied KYC fields to investors in both envs — owner adopted canonical names.
+BUG-005: get_all_financial_summaries RPC not deployed to production — JS fallback to direct SELECT on project_financial_summaries added with PGRST202 check. Marked TEMPORARY until Auth/RLS 008 is applied.
+Next step: Phase 2B — update DB layer methods in js/supabase.js to send canonical column names. Awaiting owner GO.
+
+---
+
+## 2026-06-06 — Claude Code (Session 11)
+
+Tool: Claude Code (claude-sonnet-4-6)
+Goal: ISSUE-013 Phase 2A schema audit + Phase 2A.1 DB methods + Business Model documentation
+Files read: js/supabase.js (L680-880), docs/03-modules/INVESTOR_HUB.md, memory/KNOWN_ISSUES.md, memory/CURRENT_TASK.md, memory/AGENT_HANDOFF.md
+Files changed (code, uncommitted): js/supabase.js — 3 new DB methods added
+Files changed (docs): docs/03-modules/INVESTOR_HUB.md (Business Model section), memory/CURRENT_TASK.md, memory/AGENT_HANDOFF.md, memory/SESSION_LOG.md
+Validation: No schema migration. No UI changes. No routing changes. DB methods are dead infrastructure until Phase 2/3 UI is built.
+Key findings: supabase/migrations/ folder does not exist in repo. investor_companies missing address/city/zip/website. investors missing address/city/state/zip. Both update() and getByInvestor() added safely with guards and allowlists.
+Business model: Investor global entity documented. Capital isolation from financial formulas confirmed. UI surface separation rule documented. WO connection dependency chain documented.
+Next step: Owner reviews business model doc. Owner issues commit GO for js/projects.js (Phase 1) and/or js/supabase.js (Phase 2A.1) when ready.
+
+---
+
 ## 2026-06-05 — Claude Code (Session 10)
 
 Tool: Claude Code (claude-sonnet-4-6)
