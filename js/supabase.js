@@ -723,13 +723,27 @@ const DB = {
       var sb = getSupabase();
       if (!sb) return null;
       var { data, error } = await sb.from('investors').insert({
-        name:       (inv.name || '').trim(),
-        type:       inv.type || 'person',
-        company_id: inv.company_id || null,
-        email:      inv.email || '',
-        phone:      inv.phone || '',
-        status:     inv.status || 'active',
-        notes:      inv.notes || ''
+        name:                ((inv.name || '').trim() || ((inv.first_name || '') + ' ' + (inv.last_name || '')).trim()),
+        type:                inv.type || 'person',
+        company_id:          inv.company_id || null,
+        email:               inv.email || '',
+        phone:               inv.phone || '',
+        status:              inv.status || 'active',
+        notes:               inv.notes || '',
+        first_name:          inv.first_name          || '',
+        last_name:           inv.last_name           || '',
+        address:             inv.address             || '',
+        city:                inv.city                || '',
+        state_addr:          inv.state_addr          || '',
+        zip:                 inv.zip                 || '',
+        entity_type:         inv.entity_type         || '',
+        investment_profile:  inv.investment_profile  || '',
+        accredited_investor: inv.accredited_investor !== undefined ? !!inv.accredited_investor : false,
+        capital_source:      inv.capital_source      || '',
+        tax_id:              inv.tax_id              || '',
+        signed_agreement:    inv.signed_agreement    !== undefined ? !!inv.signed_agreement : false,
+        first_contact_date:  inv.first_contact_date  || null,
+        owner_notes:         inv.owner_notes         || ''
       }).select().single();
       if (error) { console.error('DB investors.create:', error); return null; }
       return data;
@@ -753,10 +767,24 @@ const DB = {
       var sb = getSupabase();
       if (!sb) return false;
       var allowed = {};
-      if (changes.name  !== undefined) allowed.name  = (changes.name  || '').trim();
-      if (changes.email !== undefined) allowed.email = changes.email || '';
-      if (changes.phone !== undefined) allowed.phone = changes.phone || '';
-      if (changes.notes !== undefined) allowed.notes = changes.notes || '';
+      if (changes.name                !== undefined) allowed.name                = (changes.name || '').trim();
+      if (changes.email               !== undefined) allowed.email               = changes.email               || '';
+      if (changes.phone               !== undefined) allowed.phone               = changes.phone               || '';
+      if (changes.notes               !== undefined) allowed.notes               = changes.notes               || '';
+      if (changes.first_name          !== undefined) allowed.first_name          = changes.first_name          || '';
+      if (changes.last_name           !== undefined) allowed.last_name           = changes.last_name           || '';
+      if (changes.address             !== undefined) allowed.address             = changes.address             || '';
+      if (changes.city                !== undefined) allowed.city                = changes.city                || '';
+      if (changes.state_addr          !== undefined) allowed.state_addr          = changes.state_addr          || '';
+      if (changes.zip                 !== undefined) allowed.zip                 = changes.zip                 || '';
+      if (changes.entity_type         !== undefined) allowed.entity_type         = changes.entity_type         || '';
+      if (changes.investment_profile  !== undefined) allowed.investment_profile  = changes.investment_profile  || '';
+      if (changes.accredited_investor !== undefined) allowed.accredited_investor = !!changes.accredited_investor;
+      if (changes.capital_source      !== undefined) allowed.capital_source      = changes.capital_source      || '';
+      if (changes.tax_id              !== undefined) allowed.tax_id              = changes.tax_id              || '';
+      if (changes.signed_agreement    !== undefined) allowed.signed_agreement    = !!changes.signed_agreement;
+      if (changes.first_contact_date  !== undefined) allowed.first_contact_date  = changes.first_contact_date  || null;
+      if (changes.owner_notes         !== undefined) allowed.owner_notes         = changes.owner_notes         || '';
       if (!Object.keys(allowed).length) return false;
       var { error } = await sb.from('investors').update(allowed).eq('id', id);
       if (error) { console.error('DB investors.update:', error); return false; }
@@ -786,11 +814,18 @@ const DB = {
       var { data, error } = await sb.from('investor_companies').insert({
         company_name:   (co.company_name || '').trim(),
         contact_person: co.contact_person || '',
-        email:          co.email || '',
-        phone:          co.phone || '',
+        email:          co.email          || '',
+        phone:          co.phone          || '',
         license_number: co.license_number || '',
-        state:          co.state || '',
-        notes:          co.notes || ''
+        state:          co.state          || '',
+        notes:          co.notes          || '',
+        address:        co.address        || '',
+        address2:       co.address2       || '',
+        city:           co.city           || '',
+        zip:            co.zip            || '',
+        website:        co.website        || '',
+        contact_role:   co.contact_role   || '',
+        ein_tax_id:     co.ein_tax_id     || ''
       }).select().single();
       if (error) { console.error('DB investorCompanies.create:', error); return null; }
       return data;
@@ -814,6 +849,13 @@ const DB = {
       if (changes.license_number !== undefined) allowed.license_number = changes.license_number || '';
       if (changes.state          !== undefined) allowed.state          = changes.state          || '';
       if (changes.notes          !== undefined) allowed.notes          = changes.notes          || '';
+      if (changes.address        !== undefined) allowed.address        = changes.address        || '';
+      if (changes.address2       !== undefined) allowed.address2       = changes.address2       || '';
+      if (changes.city           !== undefined) allowed.city           = changes.city           || '';
+      if (changes.zip            !== undefined) allowed.zip            = changes.zip            || '';
+      if (changes.website        !== undefined) allowed.website        = changes.website        || '';
+      if (changes.contact_role   !== undefined) allowed.contact_role   = changes.contact_role   || '';
+      if (changes.ein_tax_id     !== undefined) allowed.ein_tax_id     = changes.ein_tax_id     || '';
       if (!Object.keys(allowed).length) return false;
       var { error } = await sb.from('investor_companies').update(allowed).eq('id', id);
       if (error) { console.error('DB investorCompanies.update:', error); return false; }
@@ -846,7 +888,8 @@ const DB = {
         ownership_percentage:    ownership === null || ownership === undefined || ownership === '' ? 0 : ownership,
         profit_split_percentage: profitSplit === null || profitSplit === undefined || profitSplit === '' ? 0 : profitSplit,
         status:                  'pending',
-        agreement_notes:         opts.agreement_notes || ''
+        agreement_notes:         opts.agreement_notes || '',
+        capital_commitment:      (opts.capital_commitment != null && opts.capital_commitment !== '') ? Number(opts.capital_commitment) : 0
       }).select().single();
       if (error) {
         if (error.code === '23505') {
