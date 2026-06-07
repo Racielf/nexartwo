@@ -174,6 +174,13 @@ const DB = {
       var { error } = await sb.from('services').insert(rows);
       if (error) { console.error('DB services.bulkInsert:', error); return false; }
       return true;
+    },
+    async delete(id) {
+      var sb = getSupabase();
+      if (!sb) return false;
+      var { error } = await sb.from('services').delete().eq('id', id);
+      if (error) { console.error('DB services.delete:', error); return false; }
+      return true;
     }
   },
 
@@ -663,14 +670,30 @@ const DB = {
       var sb = getSupabase();
       if (!sb) return null;
       var { data, error } = await sb.rpc('get_all_financial_summaries');
-      if (error) { console.error('DB projectFinancialSummaries.getAll:', error); return null; }
+      if (error) {
+        // TEMPORARY pre-008 fallback. Remove after Auth/RLS 008 is applied.
+        if (error.code === 'PGRST202') {
+          var r2 = await sb.from('project_financial_summaries').select('*');
+          if (r2.error) { console.error('DB projectFinancialSummaries.getAll fallback:', r2.error); return null; }
+          return r2.data;
+        }
+        console.error('DB projectFinancialSummaries.getAll:', error); return null;
+      }
       return data;
     },
     async getByProject(projectId) {
       var sb = getSupabase();
       if (!sb) return null;
       var { data, error } = await sb.rpc('get_project_financial_summary', { p_project_id: projectId });
-      if (error) { console.error('DB projectFinancialSummaries.getByProject:', error); return null; }
+      if (error) {
+        // TEMPORARY pre-008 fallback. Remove after Auth/RLS 008 is applied.
+        if (error.code === 'PGRST202') {
+          var r2 = await sb.from('project_financial_summaries').select('*').eq('project_id', projectId).single();
+          if (r2.error) { console.error('DB projectFinancialSummaries.getByProject fallback:', r2.error); return null; }
+          return r2.data;
+        }
+        console.error('DB projectFinancialSummaries.getByProject:', error); return null;
+      }
       // RPC returns SETOF — extract the first row. Returns null if no summary exists yet.
       return (data && data.length > 0) ? data[0] : null;
     }
@@ -724,6 +747,20 @@ const DB = {
       var { error } = await sb.from('investors').update({ notes: notes }).eq('id', id);
       if (error) { console.error('DB investors.updateNotes:', error); return false; }
       return true;
+    },
+    async update(id, changes) {
+      if (!id) return false;
+      var sb = getSupabase();
+      if (!sb) return false;
+      var allowed = {};
+      if (changes.name  !== undefined) allowed.name  = (changes.name  || '').trim();
+      if (changes.email !== undefined) allowed.email = changes.email || '';
+      if (changes.phone !== undefined) allowed.phone = changes.phone || '';
+      if (changes.notes !== undefined) allowed.notes = changes.notes || '';
+      if (!Object.keys(allowed).length) return false;
+      var { error } = await sb.from('investors').update(allowed).eq('id', id);
+      if (error) { console.error('DB investors.update:', error); return false; }
+      return true;
     }
     // No delete method — use updateStatus('inactive') instead.
   },
@@ -763,6 +800,23 @@ const DB = {
       if (!sb) return false;
       var { error } = await sb.from('investor_companies').update({ notes: notes }).eq('id', id);
       if (error) { console.error('DB investorCompanies.updateNotes:', error); return false; }
+      return true;
+    },
+    async update(id, changes) {
+      if (!id) return false;
+      var sb = getSupabase();
+      if (!sb) return false;
+      var allowed = {};
+      if (changes.company_name   !== undefined) allowed.company_name   = (changes.company_name || '').trim();
+      if (changes.contact_person !== undefined) allowed.contact_person = changes.contact_person || '';
+      if (changes.email          !== undefined) allowed.email          = changes.email          || '';
+      if (changes.phone          !== undefined) allowed.phone          = changes.phone          || '';
+      if (changes.license_number !== undefined) allowed.license_number = changes.license_number || '';
+      if (changes.state          !== undefined) allowed.state          = changes.state          || '';
+      if (changes.notes          !== undefined) allowed.notes          = changes.notes          || '';
+      if (!Object.keys(allowed).length) return false;
+      var { error } = await sb.from('investor_companies').update(allowed).eq('id', id);
+      if (error) { console.error('DB investorCompanies.update:', error); return false; }
       return true;
     }
     // No delete method.
@@ -824,6 +878,17 @@ const DB = {
       var { error } = await sb.from('project_investors').update({ status: 'cancelled' }).eq('id', id);
       if (error) { console.error('DB projectInvestors.cancel:', error); return false; }
       return true;
+    },
+    async getByInvestor(investorId) {
+      if (!investorId) return null;
+      var sb = getSupabase();
+      if (!sb) return null;
+      var { data, error } = await sb.from('project_investors')
+        .select('*, projects(id, name, status)')
+        .eq('investor_id', investorId)
+        .order('created_at', { ascending: true });
+      if (error) { console.error('DB projectInvestors.getByInvestor:', error); return null; }
+      return data;
     }
     // No delete method.
   },
