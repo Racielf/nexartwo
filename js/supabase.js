@@ -667,35 +667,23 @@ const DB = {
   // ---------- PROJECT FINANCIAL SUMMARIES (Phase 2) ----------
   projectFinancialSummaries: {
     async getAll() {
+      // TEMPORARY pre-008 direct SELECT. Restore RPC after Auth/RLS 008 is applied.
       var sb = getSupabase();
       if (!sb) return null;
-      var { data, error } = await sb.rpc('get_all_financial_summaries');
-      if (error) {
-        // TEMPORARY pre-008 fallback. Remove after Auth/RLS 008 is applied.
-        if (error.code === 'PGRST202') {
-          var r2 = await sb.from('project_financial_summaries').select('*');
-          if (r2.error) { console.error('DB projectFinancialSummaries.getAll fallback:', r2.error); return null; }
-          return r2.data;
-        }
-        console.error('DB projectFinancialSummaries.getAll:', error); return null;
-      }
+      var { data, error } = await sb.from('project_financial_summaries').select('*');
+      if (error) { console.error('DB projectFinancialSummaries.getAll:', error); return null; }
       return data;
     },
     async getByProject(projectId) {
+      // TEMPORARY pre-008 direct SELECT. Restore RPC after Auth/RLS 008 is applied.
       var sb = getSupabase();
       if (!sb) return null;
-      var { data, error } = await sb.rpc('get_project_financial_summary', { p_project_id: projectId });
-      if (error) {
-        // TEMPORARY pre-008 fallback. Remove after Auth/RLS 008 is applied.
-        if (error.code === 'PGRST202') {
-          var r2 = await sb.from('project_financial_summaries').select('*').eq('project_id', projectId).single();
-          if (r2.error) { console.error('DB projectFinancialSummaries.getByProject fallback:', r2.error); return null; }
-          return r2.data;
-        }
-        console.error('DB projectFinancialSummaries.getByProject:', error); return null;
-      }
-      // RPC returns SETOF — extract the first row. Returns null if no summary exists yet.
-      return (data && data.length > 0) ? data[0] : null;
+      var { data, error } = await sb.from('project_financial_summaries')
+        .select('*')
+        .eq('project_id', projectId)
+        .maybeSingle();
+      if (error) { console.error('DB projectFinancialSummaries.getByProject:', error); return null; }
+      return data;
     }
   },
 
