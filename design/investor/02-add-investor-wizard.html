@@ -1,0 +1,542 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Add Investor — NexArtWO</title>
+  <meta name="description" content="Register a new investor — NexArtWO Work Order System">
+  <link rel="stylesheet" href="investor-common.css">
+  <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body>
+  <div class="app-container">
+
+    <!-- SIDEBAR (same shell) -->
+    <aside class="sidebar">
+      <div class="sidebar-logo">
+        <div class="logo-icon">RC</div>
+        <div class="logo-text">
+          <h1>R.C Art Construction</h1>
+          <span>Work Order System</span>
+        </div>
+      </div>
+      <nav class="sidebar-nav">
+        <div class="nav-section-title">Main</div>
+        <a class="nav-item" href="#"><i data-lucide="layout-dashboard" class="icon"></i> Dashboard</a>
+        <a class="nav-item" href="#"><i data-lucide="clipboard-list" class="icon"></i> Work Orders</a>
+        <a class="nav-item" href="#"><i data-lucide="wrench" class="icon"></i> Price Book</a>
+        <div class="nav-section-title">Management</div>
+        <a class="nav-item" href="#"><i data-lucide="users" class="icon"></i> Clients</a>
+        <a class="nav-item disabled" href="#"><i data-lucide="hard-hat" class="icon"></i> Subcontractors <span class="nav-tag" style="color:var(--text-muted)">Soon</span></a>
+        <a class="nav-item" href="#"><i data-lucide="file-text" class="icon"></i> Documents</a>
+        <a class="nav-item" href="#"><i data-lucide="building-2" class="icon"></i> Projects</a>
+        <a class="nav-item active" href="01-investor-directory.html"><i data-lucide="landmark" class="icon"></i> Investor Hub <span class="nav-tag" style="color:var(--accent)">LIVE</span></a>
+        <div class="nav-section-title">Oregon Compliance</div>
+        <a class="nav-item disabled" href="#"><i data-lucide="shield-check" class="icon"></i> CCB Compliance <span class="nav-tag" style="color:var(--text-muted)">Soon</span></a>
+        <div class="nav-section-title">System</div>
+        <a class="nav-item" href="#"><i data-lucide="settings" class="icon"></i> Settings</a>
+      </nav>
+      <div class="sidebar-footer">
+        <div class="ccb-badge">
+          <i data-lucide="check-circle-2" style="width:14px;height:14px"></i> Oregon CCB #247277 — Active
+        </div>
+      </div>
+    </aside>
+
+    <!-- MAIN CONTENT -->
+    <main class="main-content">
+
+      <!-- TOP BAR -->
+      <div class="top-bar">
+        <div class="top-bar-left">
+          <a href="01-investor-directory.html" class="btn btn-ghost btn-sm" style="gap:4px">
+            <i data-lucide="arrow-left" style="width:16px;height:16px"></i> Back to Directory
+          </a>
+          <div>
+            <h2>Add Investor</h2>
+            <div class="subtitle">Register a new investor in the system</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- WIZARD STEP INDICATORS -->
+      <div class="wizard-steps" id="wizard-steps">
+        <div class="wizard-step active" data-step="1">
+          <div class="wizard-step-num">1</div>
+          <div class="wizard-step-label">Identity</div>
+        </div>
+        <div class="wizard-step" data-step="2">
+          <div class="wizard-step-num">2</div>
+          <div class="wizard-step-label">Entity Details</div>
+        </div>
+        <div class="wizard-step" data-step="3">
+          <div class="wizard-step-num">3</div>
+          <div class="wizard-step-label">Attach to Project</div>
+        </div>
+        <div class="wizard-step" data-step="4">
+          <div class="wizard-step-num">4</div>
+          <div class="wizard-step-label">Review & Save</div>
+        </div>
+      </div>
+
+      <!-- ========== STEP 1: IDENTITY ========== -->
+      <div class="wizard-panel" id="step-1">
+        <div class="wizard-body">
+
+          <!-- Type Selector -->
+          <div class="section-title">
+            <i data-lucide="user-check" style="width:14px;height:14px"></i> Investor Type
+          </div>
+          <div class="type-selector" id="type-selector">
+            <div class="type-option selected" onclick="selectType('person', this)">
+              <div class="type-icon" style="background:var(--info-bg);color:var(--info)">
+                <i data-lucide="user" style="width:24px;height:24px"></i>
+              </div>
+              <div class="type-label">Person</div>
+              <div class="type-desc">Individual investor</div>
+            </div>
+            <div class="type-option" onclick="selectType('company', this)">
+              <div class="type-icon" style="background:var(--purple-bg);color:var(--purple)">
+                <i data-lucide="building-2" style="width:24px;height:24px"></i>
+              </div>
+              <div class="type-label">Company</div>
+              <div class="type-desc">Corporate / LLC / Trust</div>
+            </div>
+          </div>
+
+          <!-- PERSON FIELDS (default visible) -->
+          <div id="fields-person">
+            <div class="section-title">
+              <i data-lucide="id-card" style="width:14px;height:14px"></i> Personal Information
+            </div>
+            <div class="form-row" style="margin-bottom:16px">
+              <div class="form-group" style="margin-bottom:0">
+                <label>Full Name *</label>
+                <input type="text" class="form-input" placeholder="e.g., Dora Montes">
+              </div>
+              <div class="form-group" style="margin-bottom:0">
+                <label>Email *</label>
+                <input type="email" class="form-input" placeholder="investor@email.com">
+              </div>
+            </div>
+            <div class="form-row" style="margin-bottom:16px">
+              <div class="form-group" style="margin-bottom:0">
+                <label>Phone</label>
+                <input type="tel" class="form-input" placeholder="+1 (503) 000-0000">
+              </div>
+              <div class="form-group" style="margin-bottom:0">
+                <label>Address</label>
+                <input type="text" class="form-input" placeholder="Street address">
+              </div>
+            </div>
+            <div class="form-row-3" style="margin-bottom:16px">
+              <div class="form-group" style="margin-bottom:0">
+                <label>City</label>
+                <input type="text" class="form-input" placeholder="Portland">
+              </div>
+              <div class="form-group" style="margin-bottom:0">
+                <label>State</label>
+                <select class="form-select">
+                  <option value="">Select</option>
+                  <option value="OR" selected>Oregon</option>
+                  <option value="WA">Washington</option>
+                  <option value="CA">California</option>
+                  <option value="other">Other</option>
+                </select>
+              </div>
+              <div class="form-group" style="margin-bottom:0">
+                <label>ZIP</label>
+                <input type="text" class="form-input" placeholder="97201">
+              </div>
+            </div>
+            <div class="form-group">
+              <label>Notes <span class="optional">(optional)</span></label>
+              <textarea class="form-textarea" placeholder="Internal notes about this investor..."></textarea>
+            </div>
+          </div>
+
+          <!-- COMPANY FIELDS (hidden by default) -->
+          <div id="fields-company" style="display:none">
+            <div class="section-title">
+              <i data-lucide="building-2" style="width:14px;height:14px"></i> Company Information
+            </div>
+            <div class="form-group">
+              <label>Company Legal Name *</label>
+              <input type="text" class="form-input" placeholder="e.g., Greenfield Capital Group LLC">
+            </div>
+            <div class="form-row" style="margin-bottom:16px">
+              <div class="form-group" style="margin-bottom:0">
+                <label>Contact Person *</label>
+                <input type="text" class="form-input" placeholder="Full name of primary contact">
+              </div>
+              <div class="form-group" style="margin-bottom:0">
+                <label>Email *</label>
+                <input type="email" class="form-input" placeholder="contact@company.com">
+              </div>
+            </div>
+            <div class="form-row" style="margin-bottom:16px">
+              <div class="form-group" style="margin-bottom:0">
+                <label>Phone</label>
+                <input type="tel" class="form-input" placeholder="+1 (971) 000-0000">
+              </div>
+              <div class="form-group" style="margin-bottom:0">
+                <label>Website <span class="optional">(optional)</span></label>
+                <input type="url" class="form-input" placeholder="https://company.com">
+              </div>
+            </div>
+            <div class="form-group">
+              <label>Address</label>
+              <input type="text" class="form-input" placeholder="Company street address">
+            </div>
+            <div class="form-row-3" style="margin-bottom:16px">
+              <div class="form-group" style="margin-bottom:0">
+                <label>City</label>
+                <input type="text" class="form-input" placeholder="Portland">
+              </div>
+              <div class="form-group" style="margin-bottom:0">
+                <label>State</label>
+                <select class="form-select">
+                  <option value="">Select</option>
+                  <option value="OR" selected>Oregon</option>
+                  <option value="WA">Washington</option>
+                  <option value="CA">California</option>
+                  <option value="other">Other</option>
+                </select>
+              </div>
+              <div class="form-group" style="margin-bottom:0">
+                <label>ZIP</label>
+                <input type="text" class="form-input" placeholder="97201">
+              </div>
+            </div>
+            <div class="form-row" style="margin-bottom:16px">
+              <div class="form-group" style="margin-bottom:0">
+                <label>License / Registration # <span class="optional">(optional)</span></label>
+                <input type="text" class="form-input" placeholder="EIN or state reg number">
+              </div>
+              <div class="form-group" style="margin-bottom:0">
+                <label>Entity Type <span class="optional">(optional)</span></label>
+                <select class="form-select">
+                  <option value="">Select type</option>
+                  <option>LLC</option>
+                  <option>Corporation</option>
+                  <option>S-Corp</option>
+                  <option>Trust</option>
+                  <option>Partnership</option>
+                </select>
+              </div>
+            </div>
+            <div class="form-group">
+              <label>Notes <span class="optional">(optional)</span></label>
+              <textarea class="form-textarea" placeholder="Internal notes about this company..."></textarea>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- STEP 1 FOOTER -->
+        <div class="wizard-footer">
+          <a href="01-investor-directory.html" class="btn btn-ghost" style="gap:4px">
+            <i data-lucide="x" style="width:14px;height:14px"></i> Cancel
+          </a>
+          <div class="wizard-footer-right">
+            <span class="step-indicator">Step 1 of 4</span>
+            <button class="btn btn-primary" onclick="goToStep(2)" style="gap:4px">
+              Continue <i data-lucide="arrow-right" style="width:14px;height:14px"></i>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ========== STEP 2: ENTITY DETAILS ========== -->
+      <div class="wizard-panel" id="step-2" style="display:none">
+        <div class="wizard-body">
+
+          <div class="section-title">
+            <i data-lucide="building-2" style="width:14px;height:14px"></i> Company / Entity Details
+          </div>
+
+          <div style="background:var(--info-bg);border:1px solid rgba(37,99,235,0.15);border-radius:var(--radius-md);padding:14px 16px;margin-bottom:20px;display:flex;align-items:flex-start;gap:10px">
+            <i data-lucide="info" style="width:16px;height:16px;color:var(--info);flex-shrink:0;margin-top:2px"></i>
+            <div style="font-size:13px;color:var(--info);line-height:1.5">
+              This step is <strong>optional</strong>. If this investor is a Person who invests through a company or entity, you can link those details here. Skip if not applicable.
+            </div>
+          </div>
+
+          <div class="form-row" style="margin-bottom:16px">
+            <div class="form-group" style="margin-bottom:0">
+              <label>EIN / Tax ID <span class="optional">(optional)</span></label>
+              <input type="text" class="form-input" placeholder="XX-XXXXXXX">
+            </div>
+            <div class="form-group" style="margin-bottom:0">
+              <label>Entity Type <span class="optional">(optional)</span></label>
+              <select class="form-select">
+                <option value="">Select type</option>
+                <option>LLC</option>
+                <option>Corporation</option>
+                <option>S-Corp</option>
+                <option>Trust</option>
+                <option>Partnership</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label>Officer / Role in Entity <span class="optional">(optional)</span></label>
+            <input type="text" class="form-input" placeholder="e.g., Managing Member, CEO, Partner">
+          </div>
+
+          <!-- Link to existing company -->
+          <div class="section-title" style="margin-top:28px">
+            <i data-lucide="link" style="width:14px;height:14px"></i> Link to Existing Company
+          </div>
+
+          <div style="background:var(--bg-input);border:1px solid var(--border);border-radius:var(--radius-md);padding:16px;cursor:pointer;transition:all 0.2s;display:flex;align-items:center;gap:12px"
+               onmouseenter="this.style.borderColor='var(--accent)'" onmouseleave="this.style.borderColor='var(--border)'">
+            <div style="width:40px;height:40px;border-radius:50%;background:#fef3c7;display:flex;align-items:center;justify-content:center;flex-shrink:0">
+              <i data-lucide="search" style="width:18px;height:18px;color:#92400e"></i>
+            </div>
+            <div style="flex:1">
+              <div style="font-size:13px;font-weight:600;color:var(--text-primary)">Search existing company</div>
+              <div style="font-size:12px;color:var(--text-muted)">Link this investor to a company already registered in the system</div>
+            </div>
+            <i data-lucide="chevron-right" style="width:16px;height:16px;color:var(--text-muted)"></i>
+          </div>
+
+        </div>
+
+        <!-- STEP 2 FOOTER -->
+        <div class="wizard-footer">
+          <button class="btn btn-ghost" onclick="goToStep(1)" style="gap:4px">
+            <i data-lucide="arrow-left" style="width:14px;height:14px"></i> Back
+          </button>
+          <div class="wizard-footer-right">
+            <span class="step-indicator">Step 2 of 4</span>
+            <button class="btn btn-secondary" onclick="goToStep(3)">Skip</button>
+            <button class="btn btn-primary" onclick="goToStep(3)" style="gap:4px">
+              Continue <i data-lucide="arrow-right" style="width:14px;height:14px"></i>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ========== STEP 3: ATTACH TO PROJECT ========== -->
+      <div class="wizard-panel" id="step-3" style="display:none">
+        <div class="wizard-body">
+
+          <div class="section-title">
+            <i data-lucide="folder-plus" style="width:14px;height:14px"></i> Attach to Project
+          </div>
+
+          <div style="background:var(--warning-bg);border:1px solid rgba(217,119,6,0.2);border-radius:var(--radius-md);padding:14px 16px;margin-bottom:20px;display:flex;align-items:flex-start;gap:10px">
+            <i data-lucide="info" style="width:16px;height:16px;color:var(--accent);flex-shrink:0;margin-top:2px"></i>
+            <div style="font-size:13px;color:var(--accent-hover);line-height:1.5">
+              This step is <strong>optional</strong>. You can save the investor now and attach them to a project later from the Investor Profile or Project Capital Workspace.
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label>Select Project</label>
+            <select class="form-select" id="project-select">
+              <option value="">— Choose a project —</option>
+              <option value="665">665 Home Ave — Portland, OR</option>
+              <option value="oak">Oak Grove Renovation — Oak Grove, OR</option>
+              <option value="mil">Milwaukie Flip — Milwaukie, OR</option>
+              <option value="custom">Tigard New Build — Tigard, OR</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label>Role in Project *</label>
+            <select class="form-select">
+              <option value="">Select role</option>
+              <option>Equity Partner</option>
+              <option>Limited Partner</option>
+              <option>Passive Investor</option>
+              <option>Co-Owner</option>
+              <option>Lender</option>
+              <option>Silent Partner</option>
+            </select>
+          </div>
+
+          <div class="form-row" style="margin-bottom:16px">
+            <div class="form-group" style="margin-bottom:0">
+              <label>Ownership %</label>
+              <input type="number" class="form-input" placeholder="e.g., 20" min="0" max="100" step="0.1">
+            </div>
+            <div class="form-group" style="margin-bottom:0">
+              <label>Profit Split %</label>
+              <input type="number" class="form-input" placeholder="e.g., 25" min="0" max="100" step="0.1">
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label>Status in Project</label>
+            <select class="form-select">
+              <option>Pending</option>
+              <option>Active</option>
+              <option>On Hold</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label>Agreement Notes <span class="optional">(optional)</span></label>
+            <textarea class="form-textarea" placeholder="Key terms, verbal agreements, conditions..."></textarea>
+          </div>
+
+        </div>
+
+        <!-- STEP 3 FOOTER -->
+        <div class="wizard-footer">
+          <button class="btn btn-ghost" onclick="goToStep(2)" style="gap:4px">
+            <i data-lucide="arrow-left" style="width:14px;height:14px"></i> Back
+          </button>
+          <div class="wizard-footer-right">
+            <span class="step-indicator">Step 3 of 4</span>
+            <button class="btn btn-secondary" onclick="goToStep(4)">Skip</button>
+            <button class="btn btn-primary" onclick="goToStep(4)" style="gap:4px">
+              Continue <i data-lucide="arrow-right" style="width:14px;height:14px"></i>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ========== STEP 4: REVIEW & SAVE ========== -->
+      <div class="wizard-panel" id="step-4" style="display:none">
+        <div class="wizard-body">
+
+          <div class="section-title">
+            <i data-lucide="check-circle" style="width:14px;height:14px"></i> Review & Save
+          </div>
+
+          <p style="font-size:13px;color:var(--text-secondary);margin-bottom:20px;line-height:1.5">
+            Review the investor information below. You can go back to any step to make changes.
+          </p>
+
+          <!-- Investor Summary -->
+          <div class="review-section">
+            <div class="review-section-title">
+              <i data-lucide="user" style="width:14px;height:14px"></i> Investor Information
+            </div>
+            <div class="review-row">
+              <span class="review-label">Type</span>
+              <span class="review-value"><span class="badge badge-person" style="font-size:10px;padding:2px 8px"><i data-lucide="user" style="width:10px;height:10px"></i> Person</span></span>
+            </div>
+            <div class="review-row">
+              <span class="review-label">Full Name</span>
+              <span class="review-value">Dora Montes</span>
+            </div>
+            <div class="review-row">
+              <span class="review-label">Email</span>
+              <span class="review-value">doramontes@live.com</span>
+            </div>
+            <div class="review-row">
+              <span class="review-label">Phone</span>
+              <span class="review-value">(503) 555-0202</span>
+            </div>
+            <div class="review-row">
+              <span class="review-label">Location</span>
+              <span class="review-value">Portland, OR 97201</span>
+            </div>
+          </div>
+
+          <!-- Project Link Summary -->
+          <div class="review-section">
+            <div class="review-section-title">
+              <i data-lucide="folder" style="width:14px;height:14px"></i> Project Assignment
+            </div>
+            <div class="review-row">
+              <span class="review-label">Project</span>
+              <span class="review-value">665 Home Ave — Portland, OR</span>
+            </div>
+            <div class="review-row">
+              <span class="review-label">Role in Project</span>
+              <span class="review-value">Equity Partner</span>
+            </div>
+            <div class="review-row">
+              <span class="review-label">Ownership</span>
+              <span class="review-value">20%</span>
+            </div>
+            <div class="review-row">
+              <span class="review-label">Profit Split</span>
+              <span class="review-value">25%</span>
+            </div>
+            <div class="review-row">
+              <span class="review-label">Status</span>
+              <span class="review-value"><span class="badge badge-pending" style="font-size:10px;padding:2px 8px">Pending</span></span>
+            </div>
+          </div>
+
+          <!-- Future note -->
+          <div class="note-box" style="margin-top:20px">
+            <div class="note-box-label">
+              <i data-lucide="info" style="width:13px;height:13px"></i> Capital & Work Orders
+            </div>
+            <div class="note-box-text">
+              Capital contributions and capital calls can be added from the <strong>Project Capital Workspace</strong> after saving. Work order direction (Client vs Investor) is a future feature.
+            </div>
+          </div>
+
+        </div>
+
+        <!-- STEP 4 FOOTER -->
+        <div class="wizard-footer">
+          <button class="btn btn-ghost" onclick="goToStep(3)" style="gap:4px">
+            <i data-lucide="arrow-left" style="width:14px;height:14px"></i> Back
+          </button>
+          <div class="wizard-footer-right">
+            <button class="btn btn-secondary" style="gap:4px">
+              <i data-lucide="save" style="width:14px;height:14px"></i> Save Investor Only
+            </button>
+            <button class="btn btn-primary" style="gap:4px">
+              <i data-lucide="check" style="width:14px;height:14px"></i> Save & Attach to Project
+            </button>
+          </div>
+        </div>
+      </div>
+
+    </main>
+  </div>
+
+  <script>
+    lucide.createIcons();
+
+    let currentStep = 1;
+    let selectedType = 'person';
+
+    function selectType(type, el) {
+      selectedType = type;
+      document.querySelectorAll('#type-selector .type-option').forEach(o => o.classList.remove('selected'));
+      el.classList.add('selected');
+
+      document.getElementById('fields-person').style.display = type === 'person' ? '' : 'none';
+      document.getElementById('fields-company').style.display = type === 'company' ? '' : 'none';
+
+      // Re-render icons after DOM change
+      lucide.createIcons();
+    }
+
+    function goToStep(step) {
+      // Hide current
+      document.getElementById('step-' + currentStep).style.display = 'none';
+
+      // Update step indicators
+      document.querySelectorAll('.wizard-step').forEach(s => {
+        const sNum = parseInt(s.getAttribute('data-step'));
+        s.classList.remove('active', 'done');
+        if (sNum < step) s.classList.add('done');
+        if (sNum === step) s.classList.add('active');
+      });
+
+      // Show target
+      currentStep = step;
+      document.getElementById('step-' + step).style.display = '';
+
+      // Re-render icons
+      lucide.createIcons();
+
+      // Scroll to top
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  </script>
+</body>
+</html>

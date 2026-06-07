@@ -1,0 +1,475 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Investors — Global Directory | NexArtWO</title>
+  <meta name="description" content="Global Investor Directory for R.C Art Construction — NexArtWO Work Order System">
+  <link rel="stylesheet" href="investor-common.css">
+  <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body>
+  <div class="app-container">
+
+    <!-- SIDEBAR -->
+    <aside class="sidebar">
+      <div class="sidebar-logo">
+        <div class="logo-icon">RC</div>
+        <div class="logo-text">
+          <h1>R.C Art Construction</h1>
+          <span>Work Order System</span>
+        </div>
+      </div>
+
+      <nav class="sidebar-nav">
+        <div class="nav-section-title">Main</div>
+        <a class="nav-item" href="#">
+          <i data-lucide="layout-dashboard" class="icon"></i> Dashboard
+        </a>
+        <a class="nav-item" href="#">
+          <i data-lucide="clipboard-list" class="icon"></i> Work Orders
+        </a>
+        <a class="nav-item" href="#">
+          <i data-lucide="wrench" class="icon"></i> Price Book
+        </a>
+
+        <div class="nav-section-title">Management</div>
+        <a class="nav-item" href="#">
+          <i data-lucide="users" class="icon"></i> Clients
+        </a>
+        <a class="nav-item disabled" href="#">
+          <i data-lucide="hard-hat" class="icon"></i> Subcontractors
+          <span class="nav-tag" style="color:var(--text-muted)">Soon</span>
+        </a>
+        <a class="nav-item" href="#">
+          <i data-lucide="file-text" class="icon"></i> Documents
+        </a>
+        <a class="nav-item" href="#">
+          <i data-lucide="building-2" class="icon"></i> Projects
+        </a>
+        <a class="nav-item active" href="#">
+          <i data-lucide="landmark" class="icon"></i> Investor Hub
+          <span class="nav-tag" style="color:var(--accent)">LIVE</span>
+        </a>
+
+        <div class="nav-section-title">Oregon Compliance</div>
+        <a class="nav-item disabled" href="#">
+          <i data-lucide="shield-check" class="icon"></i> CCB Compliance
+          <span class="nav-tag" style="color:var(--text-muted)">Soon</span>
+        </a>
+
+        <div class="nav-section-title">System</div>
+        <a class="nav-item" href="#">
+          <i data-lucide="settings" class="icon"></i> Settings
+        </a>
+      </nav>
+
+      <div class="sidebar-footer">
+        <div class="ccb-badge">
+          <i data-lucide="check-circle-2" style="width:14px;height:14px"></i> Oregon CCB #247277 — Active
+        </div>
+      </div>
+    </aside>
+
+    <!-- MAIN CONTENT -->
+    <main class="main-content">
+
+      <!-- TOP BAR -->
+      <div class="top-bar">
+        <div class="top-bar-left">
+          <div>
+            <h2>Investor Hub</h2>
+            <div class="subtitle">Global Investor Directory</div>
+          </div>
+        </div>
+        <div class="top-bar-right">
+          <div class="search-box" id="investor-search">
+            <i data-lucide="search" style="width:16px;height:16px;color:var(--text-muted);flex-shrink:0"></i>
+            <input type="text" placeholder="Search investors by name, email, company..." id="search-input" oninput="filterInvestors()">
+          </div>
+          <a href="02-add-investor-wizard.html" class="btn btn-primary" id="btn-add-investor">
+            <i data-lucide="user-plus" style="width:16px;height:16px"></i> Add Investor
+          </a>
+        </div>
+      </div>
+
+      <!-- PAGE CONTENT -->
+      <div class="page animate-in">
+
+        <!-- KPI STRIP -->
+        <div class="stats-grid" style="grid-template-columns: repeat(4, 1fr);">
+          <div class="stat-card accent">
+            <div class="stat-icon"><i data-lucide="users" style="width:22px;height:22px"></i></div>
+            <div class="stat-value">7</div>
+            <div class="stat-label">Total Investors</div>
+            <div class="stat-sub">Registered in system</div>
+          </div>
+          <div class="stat-card success">
+            <div class="stat-icon"><i data-lucide="check-circle" style="width:22px;height:22px"></i></div>
+            <div class="stat-value">5</div>
+            <div class="stat-label">Active in Projects</div>
+            <div class="stat-sub">Assigned to ≥1 project</div>
+          </div>
+          <div class="stat-card info">
+            <div class="stat-icon"><i data-lucide="clock" style="width:22px;height:22px"></i></div>
+            <div class="stat-value">2</div>
+            <div class="stat-label">Pending Verification</div>
+            <div class="stat-sub">Awaiting review</div>
+          </div>
+          <div class="stat-card purple">
+            <div class="stat-icon"><i data-lucide="banknote" style="width:22px;height:22px"></i></div>
+            <div class="stat-value">$425K</div>
+            <div class="stat-label">Total Capital Committed</div>
+            <div class="stat-sub">Across all projects</div>
+          </div>
+        </div>
+
+        <!-- FILTER BAR -->
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:12px">
+          <div class="filter-tabs" id="type-filters">
+            <div class="filter-tab active" onclick="setFilter('all',this)">All Investors</div>
+            <div class="filter-tab" onclick="setFilter('person',this)">
+              <i data-lucide="user" style="width:13px;height:13px"></i> Person
+            </div>
+            <div class="filter-tab" onclick="setFilter('company',this)">
+              <i data-lucide="building-2" style="width:13px;height:13px"></i> Company
+            </div>
+          </div>
+          <div style="font-size:12px;color:var(--text-muted)">
+            Showing <strong id="showing-count" style="color:var(--text-primary)">7</strong> investors
+          </div>
+        </div>
+
+        <!-- INVESTOR TABLE -->
+        <div class="card">
+          <div class="card-body" style="padding:0">
+            <table class="data-table" id="investor-table">
+              <thead>
+                <tr>
+                  <th style="width:40px;padding-left:16px">
+                    <input type="checkbox" style="width:15px;height:15px;cursor:pointer;accent-color:var(--accent)">
+                  </th>
+                  <th>Investor</th>
+                  <th>Type</th>
+                  <th>Contact</th>
+                  <th>Linked Projects</th>
+                  <th>Capital Committed</th>
+                  <th>Status</th>
+                  <th style="width:120px">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                <!-- Row 1: Company -->
+                <tr data-type="company" data-name="rc art construction llc">
+                  <td style="padding-left:16px"><input type="checkbox" style="width:15px;height:15px;cursor:pointer;accent-color:var(--accent)"></td>
+                  <td>
+                    <div style="display:flex;align-items:center;gap:10px">
+                      <div class="avatar avatar-amber">RC</div>
+                      <div>
+                        <div style="font-weight:600;color:var(--text-primary)">R.C Art Construction LLC</div>
+                        <div style="font-size:11px;color:var(--text-muted)">Contact: Rodolfo Figueroa</div>
+                      </div>
+                    </div>
+                  </td>
+                  <td><span class="badge badge-company"><i data-lucide="building-2" style="width:11px;height:11px"></i> Company</span></td>
+                  <td>
+                    <div style="font-size:12px;display:flex;flex-direction:column;gap:2px">
+                      <span style="display:flex;align-items:center;gap:4px"><i data-lucide="mail" style="width:12px;height:12px"></i> info@rcartconstruction.com</span>
+                      <span style="display:flex;align-items:center;gap:4px"><i data-lucide="phone" style="width:12px;height:12px"></i> (503) 555-0101</span>
+                    </div>
+                  </td>
+                  <td>
+                    <div style="display:flex;gap:4px;flex-wrap:wrap">
+                      <span class="badge badge-active" style="font-size:10px;padding:2px 8px">665 Home</span>
+                      <span class="badge badge-active" style="font-size:10px;padding:2px 8px">Oak Grove</span>
+                    </div>
+                  </td>
+                  <td><strong style="color:var(--text-primary)">$180,000</strong></td>
+                  <td><span class="badge badge-active">Active</span></td>
+                  <td>
+                    <div style="display:flex;gap:4px">
+                      <a href="03-investor-profile.html" class="btn btn-sm btn-secondary" style="gap:4px" title="View Profile">
+                        <i data-lucide="eye" style="width:13px;height:13px"></i>
+                      </a>
+                      <button class="btn btn-sm btn-secondary" title="Edit Investor">
+                        <i data-lucide="edit-3" style="width:13px;height:13px"></i>
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+
+                <!-- Row 2: Person -->
+                <tr data-type="person" data-name="dora montes">
+                  <td style="padding-left:16px"><input type="checkbox" style="width:15px;height:15px;cursor:pointer;accent-color:var(--accent)"></td>
+                  <td>
+                    <div style="display:flex;align-items:center;gap:10px">
+                      <div class="avatar avatar-blue">DM</div>
+                      <div>
+                        <div style="font-weight:600;color:var(--text-primary)">Dora Montes</div>
+                        <div style="font-size:11px;color:var(--text-muted)">Individual investor</div>
+                      </div>
+                    </div>
+                  </td>
+                  <td><span class="badge badge-person"><i data-lucide="user" style="width:11px;height:11px"></i> Person</span></td>
+                  <td>
+                    <div style="font-size:12px;display:flex;flex-direction:column;gap:2px">
+                      <span style="display:flex;align-items:center;gap:4px"><i data-lucide="mail" style="width:12px;height:12px"></i> doramontes@live.com</span>
+                      <span style="display:flex;align-items:center;gap:4px"><i data-lucide="phone" style="width:12px;height:12px"></i> (503) 555-0202</span>
+                    </div>
+                  </td>
+                  <td>
+                    <div style="display:flex;gap:4px;flex-wrap:wrap">
+                      <span class="badge badge-active" style="font-size:10px;padding:2px 8px">665 Home</span>
+                    </div>
+                  </td>
+                  <td><strong style="color:var(--text-primary)">$75,000</strong></td>
+                  <td><span class="badge badge-active">Active</span></td>
+                  <td>
+                    <div style="display:flex;gap:4px">
+                      <a href="03-investor-profile.html" class="btn btn-sm btn-secondary" title="View Profile">
+                        <i data-lucide="eye" style="width:13px;height:13px"></i>
+                      </a>
+                      <button class="btn btn-sm btn-secondary" title="Edit Investor">
+                        <i data-lucide="edit-3" style="width:13px;height:13px"></i>
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+
+                <!-- Row 3: Company -->
+                <tr data-type="company" data-name="greenfield capital group">
+                  <td style="padding-left:16px"><input type="checkbox" style="width:15px;height:15px;cursor:pointer;accent-color:var(--accent)"></td>
+                  <td>
+                    <div style="display:flex;align-items:center;gap:10px">
+                      <div class="avatar avatar-green">GC</div>
+                      <div>
+                        <div style="font-weight:600;color:var(--text-primary)">Greenfield Capital Group</div>
+                        <div style="font-size:11px;color:var(--text-muted)">Contact: Mark Sullivan</div>
+                      </div>
+                    </div>
+                  </td>
+                  <td><span class="badge badge-company"><i data-lucide="building-2" style="width:11px;height:11px"></i> Company</span></td>
+                  <td>
+                    <div style="font-size:12px;display:flex;flex-direction:column;gap:2px">
+                      <span style="display:flex;align-items:center;gap:4px"><i data-lucide="mail" style="width:12px;height:12px"></i> mark@greenfieldcap.com</span>
+                      <span style="display:flex;align-items:center;gap:4px"><i data-lucide="phone" style="width:12px;height:12px"></i> (971) 555-0303</span>
+                    </div>
+                  </td>
+                  <td>
+                    <div style="display:flex;gap:4px;flex-wrap:wrap">
+                      <span class="badge badge-active" style="font-size:10px;padding:2px 8px">Oak Grove</span>
+                      <span class="badge badge-pending" style="font-size:10px;padding:2px 8px">Milwaukie Flip</span>
+                    </div>
+                  </td>
+                  <td><strong style="color:var(--text-primary)">$120,000</strong></td>
+                  <td><span class="badge badge-active">Active</span></td>
+                  <td>
+                    <div style="display:flex;gap:4px">
+                      <a href="03-investor-profile.html" class="btn btn-sm btn-secondary" title="View Profile">
+                        <i data-lucide="eye" style="width:13px;height:13px"></i>
+                      </a>
+                      <button class="btn btn-sm btn-secondary" title="Edit Investor">
+                        <i data-lucide="edit-3" style="width:13px;height:13px"></i>
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+
+                <!-- Row 4: Person -->
+                <tr data-type="person" data-name="james peterson">
+                  <td style="padding-left:16px"><input type="checkbox" style="width:15px;height:15px;cursor:pointer;accent-color:var(--accent)"></td>
+                  <td>
+                    <div style="display:flex;align-items:center;gap:10px">
+                      <div class="avatar avatar-purple">JP</div>
+                      <div>
+                        <div style="font-weight:600;color:var(--text-primary)">James Peterson</div>
+                        <div style="font-size:11px;color:var(--text-muted)">Individual investor</div>
+                      </div>
+                    </div>
+                  </td>
+                  <td><span class="badge badge-person"><i data-lucide="user" style="width:11px;height:11px"></i> Person</span></td>
+                  <td>
+                    <div style="font-size:12px;display:flex;flex-direction:column;gap:2px">
+                      <span style="display:flex;align-items:center;gap:4px"><i data-lucide="mail" style="width:12px;height:12px"></i> jpeterson@gmail.com</span>
+                      <span style="display:flex;align-items:center;gap:4px"><i data-lucide="phone" style="width:12px;height:12px"></i> (503) 555-0404</span>
+                    </div>
+                  </td>
+                  <td>
+                    <span style="font-size:12px;color:var(--text-muted)">No projects linked</span>
+                  </td>
+                  <td><span style="font-size:12px;color:var(--text-muted)">—</span></td>
+                  <td><span class="badge badge-pending">Pending</span></td>
+                  <td>
+                    <div style="display:flex;gap:4px">
+                      <a href="03-investor-profile.html" class="btn btn-sm btn-secondary" title="View Profile">
+                        <i data-lucide="eye" style="width:13px;height:13px"></i>
+                      </a>
+                      <button class="btn btn-sm btn-secondary" title="Edit Investor">
+                        <i data-lucide="edit-3" style="width:13px;height:13px"></i>
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+
+                <!-- Row 5: Person -->
+                <tr data-type="person" data-name="maria elena vega">
+                  <td style="padding-left:16px"><input type="checkbox" style="width:15px;height:15px;cursor:pointer;accent-color:var(--accent)"></td>
+                  <td>
+                    <div style="display:flex;align-items:center;gap:10px">
+                      <div class="avatar avatar-rose">MV</div>
+                      <div>
+                        <div style="font-weight:600;color:var(--text-primary)">Maria Elena Vega</div>
+                        <div style="font-size:11px;color:var(--text-muted)">Individual investor</div>
+                      </div>
+                    </div>
+                  </td>
+                  <td><span class="badge badge-person"><i data-lucide="user" style="width:11px;height:11px"></i> Person</span></td>
+                  <td>
+                    <div style="font-size:12px;display:flex;flex-direction:column;gap:2px">
+                      <span style="display:flex;align-items:center;gap:4px"><i data-lucide="mail" style="width:12px;height:12px"></i> mevega@outlook.com</span>
+                      <span style="display:flex;align-items:center;gap:4px"><i data-lucide="phone" style="width:12px;height:12px"></i> (541) 555-0505</span>
+                    </div>
+                  </td>
+                  <td>
+                    <div style="display:flex;gap:4px;flex-wrap:wrap">
+                      <span class="badge badge-active" style="font-size:10px;padding:2px 8px">Milwaukie Flip</span>
+                    </div>
+                  </td>
+                  <td><strong style="color:var(--text-primary)">$50,000</strong></td>
+                  <td><span class="badge badge-active">Active</span></td>
+                  <td>
+                    <div style="display:flex;gap:4px">
+                      <a href="03-investor-profile.html" class="btn btn-sm btn-secondary" title="View Profile">
+                        <i data-lucide="eye" style="width:13px;height:13px"></i>
+                      </a>
+                      <button class="btn btn-sm btn-secondary" title="Edit Investor">
+                        <i data-lucide="edit-3" style="width:13px;height:13px"></i>
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+
+                <!-- Row 6: Company -->
+                <tr data-type="company" data-name="pdx real estate holdings">
+                  <td style="padding-left:16px"><input type="checkbox" style="width:15px;height:15px;cursor:pointer;accent-color:var(--accent)"></td>
+                  <td>
+                    <div style="display:flex;align-items:center;gap:10px">
+                      <div class="avatar avatar-amber">PX</div>
+                      <div>
+                        <div style="font-weight:600;color:var(--text-primary)">PDX Real Estate Holdings</div>
+                        <div style="font-size:11px;color:var(--text-muted)">Contact: Sarah Chen</div>
+                      </div>
+                    </div>
+                  </td>
+                  <td><span class="badge badge-company"><i data-lucide="building-2" style="width:11px;height:11px"></i> Company</span></td>
+                  <td>
+                    <div style="font-size:12px;display:flex;flex-direction:column;gap:2px">
+                      <span style="display:flex;align-items:center;gap:4px"><i data-lucide="mail" style="width:12px;height:12px"></i> sarah@pdxreh.com</span>
+                      <span style="display:flex;align-items:center;gap:4px"><i data-lucide="phone" style="width:12px;height:12px"></i> (971) 555-0606</span>
+                    </div>
+                  </td>
+                  <td>
+                    <span style="font-size:12px;color:var(--text-muted)">No projects linked</span>
+                  </td>
+                  <td><span style="font-size:12px;color:var(--text-muted)">—</span></td>
+                  <td><span class="badge badge-pending">Pending</span></td>
+                  <td>
+                    <div style="display:flex;gap:4px">
+                      <a href="03-investor-profile.html" class="btn btn-sm btn-secondary" title="View Profile">
+                        <i data-lucide="eye" style="width:13px;height:13px"></i>
+                      </a>
+                      <button class="btn btn-sm btn-secondary" title="Edit Investor">
+                        <i data-lucide="edit-3" style="width:13px;height:13px"></i>
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+
+                <!-- Row 7: Person -->
+                <tr data-type="person" data-name="antonio ruiz">
+                  <td style="padding-left:16px"><input type="checkbox" style="width:15px;height:15px;cursor:pointer;accent-color:var(--accent)"></td>
+                  <td>
+                    <div style="display:flex;align-items:center;gap:10px">
+                      <div class="avatar avatar-green">AR</div>
+                      <div>
+                        <div style="font-weight:600;color:var(--text-primary)">Antonio Ruiz</div>
+                        <div style="font-size:11px;color:var(--text-muted)">Individual investor</div>
+                      </div>
+                    </div>
+                  </td>
+                  <td><span class="badge badge-person"><i data-lucide="user" style="width:11px;height:11px"></i> Person</span></td>
+                  <td>
+                    <div style="font-size:12px;display:flex;flex-direction:column;gap:2px">
+                      <span style="display:flex;align-items:center;gap:4px"><i data-lucide="mail" style="width:12px;height:12px"></i> aruiz@correo.com</span>
+                      <span style="display:flex;align-items:center;gap:4px"><i data-lucide="map-pin" style="width:12px;height:12px"></i> Beaverton, OR</span>
+                    </div>
+                  </td>
+                  <td>
+                    <div style="display:flex;gap:4px;flex-wrap:wrap">
+                      <span class="badge badge-active" style="font-size:10px;padding:2px 8px">665 Home</span>
+                    </div>
+                  </td>
+                  <td><strong style="color:var(--text-primary)">$0</strong></td>
+                  <td><span class="badge badge-verified">Verified</span></td>
+                  <td>
+                    <div style="display:flex;gap:4px">
+                      <a href="03-investor-profile.html" class="btn btn-sm btn-secondary" title="View Profile">
+                        <i data-lucide="eye" style="width:13px;height:13px"></i>
+                      </a>
+                      <button class="btn btn-sm btn-secondary" title="Edit Investor">
+                        <i data-lucide="edit-3" style="width:13px;height:13px"></i>
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+      </div>
+    </main>
+  </div>
+
+  <script>
+    // Initialize Lucide icons
+    lucide.createIcons();
+
+    // Filter tabs
+    function setFilter(type, el) {
+      document.querySelectorAll('#type-filters .filter-tab').forEach(t => t.classList.remove('active'));
+      el.classList.add('active');
+      const rows = document.querySelectorAll('#investor-table tbody tr');
+      let count = 0;
+      rows.forEach(row => {
+        const rowType = row.getAttribute('data-type');
+        if (type === 'all' || rowType === type) {
+          row.style.display = '';
+          count++;
+        } else {
+          row.style.display = 'none';
+        }
+      });
+      document.getElementById('showing-count').textContent = count;
+    }
+
+    // Search
+    function filterInvestors() {
+      const q = document.getElementById('search-input').value.toLowerCase();
+      const rows = document.querySelectorAll('#investor-table tbody tr');
+      let count = 0;
+      rows.forEach(row => {
+        const name = row.getAttribute('data-name') || '';
+        const text = row.textContent.toLowerCase();
+        if (text.includes(q) || name.includes(q)) {
+          row.style.display = '';
+          count++;
+        } else {
+          row.style.display = 'none';
+        }
+      });
+      document.getElementById('showing-count').textContent = count;
+    }
+  </script>
+</body>
+</html>
