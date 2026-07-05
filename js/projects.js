@@ -183,6 +183,29 @@ var _projectsModuleShell = null;
 var _projectsModuleLocalLoaded = false;
 var _projectsModuleRoute = 'projects';
 var _projectsLiveRefreshInFlight = false;
+var _propertyHubActiveSection = 'overview';
+
+function isFlipEngineProject(project) {
+  return !!(project && project.project_type === 'fix_and_flip');
+}
+
+function syncPropertyHubTabVisibility() {
+  var tab = document.querySelector('.proj-detail-tab[data-tab="propertyhub"]');
+  var content = document.getElementById('proj-tab-propertyhub');
+  var show = isFlipEngineProject(_currentProject);
+  if (tab) tab.style.display = show ? '' : 'none';
+  if (!show && content) {
+    content.innerHTML = '';
+    content.style.display = 'none';
+  }
+  if (!show && tab && tab.classList.contains('active')) {
+    tab.classList.remove('active');
+    var overviewTab = document.querySelector('.proj-detail-tab[data-tab="overview"]');
+    var overviewContent = document.getElementById('proj-tab-overview');
+    if (overviewTab) overviewTab.classList.add('active');
+    if (overviewContent) overviewContent.style.display = 'block';
+  }
+}
 
 function projectsModuleShellHtml() {
   return '' +
@@ -227,6 +250,7 @@ function projectsModuleShellHtml() {
       '</div>' +
       '<div class="proj-detail-tabs" id="proj-detail-tabs">' +
         '<div class="proj-detail-tab active" data-tab="overview" onclick="switchProjTab(\'overview\')">Overview</div>' +
+        '<div class="proj-detail-tab" data-tab="propertyhub" onclick="switchProjTab(\'propertyhub\')" style="display:none"><i data-lucide="home"></i>Property Hub</div>' +
         '<div class="proj-detail-tab" data-tab="financials" onclick="switchProjTab(\'financials\')">Financials</div>' +
         '<div class="proj-detail-tab" data-tab="expenses" onclick="switchProjTab(\'expenses\')">Expenses</div>' +
         '<div class="proj-detail-tab" data-tab="disbursements" onclick="switchProjTab(\'disbursements\')">Disbursements</div>' +
@@ -234,6 +258,7 @@ function projectsModuleShellHtml() {
         '<div class="proj-detail-tab" data-tab="investorhub" onclick="switchProjTab(\'investorhub\')" style="color:var(--accent)" title="Investor Hub - Owner Admin active"><i data-lucide="landmark"></i>Investor Hub</div>' +
       '</div>' +
       '<div id="proj-tab-overview" class="proj-tab-content"></div>' +
+      '<div id="proj-tab-propertyhub" class="proj-tab-content" style="display:none"></div>' +
       '<div id="proj-tab-financials" class="proj-tab-content" style="display:none"></div>' +
       '<div id="proj-tab-expenses" class="proj-tab-content" style="display:none"></div>' +
       '<div id="proj-tab-disbursements" class="proj-tab-content" style="display:none"></div>' +
@@ -802,6 +827,10 @@ async function openProjectDetail(projId, options) {
   if (overviewContent) overviewContent.style.display = 'block';
   var woTab = document.getElementById('proj-tab-workorders');
   if (woTab) woTab.innerHTML = '';  // clear stale WOs from previous project
+  _propertyHubActiveSection = 'overview';
+  syncPropertyHubTabVisibility();
+  var propertyHubTab = document.getElementById('proj-tab-propertyhub');
+  if (propertyHubTab) propertyHubTab.innerHTML = '';
 
   // Set loading flag BEFORE initial render so spinner shows only when Supabase is active
   _currentProject._financialsLoading = !options.skipFinancials && (typeof isSupabaseReady === 'function' && isSupabaseReady());
@@ -878,6 +907,7 @@ function updateProjectWorkspaceChrome(tab) {
   var name = projectDisplayName(p);
   var tabLabels = {
     overview: 'Project Overview',
+    propertyhub: 'Property Hub',
     financials: 'Financial Control',
     expenses: 'Project Expenses',
     disbursements: 'Disbursements',
@@ -894,10 +924,10 @@ function updateProjectWorkspaceChrome(tab) {
   if (topbarEl) topbarEl.textContent = pageTitle;
   if (titleEl) titleEl.textContent = pageTitle;
   if (kickerEl) {
-    kickerEl.textContent = tab === 'investorhub' ? 'Owner/Admin Capital Console' : 'Project Control';
+    kickerEl.textContent = tab === 'investorhub' ? 'Owner/Admin Capital Console' : (tab === 'propertyhub' ? 'FlipEngine Property Hub' : 'Project Control');
   }
   if (contextEl) {
-    contextEl.textContent = tab === 'investorhub' ? 'Investor workspace' : 'Project workspace';
+    contextEl.textContent = tab === 'investorhub' ? 'Investor workspace' : (tab === 'propertyhub' ? 'Property workspace' : 'Project workspace');
   }
   if (subtitleEl) {
     if (tab === 'investorhub') {
@@ -913,7 +943,11 @@ function updateProjectWorkspaceChrome(tab) {
 }
 
 function switchProjTab(tab) {
+  if (tab === 'propertyhub' && !isFlipEngineProject(_currentProject)) {
+    tab = 'overview';
+  }
   syncProjectRouteChrome(tab === 'investorhub' ? 'investorhub' : 'projects', { updateTitle: false });
+  syncPropertyHubTabVisibility();
   updateProjectWorkspaceChrome(tab);
   document.querySelectorAll('.proj-detail-tab').forEach(function(t) { t.classList.remove('active'); });
   document.querySelectorAll('.proj-tab-content').forEach(function(c) { c.style.display = 'none'; });
@@ -929,6 +963,170 @@ function switchProjTab(tab) {
   if (tab === 'workorders') {
     if (_currentProject) renderWorkOrdersTab();
   }
+
+  if (tab === 'propertyhub') {
+    renderPropertyHubShell();
+  }
+}
+
+var PROPERTY_HUB_SECTIONS = [
+  { id: 'overview', label: 'Overview', icon: 'layout-dashboard', ready: true },
+  { id: 'acquisition', label: 'Acquisition', icon: 'home', locked: true },
+  { id: 'budget', label: 'Budget', icon: 'calculator', locked: true },
+  { id: 'workorders', label: 'Work Orders', icon: 'clipboard-list', ready: true },
+  { id: 'expenses', label: 'Expenses', icon: 'receipt', ready: true },
+  { id: 'receipts', label: 'Receipts', icon: 'receipt-text', locked: true },
+  { id: 'documents', label: 'Documents', icon: 'files', locked: true },
+  { id: 'loans', label: 'Loans / Draws', icon: 'landmark', locked: true },
+  { id: 'investors', label: 'Investors', icon: 'users', locked: true },
+  { id: 'contractors', label: 'Contractors', icon: 'hard-hat', locked: true },
+  { id: 'labor', label: 'Labor / Time', icon: 'clock', locked: true },
+  { id: 'payments', label: 'Payments', icon: 'wallet', locked: true },
+  { id: 'sale', label: 'Sale / Exit', icon: 'badge-dollar-sign', locked: true },
+  { id: 'reports', label: 'Reports', icon: 'chart-column', locked: true }
+];
+
+function propertyHubSectionById(sectionId) {
+  return PROPERTY_HUB_SECTIONS.find(function(section) { return section.id === sectionId; }) || PROPERTY_HUB_SECTIONS[0];
+}
+
+function propertyHubModuleButton(section) {
+  var active = _propertyHubActiveSection === section.id;
+  var locked = !!section.locked;
+  var bg = active ? 'var(--accent)' : 'var(--bg-card)';
+  var color = active ? '#fff' : (locked ? 'var(--text-muted)' : 'var(--text-primary)');
+  var border = active ? 'var(--accent)' : 'var(--border)';
+  var opacity = locked && !active ? '0.72' : '1';
+  return '<button type="button" class="btn btn-sm" onclick="switchPropertyHubSection(\'' + section.id + '\')" style="justify-content:flex-start;gap:7px;background:' + bg + ';color:' + color + ';border:1px solid ' + border + ';opacity:' + opacity + ';min-height:34px">' +
+    '<i data-lucide="' + section.icon + '" style="width:13px;height:13px"></i>' +
+    '<span>' + escHtml(section.label) + '</span>' +
+    (locked ? '<i data-lucide="lock-keyhole" style="width:12px;height:12px;margin-left:auto"></i>' : '') +
+  '</button>';
+}
+
+function propertyHubReadinessNotice(label) {
+  return '<div style="border:1px dashed var(--border);border-radius:8px;background:var(--bg-secondary);padding:18px;color:var(--text-secondary);display:flex;gap:12px;align-items:flex-start">' +
+    '<i data-lucide="lock-keyhole" style="width:18px;height:18px;color:var(--text-muted);margin-top:2px"></i>' +
+    '<div><div style="font-size:13px;font-weight:800;color:var(--text-primary);margin-bottom:4px">' + escHtml(label) + ' is read-only</div>' +
+    '<div style="font-size:12px;line-height:1.5">Requires FlipEngine database migration before editing.</div></div>' +
+  '</div>';
+}
+
+function propertyHubMetric(label, value, note) {
+  return '<div class="proj-stat-card" style="text-align:left">' +
+    '<div class="proj-stat-label">' + escHtml(label) + '</div>' +
+    '<div class="proj-stat-value" style="font-size:18px;margin-top:4px">' + value + '</div>' +
+    (note ? '<div style="font-size:10px;color:var(--text-muted);margin-top:4px;line-height:1.4">' + escHtml(note) + '</div>' : '') +
+  '</div>';
+}
+
+function propertyHubInfoRow(label, value) {
+  return '<div class="proj-fin-row">' +
+    '<span class="proj-fin-label">' + escHtml(label) + '</span>' +
+    '<span class="proj-fin-value" style="text-align:right;max-width:60%">' + value + '</span>' +
+  '</div>';
+}
+
+function propertyHubPlaceholder(section) {
+  return '<div class="card"><div class="card-body" style="padding:18px">' +
+    '<h4 style="font-size:12px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;margin:0 0 14px;display:flex;align-items:center;gap:8px">' +
+      '<i data-lucide="' + section.icon + '" style="width:14px;height:14px"></i>' + escHtml(section.label) +
+    '</h4>' +
+    propertyHubReadinessNotice(section.label) +
+  '</div></div>';
+}
+
+function renderPropertyHubSection(sectionId) {
+  var p = _currentProject;
+  var section = propertyHubSectionById(sectionId);
+  var f = p && p._financials ? p._financials : null;
+
+  if (section.id === 'overview') {
+    return '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin-bottom:16px">' +
+      propertyHubMetric('Project', escHtml(projectDisplayName(p)), 'Existing NexArWO project record') +
+      propertyHubMetric('Address', escHtml(p.address || '—'), 'Read from current project') +
+      propertyHubMetric('Purchase Price', fmtMoney(p.purchase_price || p.purchasePrice), 'Existing project field') +
+      propertyHubMetric('Cash Position', f ? fmtMoney(f.project_cash_position) : '<span style="color:var(--text-muted);font-size:13px">Not available</span>', 'Existing financial summary') +
+    '</div>' +
+    '<div class="card"><div class="card-body" style="padding:18px">' +
+      '<h4 style="font-size:12px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;margin:0 0 14px;display:flex;align-items:center;gap:8px"><i data-lucide="shield-check" style="width:14px;height:14px"></i> Shell Status</h4>' +
+      propertyHubInfoRow('Mode', '<span style="color:var(--accent)">Read-only shell</span>') +
+      propertyHubInfoRow('Gate', '<span style="font-family:monospace;font-size:11px">project_type = fix_and_flip</span>') +
+      propertyHubInfoRow('Database writes', '<span style="color:var(--text-muted)">Disabled</span>') +
+      propertyHubInfoRow('Investor Hub', '<span style="color:var(--text-muted)">Not invoked by Property Hub</span>') +
+    '</div></div>';
+  }
+
+  if (section.id === 'workorders') {
+    return '<div class="card"><div class="card-body" style="padding:18px">' +
+      '<h4 style="font-size:12px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;margin:0 0 14px;display:flex;align-items:center;gap:8px"><i data-lucide="clipboard-list" style="width:14px;height:14px"></i> Work Orders</h4>' +
+      '<p style="margin:0 0 14px;color:var(--text-secondary);font-size:13px;line-height:1.5">Linked Work Orders remain managed by the existing NexArWO Work Orders tab using the current project relationship.</p>' +
+      '<button type="button" class="btn btn-secondary btn-sm" onclick="switchProjTab(\'workorders\')" style="gap:6px"><i data-lucide="arrow-right" style="width:13px;height:13px"></i> Open Existing Work Orders</button>' +
+    '</div></div>';
+  }
+
+  if (section.id === 'expenses') {
+    return '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin-bottom:16px">' +
+      propertyHubMetric('Net Expenses', f ? fmtMoney(f.net_expense_cost) : '<span style="color:var(--text-muted);font-size:13px">Not available</span>', 'Existing project financial summary') +
+      propertyHubMetric('Disbursements', f ? fmtMoney(f.total_disbursements) : '<span style="color:var(--text-muted);font-size:13px">Not available</span>', 'Existing project financial summary') +
+      propertyHubMetric('Cost Basis', f ? fmtMoney(f.cost_basis) : '<span style="color:var(--text-muted);font-size:13px">Not available</span>', 'Existing project financial summary') +
+    '</div>' +
+    '<div class="card"><div class="card-body" style="padding:18px">' +
+      propertyHubReadinessNotice('FlipEngine expense mapping') +
+    '</div></div>';
+  }
+
+  return propertyHubPlaceholder(section);
+}
+
+function switchPropertyHubSection(sectionId) {
+  _propertyHubActiveSection = propertyHubSectionById(sectionId).id;
+  renderPropertyHubShell();
+}
+
+function renderPropertyHubShell() {
+  var tab = document.getElementById('proj-tab-propertyhub');
+  if (!tab || !_currentProject) return;
+
+  if (!isFlipEngineProject(_currentProject)) {
+    tab.innerHTML = '';
+    return;
+  }
+
+  _propertyHubActiveSection = propertyHubSectionById(_propertyHubActiveSection).id;
+  var p = _currentProject;
+  var st = PROJECT_STATUSES[p.status] || PROJECT_STATUSES.planning;
+  var section = propertyHubSectionById(_propertyHubActiveSection);
+  var buttons = PROPERTY_HUB_SECTIONS.map(propertyHubModuleButton).join('');
+
+  tab.innerHTML =
+    '<div style="display:flex;flex-direction:column;gap:16px">' +
+      '<section class="card" style="border-radius:8px"><div class="card-body" style="padding:18px">' +
+        '<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:wrap">' +
+          '<div>' +
+            '<div class="proj-page-kicker" style="margin-bottom:6px">FlipEngine</div>' +
+            '<h4 style="margin:0;font-size:18px;color:var(--text-primary)">Property Hub</h4>' +
+            '<div style="margin-top:8px;color:var(--text-secondary);font-size:13px;display:flex;gap:8px;align-items:center;flex-wrap:wrap">' +
+              '<strong style="color:var(--text-primary)">' + escHtml(projectDisplayName(p)) + '</strong>' +
+              projectStatusPill(st) +
+              projectTypePill(getProjTypeCfg(p.project_type || null)) +
+            '</div>' +
+          '</div>' +
+          '<div style="font-size:11px;font-weight:800;color:var(--text-muted);background:var(--bg-secondary);border:1px solid var(--border);border-radius:999px;padding:6px 10px;text-transform:uppercase;letter-spacing:0.4px">Read-only shell</div>' +
+        '</div>' +
+      '</div></section>' +
+      '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:16px;align-items:start">' +
+        '<aside style="display:grid;gap:8px">' + buttons + '</aside>' +
+        '<section>' +
+          '<div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;color:var(--text-muted);font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:0.5px">' +
+            '<i data-lucide="' + section.icon + '" style="width:14px;height:14px"></i>' + escHtml(section.label) +
+          '</div>' +
+          renderPropertyHubSection(section.id) +
+        '</section>' +
+      '</div>' +
+    '</div>';
+
+  if (typeof lucide !== 'undefined') lucide.createIcons();
 }
 
 function renderProjectDetail(options) {
@@ -937,6 +1135,8 @@ function renderProjectDetail(options) {
   var p = _currentProject;
   var st = PROJECT_STATUSES[p.status] || PROJECT_STATUSES.planning;
   var activeTab = document.querySelector('.proj-detail-tab.active');
+  syncPropertyHubTabVisibility();
+  activeTab = document.querySelector('.proj-detail-tab.active');
   updateProjectWorkspaceChrome(options.preserveTab && activeTab ? activeTab.dataset.tab : 'overview');
 
   // Overview tab - responsive 2-col grid (1-col on mobile via CSS)
@@ -972,6 +1172,7 @@ function renderProjectDetail(options) {
           '<p style="font-size:13px;max-width:300px;margin:0 auto">Add project expenses, refunds, or disbursements to automatically generate this financial summary.</p>' +
         '</div>';
     }
+    if (activeTab && activeTab.dataset.tab === 'propertyhub') renderPropertyHubShell();
     lucide.createIcons();
     return;
   }
@@ -1022,6 +1223,7 @@ function renderProjectDetail(options) {
     '</div></div></div>';
 
   lucide.createIcons();
+  if (activeTab && activeTab.dataset.tab === 'propertyhub') renderPropertyHubShell();
 }
 
 // ---- Expenses / Refunds / Disbursements Logic ----
