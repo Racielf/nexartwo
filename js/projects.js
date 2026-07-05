@@ -13,6 +13,12 @@ var _currentProject = null;
 // ============================================================
 var INVESTOR_HUB_ENABLED = true;
 
+function isInvestorHubWorkspaceTabEnabled() {
+  return !!(typeof window !== 'undefined' &&
+    window.NEXARTWO_FEATURE_FLAGS &&
+    window.NEXARTWO_FEATURE_FLAGS.investorHubWorkspaceTab === true);
+}
+
 var PROJECT_STATUSES = {
   planning:    { label: 'Planning',     color: '#64748b', bg: '#64748b18' },
   active:      { label: 'Active',       color: '#3b82f6', bg: '#3b82f618' },
@@ -210,10 +216,13 @@ function syncPropertyHubTabVisibility() {
 function syncPropertyHubNavigationContext(activeTab) {
   var investorTab = document.querySelector('.proj-detail-tab[data-tab="investorhub"]');
   if (!investorTab) return;
-  investorTab.style.display = activeTab === 'propertyhub' ? 'none' : '';
+  var showInvestorHubTab = isInvestorHubWorkspaceTabEnabled();
+  investorTab.style.display = showInvestorHubTab ? '' : 'none';
+  investorTab.setAttribute('aria-hidden', showInvestorHubTab ? 'false' : 'true');
 }
 
 function projectsModuleShellHtml() {
+  var investorHubTabStyle = isInvestorHubWorkspaceTabEnabled() ? 'color:var(--accent)' : 'display:none';
   return '' +
     '<div id="proj-list-view" class="content-area">' +
       '<div class="projects-list-header">' +
@@ -261,7 +270,7 @@ function projectsModuleShellHtml() {
         '<div class="proj-detail-tab" data-tab="expenses" onclick="switchProjTab(\'expenses\')">Expenses</div>' +
         '<div class="proj-detail-tab" data-tab="disbursements" onclick="switchProjTab(\'disbursements\')">Disbursements</div>' +
         '<div class="proj-detail-tab" data-tab="workorders" onclick="switchProjTab(\'workorders\')">Work Orders</div>' +
-        '<div class="proj-detail-tab" data-tab="investorhub" onclick="switchProjTab(\'investorhub\')" style="color:var(--accent)" title="Investor Hub - Owner Admin active"><i data-lucide="landmark"></i>Investor Hub</div>' +
+        '<div class="proj-detail-tab" data-tab="investorhub" onclick="switchProjTab(\'investorhub\')" style="' + investorHubTabStyle + '" title="Investor Hub requires explicit owner-approved workspace flag"><i data-lucide="landmark"></i>Investor Hub</div>' +
       '</div>' +
       '<div id="proj-tab-overview" class="proj-tab-content"></div>' +
       '<div id="proj-tab-propertyhub" class="proj-tab-content" style="display:none"></div>' +
@@ -912,28 +921,40 @@ function updateProjectWorkspaceChrome(tab) {
   var ptc = getProjTypeCfg(p.project_type || null);
   var name = projectDisplayName(p);
   var tabLabels = {
-    overview: 'Project Overview',
+    overview: 'Overview',
     propertyhub: 'Property Hub',
-    financials: 'Financial Control',
-    expenses: 'Project Expenses',
+    financials: 'Financials',
+    expenses: 'Expenses',
     disbursements: 'Disbursements',
-    workorders: 'Project Work Orders',
+    workorders: 'Work Orders',
     investorhub: 'Investor Hub'
   };
+  var kickerLabels = {
+    overview: 'Project workspace',
+    propertyhub: 'FlipEngine',
+    financials: 'Project financials',
+    expenses: 'Operating costs',
+    disbursements: 'Disbursements',
+    workorders: 'Project work orders',
+    investorhub: 'Owner/Admin capital console'
+  };
   var pageTitle = tabLabels[tab] || 'Project Workspace';
+  var kickerLabel = kickerLabels[tab] || 'Project workspace';
   var titleEl = document.getElementById('proj-detail-title');
   var subtitleEl = document.getElementById('proj-detail-subtitle');
   var kickerEl = document.getElementById('proj-page-kicker');
   var contextEl = document.getElementById('proj-context-eyebrow');
   var topbarEl = document.getElementById('topbar-title');
+  var topbarSubtitleEl = document.getElementById('topbar-subtitle');
 
-  if (topbarEl) topbarEl.textContent = pageTitle;
+  if (topbarEl) topbarEl.textContent = name;
+  if (topbarSubtitleEl) topbarSubtitleEl.textContent = pageTitle + ' - Project workspace';
   if (titleEl) titleEl.textContent = pageTitle;
   if (kickerEl) {
-    kickerEl.textContent = tab === 'investorhub' ? 'Owner/Admin Capital Console' : (tab === 'propertyhub' ? 'FlipEngine Property Hub' : 'Project Control');
+    kickerEl.textContent = kickerLabel;
   }
   if (contextEl) {
-    contextEl.textContent = tab === 'investorhub' ? 'Investor workspace' : (tab === 'propertyhub' ? 'Property workspace' : 'Project workspace');
+    contextEl.textContent = tab === 'propertyhub' ? 'Property workspace' : 'Project workspace';
   }
   if (subtitleEl) {
     if (tab === 'investorhub') {
