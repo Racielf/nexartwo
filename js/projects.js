@@ -204,7 +204,9 @@ function isFlipEngineProject(project) {
 }
 
 function isInvestorHubWorkspaceTabEnabled() {
-  return !!(typeof INVESTOR_HUB_ENABLED !== 'undefined' && INVESTOR_HUB_ENABLED);
+  return !!(typeof window !== 'undefined' &&
+    window.NEXARTWO_FEATURE_FLAGS &&
+    window.NEXARTWO_FEATURE_FLAGS.investorHubWorkspaceTab === true);
 }
 
 function ensurePropertyHubShellElements() {
