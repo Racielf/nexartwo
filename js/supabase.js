@@ -724,8 +724,8 @@ const DB = {
         city:                inv.city                || '',
         state_addr:          inv.state_addr          || '',
         zip:                 inv.zip                 || '',
-        entity_type:         inv.entity_type         || '',
-        investment_profile:  inv.investment_profile  || '',
+        entity_type:         inv.entity_type         || 'individual',
+        investment_profile:  inv.investment_profile  || 'individual',
         accredited_investor: inv.accredited_investor !== undefined ? !!inv.accredited_investor : false,
         capital_source:      inv.capital_source      || '',
         tax_id:              inv.tax_id              || '',
@@ -920,8 +920,22 @@ const DB = {
         .order('created_at', { ascending: true });
       if (error) { console.error('DB projectInvestors.getByInvestor:', error); return null; }
       return data;
+    },
+    async update(id, changes) {
+      if (!id) return false;
+      var sb = getSupabase();
+      if (!sb) return false;
+      var allowed = {};
+      if (changes.role                    !== undefined) allowed.role                    = changes.role;
+      if (changes.capital_commitment      !== undefined) allowed.capital_commitment      = Number(changes.capital_commitment) || 0;
+      if (changes.profit_split_percentage !== undefined) allowed.profit_split_percentage = Number(changes.profit_split_percentage) || 0;
+      if (changes.agreement_notes         !== undefined) allowed.agreement_notes         = changes.agreement_notes || '';
+      if (!Object.keys(allowed).length) return false;
+      var { error } = await sb.from('project_investors').update(allowed).eq('id', id);
+      if (error) { console.error('DB projectInvestors.update:', error); return false; }
+      return true;
     }
-    // No delete method.
+    // No delete method - use cancel(id) to preserve history.
   },
 
   capitalContributions: {

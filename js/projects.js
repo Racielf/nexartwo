@@ -242,7 +242,41 @@ function projectsModuleShellHtml() {
     '</div>';
 }
 
+function ihInjectRouteCSS() {
+  if (document.getElementById('ih-route-style')) return;
+  var s = document.createElement('style');
+  s.id = 'ih-route-style';
+  s.textContent = [
+    'body.projects-route-investorhub .search-box{display:none!important}',
+    'body.projects-route-investorhub #btn-save-all{display:none!important}',
+    'body.projects-route-investorhub .top-bar-right .btn-primary{display:none!important}',
+    'body.projects-route-investorhub .proj-title-actions{display:none!important}',
+    'body.projects-route-investorhub #proj-detail-subtitle{display:none!important}',
+    'body.projects-route-investorhub #proj-detail-tabs{display:none!important}',
+    'body.projects-route-investorhub #topbar-title{display:none!important}',
+    'body.projects-route-investorhub #topbar-subtitle{display:none!important}',
+    'body.projects-route-investorhub .proj-workspace-header{position:sticky;top:0;z-index:50;background:var(--bg,#fbf5e6);border-bottom:1px solid #e5e7eb;padding-bottom:12px}',
+    '.ih-investor-card{cursor:pointer;transition:box-shadow .15s,transform .15s}',
+    '.ih-investor-card:hover{box-shadow:0 6px 20px rgba(0,0,0,.13);transform:translateY(-2px)}',
+    '.ih-investor-card .ih-row-actions{margin-top:10px}',
+    '.ih-card-tags{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-top:4px}',
+    '.ih-type-badge{display:inline-block;font-size:10px;font-weight:600;letter-spacing:.4px;text-transform:uppercase;padding:2px 7px;border-radius:4px;background:#f3f4f6;color:#6b7280}',
+    '.ih-detail-overlay{position:fixed;inset:0;background:rgba(0,0,0,.48);display:flex;align-items:center;justify-content:center;z-index:9000}',
+    '.ih-detail-box{background:#fff;border-radius:14px;padding:30px;max-width:580px;width:calc(100% - 32px);max-height:calc(100vh - 60px);overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.22)}',
+    '.ih-detail-section{margin-bottom:20px;padding-bottom:18px;border-bottom:1px solid #f3f4f6}',
+    '.ih-detail-section:last-of-type{border-bottom:none;margin-bottom:0;padding-bottom:0}',
+    '.ih-detail-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px 20px;margin-top:10px}',
+    '.ih-detail-label{font-size:10px;font-weight:700;color:#9ca3af;text-transform:uppercase;letter-spacing:.5px;margin-bottom:2px}',
+    '.ih-detail-value{font-size:14px;color:#111827;font-weight:500}',
+    '.ih-detail-value.muted{color:#6b7280;font-weight:400}',
+    '.ih-detail-section-title{font-size:12px;font-weight:700;color:#374151;text-transform:uppercase;letter-spacing:.4px;margin-bottom:8px}',
+    '.ih-detail-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:22px;padding-top:18px;border-top:1px solid #f3f4f6}'
+  ].join('');
+  document.head.appendChild(s);
+}
+
 function ensureProjectsModuleShell(route) {
+  ihInjectRouteCSS();
   route = route === 'investorhub' ? 'investorhub' : 'projects';
   var target = document.getElementById(route === 'investorhub' ? 'page-investorhub' : 'page-projects');
   if (!target) return false;
@@ -866,11 +900,15 @@ function updateProjectWorkspaceChrome(tab) {
     contextEl.textContent = tab === 'investorhub' ? 'Investor workspace' : 'Project workspace';
   }
   if (subtitleEl) {
-    subtitleEl.innerHTML =
-      '<span class="proj-subtle-label">Project</span>' +
-      '<strong>' + escHtml(name) + '</strong>' +
-      projectStatusPill(st) +
-      projectTypePill(ptc);
+    if (tab === 'investorhub') {
+      subtitleEl.innerHTML = '';
+    } else {
+      subtitleEl.innerHTML =
+        '<span class="proj-subtle-label">Project</span>' +
+        '<strong>' + escHtml(name) + '</strong>' +
+        projectStatusPill(st) +
+        projectTypePill(ptc);
+    }
   }
 }
 
@@ -1663,9 +1701,9 @@ async function ihCreateInvestor(inv) {
   return null;
 }
 
-async function ihAttachInvestor(projectId, investorId, role) {
+async function ihAttachInvestor(projectId, investorId, role, opts) {
   if (ihCanUseLive()) {
-    var live = await DB.projectInvestors.attach(projectId, investorId, role);
+    var live = await DB.projectInvestors.attach(projectId, investorId, role, opts);
     if (live) return live;
   }
   return null;
@@ -1746,19 +1784,18 @@ function ihRenderInvestorCards(pis, contribs) {
 
   return '<div class="ih-investor-grid">' + active.map(function(pi) {
     var inv = pi.investors || {};
-    var invContribs = contribs.filter(function(c) {
-      return c.investor_id === pi.investor_id && c.status === 'confirmed';
-    });
-    var confirmed = invContribs.reduce(function(sum, c) { return sum + (parseFloat(c.amount) || 0); }, 0);
-    return '<article class="ih-investor-card">'
-      + '<div class="ih-investor-top">'
-      + '<div><div class="ih-investor-name">' + escHtml(inv.name || 'Unnamed investor') + '</div>'
-      + '<div class="ih-investor-meta">' + escHtml(IH_ROLES[pi.role] || pi.role || 'Investor') + ' / ' + escHtml(inv.type || 'person') + '</div></div>'
+    var pId = escHtml(pi.id);
+    var iId = escHtml(pi.investor_id);
+    var typeLbl = inv.type === 'company' ? 'Company' : 'Person';
+    return '<article class="ih-investor-card" onclick="openInvestorDetailModal(\'' + pId + '\',\'' + iId + '\')">'
+      + '<div class="ih-investor-top" style="margin-bottom:0">'
+      + '<div class="ih-investor-name">' + escHtml(inv.name || 'Unnamed investor') + '</div>'
+      + '</div>'
+      + '<div class="ih-card-tags">'
+      + '<span class="ih-type-badge">' + escHtml(typeLbl) + '</span>'
       + ihStatusChip(pi.status)
       + '</div>'
-      + '<div class="ih-investor-money">' + fmtMoney(confirmed) + '</div>'
-      + '<div class="ih-investor-meta">' + escHtml(inv.email || 'No email on file') + '</div>'
-      + ihActionButtons('investor', pi.id, pi.status)
+      + ihInvestorCardActions(pi.id, pi.investor_id, pi.status)
       + '</article>';
   }).join('') + '</div>';
 }
@@ -1863,7 +1900,7 @@ function ihRenderInvestorHubShell(projectId, data) {
     + '<div class="ih-hero-copy">'
     + '<div class="ih-kicker"><i data-lucide="shield-check"></i> OWNER ADMIN MODULE ACTIVE</div>'
     + '<h3>Investor Hub Control Room</h3>'
-    + '<p>This is the active Owner/Admin workspace for ' + projectName + '. Investor records load from Supabase in real time when available, while capital stays separate from expenses, disbursements, ROI, and P&L.</p>'
+    + '<p>Investor records load from Supabase in real time. Capital commitments and profit share stay separate from project expenses, disbursements, ROI, and P&amp;L.</p>'
     + '<div class="ih-hero-actions">'
     + heroActions
     + '<button class="btn btn-secondary btn-sm" onclick="renderInvestorHub(_currentProject.id)"><i data-lucide="refresh-cw"></i> Refresh Live Data</button>'
@@ -1995,61 +2032,728 @@ function ihOpenRealDataRequiredModal(actionTitle) {
     + '</div></div>';
 }
 
-async function openAddInvestorModal() {
-  if (_currentProject) await ihProjectData(_currentProject.id);
-  if (!ihCanUseLive()) {
-    ihOpenRealDataRequiredModal('Add Investor');
-    return;
-  }
-  var allInvestors = await ihAllInvestors();
-  showConfirmModal('Add Investor to Project', '', null);
-  var box = document.querySelector('.confirm-box');
-  ihSetWideModal(box);
-  box.innerHTML = '<h3 style="margin:0 0 6px;font-size:16px">Add Investor</h3>'
-    + '<div class="ih-modal-note">Attaches an investor to project: ' + escHtml(_currentProject ? projectDisplayName(_currentProject) : 'selected project') + '.</div>'
-    + '<div class="ih-modal-form">'
-    + '<div><label>Select Existing Investor</label>'
-    + '<select id="ih-inv-sel" class="form-control"><option value="">Select existing...</option>'
-    + allInvestors.map(function(i) { return '<option value="' + escHtml(i.id) + '">' + escHtml(i.name) + '</option>'; }).join('')
-    + '</select></div>'
-    + '<div class="ih-modal-divider">or create new</div>'
-    + '<div><label>Name</label><input type="text" id="ih-inv-name" class="form-control" placeholder="Full name"></div>'
-    + '<div class="ih-modal-grid">'
-    + '<div><label>Type</label><select id="ih-inv-type" class="form-control"><option value="person">Person</option><option value="company">Company</option></select></div>'
-    + '<div><label>Role in Project</label><select id="ih-inv-role" class="form-control">'
-    + '<option value="equity_partner">Equity Partner</option><option value="private_lender">Private Lender</option><option value="lead_contractor">Lead Contractor</option><option value="silent_partner">Silent Partner</option><option value="other">Other</option>'
-    + '</select></div></div>'
-    + '<div class="ih-modal-grid">'
-    + '<div><label>Email</label><input type="text" inputmode="email" id="ih-inv-email" class="form-control" placeholder="name@example.com"></div>'
-    + '<div><label>Phone</label><input type="text" inputmode="tel" id="ih-inv-phone" class="form-control" placeholder="(555) 000-0000"></div></div>'
-    + '<div class="ih-modal-actions"><button class="btn btn-secondary" onclick="closeConfirmModal()">Cancel</button><button class="btn btn-primary" onclick="saveAddInvestor()">Attach Investor</button></div>'
+// ---- ISSUE-013 Phase 2C: Add Investor Wizard ----
+
+var _ihWizData = {};
+var _ihWizEditPiId = null;
+var _ihWizEditInvId = null;
+var _ihWizEditCoId  = null;
+
+function ihWizIndHtml(n) {
+  var labels = ['Identity', 'Investor Terms', 'Review'];
+  var isActive = (n === 1);
+  return '<div id="ih-wiz-ind-' + n + '" style="display:flex;flex-direction:column;align-items:center;gap:2px;min-width:56px">'
+    + '<div style="width:26px;height:26px;border-radius:50%;background:' + (isActive ? 'var(--accent,#d97706)' : '#e5e7eb') + ';color:' + (isActive ? '#fff' : '#9ca3af') + ';display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700">' + n + '</div>'
+    + '<div style="font-size:10px;color:' + (isActive ? 'var(--accent,#d97706)' : '#9ca3af') + ';font-weight:' + (isActive ? '600' : '400') + ';white-space:nowrap">' + labels[n - 1] + '</div>'
     + '</div>';
 }
 
-async function saveAddInvestor() {
-  var sel = document.getElementById('ih-inv-sel').value;
-  var name = (document.getElementById('ih-inv-name').value || '').trim();
-  var type = document.getElementById('ih-inv-type').value;
-  var role = document.getElementById('ih-inv-role').value;
-  var email = (document.getElementById('ih-inv-email').value || '').trim();
-  var phone = (document.getElementById('ih-inv-phone').value || '').trim();
-  var invId = sel;
+function ihWizStep(n) {
+  var labels = ['Identity', 'Investor Terms', 'Review'];
+  [1, 2, 3].forEach(function(i) {
+    var panel = document.getElementById('ih-wiz-panel-' + i);
+    var ind   = document.getElementById('ih-wiz-ind-' + i);
+    if (panel) panel.style.display = (i === n) ? '' : 'none';
+    if (ind) {
+      var isActive = (i === n), isDone = (i < n);
+      var bg = isActive ? 'var(--accent,#d97706)' : isDone ? '#22c55e' : '#e5e7eb';
+      var fg = (isActive || isDone) ? '#fff' : '#9ca3af';
+      var lc = isActive ? 'var(--accent,#d97706)' : isDone ? '#16a34a' : '#9ca3af';
+      var lw = (isActive || isDone) ? '600' : '400';
+      ind.innerHTML = '<div style="width:26px;height:26px;border-radius:50%;background:' + bg + ';color:' + fg + ';display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700">' + (isDone ? '✓' : i) + '</div>'
+        + '<div style="font-size:10px;color:' + lc + ';font-weight:' + lw + ';white-space:nowrap">' + labels[i - 1] + '</div>';
+    }
+  });
+}
 
-  if (!invId && name) {
-    var inv = await ihCreateInvestor({ name: name, type: type, email: email, phone: phone });
-    if (!inv) { alert('Could not create investor. Confirm the Supabase Investor Hub tables are applied.'); return; }
+function ihSetInvestorType(type) {
+  _ihWizData.type = type;
+  var bp = document.getElementById('ih-wiz-type-person');
+  var bc = document.getElementById('ih-wiz-type-company');
+  var fp = document.getElementById('ih-wiz-fields-person');
+  var fc = document.getElementById('ih-wiz-fields-company');
+  if (bp) bp.className = 'btn btn-sm ' + (type === 'person' ? 'btn-primary' : 'btn-secondary');
+  if (bc) bc.className = 'btn btn-sm ' + (type === 'company' ? 'btn-primary' : 'btn-secondary');
+  if (fp) fp.style.display = type === 'person' ? '' : 'none';
+  if (fc) fc.style.display = type === 'company' ? '' : 'none';
+}
+
+function ihValidateAddInvestorWizardStep(step) {
+  if (step === 1) {
+    var sel = ((document.getElementById('ih-wiz-sel') || {}).value || '').trim();
+    if (sel) return true;
+    var type = _ihWizData.type || 'person';
+    if (type === 'person') {
+      var fn = ((document.getElementById('ih-wiz-fname') || {}).value || '').trim();
+      if (!fn) { alert('First name is required.'); return false; }
+    } else {
+      var cn = ((document.getElementById('ih-wiz-co-name') || {}).value || '').trim();
+      if (!cn) { alert('Company name is required.'); return false; }
+    }
+  }
+  return true;
+}
+
+function ihValidateProjectCapitalFields() {
+  var d = _ihWizData;
+  var prof = Number(d.profit);
+  var cap = Number(d.capital);
+  if (isNaN(prof) || prof < 0 || prof > 100) { alert('Expected project profit share must be between 0 and 100.'); return false; }
+  if (isNaN(cap) || cap < 0) { alert('Investment amount cannot be negative.'); return false; }
+  return true;
+}
+
+function ihCollectAddInvestorWizardData() {
+  var d = _ihWizData;
+  var selEl = document.getElementById('ih-wiz-sel');
+  d.existingId = ((selEl || {}).value || '').trim();
+  if (d.existingId && selEl && selEl.selectedIndex >= 0) {
+    d.existingName = (selEl.options[selEl.selectedIndex] || {}).text || '';
+  } else {
+    d.existingName = '';
+  }
+  if (!d.existingId) {
+    d.type = d.type || 'person';
+    if (d.type === 'person') {
+      d.firstName = ((document.getElementById('ih-wiz-fname')   || {}).value || '').trim();
+      d.lastName  = ((document.getElementById('ih-wiz-lname')   || {}).value || '').trim();
+      d.email     = ((document.getElementById('ih-wiz-email')   || {}).value || '').trim();
+      d.phone     = ((document.getElementById('ih-wiz-phone')   || {}).value || '').trim();
+      d.address   = ((document.getElementById('ih-wiz-address') || {}).value || '').trim();
+      d.city      = ((document.getElementById('ih-wiz-city')    || {}).value || '').trim();
+      var stateSelVal = ((document.getElementById('ih-wiz-state') || {}).value || '');
+      if (stateSelVal === 'OTHER') {
+        var cntry = ((document.getElementById('ih-wiz-custom-country')    || {}).value || '').trim();
+        var cregn = ((document.getElementById('ih-wiz-custom-state-text') || {}).value || '').trim();
+        d.state = [cregn, cntry].filter(Boolean).join(', ');
+      } else {
+        d.state = stateSelVal;
+      }
+      d.zip       = ((document.getElementById('ih-wiz-zip')     || {}).value || '').trim();
+      d.notes     = ((document.getElementById('ih-wiz-notes')   || {}).value || '').trim();
+    } else {
+      d.coName        = ((document.getElementById('ih-wiz-co-name')     || {}).value || '').trim();
+      d.coContact     = ((document.getElementById('ih-wiz-co-contact')  || {}).value || '').trim();
+      d.coContactRole = ((document.getElementById('ih-wiz-co-role')     || {}).value || '').trim();
+      d.coEmail       = ((document.getElementById('ih-wiz-co-email')    || {}).value || '').trim();
+      d.coPhone       = ((document.getElementById('ih-wiz-co-phone')    || {}).value || '').trim();
+      d.coWebsite     = ((document.getElementById('ih-wiz-co-website')  || {}).value || '').trim();
+      d.coAddress     = ((document.getElementById('ih-wiz-co-address')  || {}).value || '').trim();
+      d.coAddress2    = ((document.getElementById('ih-wiz-co-address2') || {}).value || '').trim();
+      d.coCity        = ((document.getElementById('ih-wiz-co-city')     || {}).value || '').trim();
+      var coStateSelVal = ((document.getElementById('ih-wiz-co-state') || {}).value || '');
+      if (coStateSelVal === 'OTHER') {
+        var coCntry = ((document.getElementById('ih-wiz-co-custom-country')    || {}).value || '').trim();
+        var coRegn  = ((document.getElementById('ih-wiz-co-custom-state-text') || {}).value || '').trim();
+        d.coState = [coRegn, coCntry].filter(Boolean).join(', ');
+      } else {
+        d.coState = coStateSelVal;
+      }
+      d.coZip         = ((document.getElementById('ih-wiz-co-zip')      || {}).value || '').trim();
+      d.coEin         = ((document.getElementById('ih-wiz-co-ein')      || {}).value || '').trim();
+      d.coLicense     = ((document.getElementById('ih-wiz-co-license')  || {}).value || '').trim();
+      d.coNotes       = ((document.getElementById('ih-wiz-co-notes')    || {}).value || '').trim();
+    }
+  }
+  var roleEl = document.getElementById('ih-wiz-role');
+  var profEl = document.getElementById('ih-wiz-profit');
+  var capEl  = document.getElementById('ih-wiz-capital');
+  var agrEl  = document.getElementById('ih-wiz-agreement');
+  if (roleEl) d.role      = roleEl.value || 'equity_partner';
+  d.ownership = '0';
+  if (profEl) d.profit    = profEl.value || '0';
+  if (capEl)  d.capital   = capEl.value  || '0';
+  if (agrEl)  d.agreement = (agrEl.value || '').trim();
+}
+
+function ihWizReview() {
+  var rb = document.getElementById('ih-wiz-review-body');
+  if (rb) rb.innerHTML = ihWizReviewHtml();
+  ihWizStep(3);
+}
+
+function ihWizOnSelChange() {
+  var v = ((document.getElementById('ih-wiz-sel') || {}).value || '');
+  var d = document.getElementById('ih-wiz-new-divider');
+  var f = document.getElementById('ih-wiz-new-form');
+  if (d) d.style.display = v ? 'none' : '';
+  if (f) f.style.display = v ? 'none' : '';
+}
+
+function ihWizNext1() {
+  if (!ihValidateAddInvestorWizardStep(1)) return;
+  ihCollectAddInvestorWizardData();
+  ihWizStep(2);
+}
+
+function ihWizNext2() {
+  ihCollectAddInvestorWizardData();
+  if (!ihValidateProjectCapitalFields()) return;
+  ihWizReview();
+}
+
+function ihWizReviewHtml() {
+  var d = _ihWizData;
+  var ROLES = { equity_partner: 'Equity Partner', private_lender: 'Private Lender', lead_contractor: 'Lead Contractor', silent_partner: 'Silent Partner', other: 'Other' };
+  var s = '';
+  if (d.existingId) {
+    s += ihWizRR('Investor', d.existingName || d.existingId.substring(0, 8) + '…');
+  } else if (d.type === 'company') {
+    s += ihWizRR('Type', 'Company');
+    s += ihWizRR('Company Name', d.coName);
+    if (d.coContact) s += ihWizRR('Contact', d.coContact);
+    if (d.coEmail)   s += ihWizRR('Email', d.coEmail);
+    if (d.coPhone)   s += ihWizRR('Phone', d.coPhone);
+    var cl = [d.coCity, d.coState, d.coZip].filter(Boolean).join(', ');
+    if (cl) s += ihWizRR('Location', cl);
+  } else {
+    s += ihWizRR('Type', 'Person');
+    s += ihWizRR('Name', ((d.firstName || '') + ' ' + (d.lastName || '')).trim());
+    if (d.email) s += ihWizRR('Email', d.email);
+    if (d.phone) s += ihWizRR('Phone', d.phone);
+    var pl = [d.city, d.state, d.zip].filter(Boolean).join(', ');
+    if (pl) s += ihWizRR('Location', pl);
+  }
+  s += '<div style="margin:10px 0;border-top:1px solid #e5e7eb"></div>';
+  s += ihWizRR('Project', _currentProject ? projectDisplayName(_currentProject) : '—');
+  s += ihWizRR('Role', ROLES[d.role] || d.role);
+  if (Number(d.capital) > 0) s += ihWizRR('Investment Amount', '$' + Number(d.capital).toLocaleString());
+  if (Number(d.profit)  > 0) s += ihWizRR('Expected Project Profit Share', Number(d.profit) + '%');
+  if (d.agreement)            s += ihWizRR('Agreement Notes', d.agreement);
+  return s;
+}
+
+function ihWizRR(label, value) {
+  return '<div style="display:flex;justify-content:space-between;align-items:baseline;padding:5px 0;border-bottom:1px solid #f3f4f6;font-size:13px">'
+    + '<span style="color:#6b7280;flex-shrink:0;padding-right:12px">' + escHtml(label) + '</span>'
+    + '<span style="color:#111827;font-weight:500;text-align:right">' + escHtml(String(value)) + '</span>'
+    + '</div>';
+}
+
+function ihWizLockBackdrop() {
+  var ov = document.getElementById('confirm-modal-overlay');
+  if (ov) ov.onclick = function(e) { e.stopPropagation(); };
+}
+
+function ihWizUnlockBackdrop() {
+  var ov = document.getElementById('confirm-modal-overlay');
+  if (ov) ov.onclick = closeConfirmModal;
+}
+
+function ihWizCancel() {
+  _ihWizEditPiId = null; _ihWizEditInvId = null; _ihWizEditCoId = null;
+  ihWizUnlockBackdrop();
+  closeConfirmModal();
+}
+
+function ihWizPersonStateChange() {
+  var sel = document.getElementById('ih-wiz-state');
+  var wrap = document.getElementById('ih-wiz-custom-loc');
+  if (!sel || !wrap) return;
+  var isOther = sel.value === 'OTHER';
+  wrap.style.display = isOther ? '' : 'none';
+  if (!isOther) {
+    var cc = document.getElementById('ih-wiz-custom-country');
+    var cs = document.getElementById('ih-wiz-custom-state-text');
+    if (cc) cc.value = '';
+    if (cs) cs.value = '';
+  }
+}
+
+function ihWizCoStateChange() {
+  var sel = document.getElementById('ih-wiz-co-state');
+  var wrap = document.getElementById('ih-wiz-co-custom-loc');
+  if (!sel || !wrap) return;
+  var isOther = sel.value === 'OTHER';
+  wrap.style.display = isOther ? '' : 'none';
+  if (!isOther) {
+    var cc = document.getElementById('ih-wiz-co-custom-country');
+    var cs = document.getElementById('ih-wiz-co-custom-state-text');
+    if (cc) cc.value = '';
+    if (cs) cs.value = '';
+  }
+}
+
+function ihWizPreFillFields() {
+  var d = _ihWizData;
+  ihSetInvestorType(d.type || 'person');
+  if (d.type === 'company') {
+    var v = function(id, val) { var el = document.getElementById(id); if (el) el.value = val || ''; };
+    v('ih-wiz-co-name',     d.coName        || '');
+    v('ih-wiz-co-contact',  d.coContact     || '');
+    v('ih-wiz-co-role',     d.coContactRole || '');
+    v('ih-wiz-co-email',    d.coEmail       || '');
+    v('ih-wiz-co-phone',    d.coPhone       || '');
+    v('ih-wiz-co-website',  d.coWebsite     || '');
+    v('ih-wiz-co-address',  d.coAddress     || '');
+    v('ih-wiz-co-address2', d.coAddress2    || '');
+    v('ih-wiz-co-city',     d.coCity        || '');
+    v('ih-wiz-co-zip',      d.coZip         || '');
+    v('ih-wiz-co-ein',      d.coEin         || '');
+    v('ih-wiz-co-license',  d.coLicense     || '');
+    v('ih-wiz-co-notes',    d.coNotes       || '');
+    var coSt = document.getElementById('ih-wiz-co-state');
+    if (coSt && d.coState) {
+      var coOpts = Array.from(coSt.options).map(function(o) { return o.value; });
+      if (coOpts.indexOf(d.coState) >= 0) {
+        coSt.value = d.coState;
+      } else {
+        coSt.value = 'OTHER';
+        ihWizCoStateChange();
+        var csr = document.getElementById('ih-wiz-co-custom-state-text');
+        if (csr) csr.value = d.coState;
+      }
+    }
+  } else {
+    var v = function(id, val) { var el = document.getElementById(id); if (el) el.value = val || ''; };
+    v('ih-wiz-fname',   d.firstName || '');
+    v('ih-wiz-lname',   d.lastName  || '');
+    v('ih-wiz-email',   d.email     || '');
+    v('ih-wiz-phone',   d.phone     || '');
+    v('ih-wiz-address', d.address   || '');
+    v('ih-wiz-city',    d.city      || '');
+    v('ih-wiz-zip',     d.zip       || '');
+    v('ih-wiz-notes',   d.notes     || '');
+    var pSt = document.getElementById('ih-wiz-state');
+    if (pSt && d.state) {
+      var pOpts = Array.from(pSt.options).map(function(o) { return o.value; });
+      if (pOpts.indexOf(d.state) >= 0) {
+        pSt.value = d.state;
+      } else {
+        pSt.value = 'OTHER';
+        ihWizPersonStateChange();
+        var psr = document.getElementById('ih-wiz-custom-state-text');
+        if (psr) psr.value = d.state;
+      }
+    }
+  }
+  var v2 = function(id, val) { var el = document.getElementById(id); if (el) el.value = val || ''; };
+  v2('ih-wiz-role',      d.role      || 'equity_partner');
+  v2('ih-wiz-capital',   d.capital   || '0');
+  v2('ih-wiz-profit',    d.profit    || '0');
+  v2('ih-wiz-agreement', d.agreement || '');
+}
+
+async function ihWizSave() {
+  if (!ihValidateProjectCapitalFields()) return;
+  var d = _ihWizData;
+
+  // ---- EDIT MODE ----
+  if (_ihWizEditPiId && _ihWizEditInvId) {
+    var invChanges = { email: d.email || d.coEmail || '', phone: d.phone || d.coPhone || '' };
+    if (d.type === 'company') {
+      invChanges.name = d.coName || '';
+      if (_ihWizEditCoId) {
+        await DB.investorCompanies.update(_ihWizEditCoId, {
+          company_name:   d.coName        || '',
+          contact_person: d.coContact     || '',
+          contact_role:   d.coContactRole || '',
+          email:          d.coEmail       || '',
+          phone:          d.coPhone       || '',
+          website:        d.coWebsite     || '',
+          address:        d.coAddress     || '',
+          address2:       d.coAddress2    || '',
+          city:           d.coCity        || '',
+          state:          d.coState       || '',
+          zip:            d.coZip         || '',
+          ein_tax_id:     d.coEin         || '',
+          license_number: d.coLicense     || '',
+          notes:          d.coNotes       || ''
+        });
+      }
+    } else {
+      invChanges.first_name = d.firstName || '';
+      invChanges.last_name  = d.lastName  || '';
+      invChanges.name = [d.firstName, d.lastName].filter(Boolean).join(' ') || d.firstName || '';
+      invChanges.address   = d.address || '';
+      invChanges.city      = d.city    || '';
+      invChanges.state_addr = d.state  || '';
+      invChanges.zip       = d.zip     || '';
+      invChanges.notes     = d.notes   || '';
+    }
+    var piChanges = {
+      role:                    d.role      || 'equity_partner',
+      capital_commitment:      Number(d.capital)  || 0,
+      profit_split_percentage: Number(d.profit)   || 0,
+      agreement_notes:         d.agreement || ''
+    };
+    var ok1 = await DB.investors.update(_ihWizEditInvId, invChanges);
+    var ok2 = await DB.projectInvestors.update(_ihWizEditPiId, piChanges);
+    _ihWizEditPiId = null; _ihWizEditInvId = null; _ihWizEditCoId = null;
+    ihWizUnlockBackdrop();
+    closeConfirmModal();
+    if (ok1 || ok2) { showToast('Investor updated'); renderInvestorHub(_currentProject.id); }
+    else { alert('Could not save changes.'); }
+    return;
+  }
+
+  // ---- ADD MODE ----
+  var invId = d.existingId || '';
+  if (!invId) {
+    var inv;
+    if (d.type === 'company') {
+      var co = await DB.investorCompanies.create({
+        company_name:   d.coName,
+        contact_person: d.coContact || '',
+        email:          d.coEmail   || '',
+        phone:          d.coPhone   || '',
+        website:        d.coWebsite     || '',
+        address:        d.coAddress     || '',
+        address2:       d.coAddress2    || '',
+        city:           d.coCity        || '',
+        state:          d.coState       || '',
+        zip:            d.coZip         || '',
+        contact_role:   d.coContactRole || '',
+        ein_tax_id:     d.coEin         || '',
+        license_number: d.coLicense     || '',
+        notes:          d.coNotes       || ''
+      });
+      if (!co) { alert('Could not create company record.'); return; }
+      inv = await ihCreateInvestor({ name: d.coName, type: 'company', company_id: co.id, email: d.coEmail || '', phone: d.coPhone || '' });
+    } else {
+      inv = await ihCreateInvestor({
+        name:       ((d.firstName || '') + ' ' + (d.lastName || '')).trim() || d.firstName || '',
+        first_name: d.firstName || '',
+        last_name:  d.lastName  || '',
+        type:       'person',
+        email:      d.email   || '',
+        phone:      d.phone   || '',
+        address:    d.address || '',
+        city:       d.city    || '',
+        state_addr: d.state   || '',
+        zip:        d.zip     || '',
+        notes:      d.notes   || ''
+      });
+    }
+    if (!inv) {
+      if (d.type === 'company' && co) alert('Could not create investor. The company record was saved but could not be linked — please remove it from the database manually.');
+      else alert('Could not create investor.');
+      return;
+    }
     invId = inv.id;
   }
-  if (!invId) { alert('Select or create an investor first.'); return; }
-
-  var pi = await ihAttachInvestor(_currentProject.id, invId, role);
+  var profNum = Number(d.profit)  || 0;
+  var capNum  = Number(d.capital) || 0;
+  var opts = {
+    ownership_percentage:    0,
+    profit_split_percentage: profNum,
+    capital_commitment:      capNum,
+    agreement_notes:         d.agreement || ''
+  };
+  var pi = await ihAttachInvestor(_currentProject.id, invId, d.role || 'equity_partner', opts);
+  ihWizUnlockBackdrop();
   closeConfirmModal();
   if (pi) {
     showToast('Investor attached');
     renderInvestorHub(_currentProject.id);
   } else {
-    alert('Could not attach investor. Confirm the Supabase Investor Hub tables are applied.');
+    alert('Could not attach investor.');
   }
+}
+
+async function openAddInvestorModal() {
+  if (_currentProject) await ihProjectData(_currentProject.id);
+  if (!ihCanUseLive()) { ihOpenRealDataRequiredModal('Add Investor'); return; }
+  var editMode = !!_ihWizEditPiId;
+  if (!editMode) { _ihWizData = { type: 'person' }; }
+  var allInvestors = editMode ? [] : await ihAllInvestors();
+  showConfirmModal('Add Investor to Project', '', null);
+  ihWizLockBackdrop();
+  var box = document.querySelector('.confirm-box');
+  box.style.maxWidth = '740px';
+  box.style.width = 'calc(100% - 32px)';
+  box.style.maxHeight = 'calc(100vh - 80px)';
+  box.style.overflowY = 'auto';
+  var selOpts = allInvestors.map(function(i) { return '<option value="' + escHtml(i.id) + '">' + escHtml(i.name) + '</option>'; }).join('');
+  var stateOpts = '<option value="">Select a State...</option><option value="AL">Alabama</option><option value="AK">Alaska</option><option value="AZ">Arizona</option><option value="AR">Arkansas</option><option value="CA">California</option><option value="CO">Colorado</option><option value="CT">Connecticut</option><option value="DE">Delaware</option><option value="FL">Florida</option><option value="GA">Georgia</option><option value="HI">Hawaii</option><option value="ID">Idaho</option><option value="IL">Illinois</option><option value="IN">Indiana</option><option value="IA">Iowa</option><option value="KS">Kansas</option><option value="KY">Kentucky</option><option value="LA">Louisiana</option><option value="ME">Maine</option><option value="MD">Maryland</option><option value="MA">Massachusetts</option><option value="MI">Michigan</option><option value="MN">Minnesota</option><option value="MS">Mississippi</option><option value="MO">Missouri</option><option value="MT">Montana</option><option value="NE">Nebraska</option><option value="NV">Nevada</option><option value="NH">New Hampshire</option><option value="NJ">New Jersey</option><option value="NM">New Mexico</option><option value="NY">New York</option><option value="NC">North Carolina</option><option value="ND">North Dakota</option><option value="OH">Ohio</option><option value="OK">Oklahoma</option><option value="OR">Oregon</option><option value="PA">Pennsylvania</option><option value="RI">Rhode Island</option><option value="SC">South Carolina</option><option value="SD">South Dakota</option><option value="TN">Tennessee</option><option value="TX">Texas</option><option value="UT">Utah</option><option value="VT">Vermont</option><option value="VA">Virginia</option><option value="WA">Washington</option><option value="WV">West Virginia</option><option value="WI">Wisconsin</option><option value="WY">Wyoming</option><option value="OTHER">Other (International / Different Country)</option>';
+  box.innerHTML =
+    '<div style="display:flex;align-items:flex-start;gap:4px;margin-bottom:18px;padding-bottom:14px;border-bottom:1px solid #e5e7eb">'
+    + ihWizIndHtml(1)
+    + '<div style="flex:1;height:1px;background:#e5e7eb;margin:13px 4px 0"></div>'
+    + ihWizIndHtml(2)
+    + '<div style="flex:1;height:1px;background:#e5e7eb;margin:13px 4px 0"></div>'
+    + ihWizIndHtml(3)
+    + '</div>'
+
+    + '<div id="ih-wiz-panel-1">'
+    + '<h3 style="margin:0 0 12px;font-size:15px">Identity</h3>'
+    + '<div style="margin-bottom:10px"><label style="font-size:12px;font-weight:600;color:#6b7280;text-transform:uppercase;letter-spacing:.4px;display:block;margin-bottom:4px">Attach Existing Investor</label>'
+    + '<select id="ih-wiz-sel" class="form-control" onchange="ihWizOnSelChange()"><option value="">— Create new investor —</option>' + selOpts + '</select></div>'
+    + '<div class="ih-modal-divider" id="ih-wiz-new-divider">or create new</div>'
+    + '<div id="ih-wiz-new-form">'
+    + '<div style="display:flex;gap:8px;margin-bottom:12px">'
+    + '<button id="ih-wiz-type-person" class="btn btn-sm btn-primary" onclick="ihSetInvestorType(\'person\')">Person</button>'
+    + '<button id="ih-wiz-type-company" class="btn btn-sm btn-secondary" onclick="ihSetInvestorType(\'company\')">Company</button>'
+    + '</div>'
+    + '<div id="ih-wiz-fields-person" class="ih-modal-form" style="margin-top:8px">'
+    + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px"><div><label>First Name *</label><input type="text" id="ih-wiz-fname" class="form-control" placeholder="First name"></div>'
+    + '<div><label>Last Name</label><input type="text" id="ih-wiz-lname" class="form-control" placeholder="Last name"></div></div>'
+    + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px"><div><label>Email</label><input type="text" inputmode="email" id="ih-wiz-email" class="form-control" placeholder="name@example.com"></div>'
+    + '<div><label>Phone</label><input type="text" inputmode="tel" id="ih-wiz-phone" class="form-control" placeholder="(555) 000-0000"></div></div>'
+    + '<div><label>Address</label><input type="text" id="ih-wiz-address" class="form-control" placeholder="Street address"></div>'
+    + '<div style="display:grid;grid-template-columns:1fr 80px 80px;gap:8px">'
+    + '<div><label>City</label><input type="text" id="ih-wiz-city" class="form-control" placeholder="Portland"></div>'
+    + '<div><label>State</label><select id="ih-wiz-state" class="form-control" onchange="ihWizPersonStateChange()">' + stateOpts + '</select></div>'
+    + '<div><label>ZIP</label><input type="text" id="ih-wiz-zip" class="form-control" placeholder="97201"></div>'
+    + '</div>'
+    + '<div id="ih-wiz-custom-loc" style="display:none;margin-top:8px;padding:10px 12px;background:#f0f9ff;border-left:3px solid #3b82f6;border-radius:0 4px 4px 0">'
+    + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">'
+    + '<div><label>Country</label><input type="text" id="ih-wiz-custom-country" class="form-control" placeholder="e.g. Canada, Spain"></div>'
+    + '<div><label>State / Region</label><input type="text" id="ih-wiz-custom-state-text" class="form-control" placeholder="e.g. British Columbia, Madrid"></div>'
+    + '</div></div>'
+    + '<div><label>Notes <span style="font-weight:400;color:#9ca3af">(optional)</span></label><textarea id="ih-wiz-notes" class="form-control" rows="2" placeholder="Internal notes..."></textarea></div>'
+    + '</div>'
+    + '<div id="ih-wiz-fields-company" class="ih-modal-form" style="display:none;margin-top:8px">'
+    + '<div><label>Company Legal Name *</label><input type="text" id="ih-wiz-co-name" class="form-control" placeholder="e.g., Greenfield Capital LLC"></div>'
+    + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px"><div><label>Contact Person</label><input type="text" id="ih-wiz-co-contact" class="form-control" placeholder="Primary contact"></div>'
+    + '<div><label>Contact Role <span style="font-weight:400;color:#9ca3af">(optional)</span></label><input type="text" id="ih-wiz-co-role" class="form-control" placeholder="e.g., Managing Partner"></div></div>'
+    + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px"><div><label>Email</label><input type="text" inputmode="email" id="ih-wiz-co-email" class="form-control" placeholder="contact@company.com"></div>'
+    + '<div><label>Phone</label><input type="text" inputmode="tel" id="ih-wiz-co-phone" class="form-control" placeholder="(503) 000-0000"></div></div>'
+    + '<div><label>Website <span style="font-weight:400;color:#9ca3af">(optional)</span></label><input type="url" id="ih-wiz-co-website" class="form-control" placeholder="https://company.com"></div>'
+    + '<div><label>Address</label><input type="text" id="ih-wiz-co-address" class="form-control" placeholder="Street address"></div>'
+    + '<div><label>Address 2 <span style="font-weight:400;color:#9ca3af">(optional)</span></label><input type="text" id="ih-wiz-co-address2" class="form-control" placeholder="Suite, unit, etc."></div>'
+    + '<div style="display:grid;grid-template-columns:1fr 80px 80px;gap:8px">'
+    + '<div><label>City</label><input type="text" id="ih-wiz-co-city" class="form-control" placeholder="Portland"></div>'
+    + '<div><label>State</label><select id="ih-wiz-co-state" class="form-control" onchange="ihWizCoStateChange()">' + stateOpts + '</select></div>'
+    + '<div><label>ZIP</label><input type="text" id="ih-wiz-co-zip" class="form-control" placeholder="97201"></div>'
+    + '</div>'
+    + '<div id="ih-wiz-co-custom-loc" style="display:none;margin-top:8px;padding:10px 12px;background:#f0f9ff;border-left:3px solid #3b82f6;border-radius:0 4px 4px 0">'
+    + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">'
+    + '<div><label>Country</label><input type="text" id="ih-wiz-co-custom-country" class="form-control" placeholder="e.g. Canada, Spain"></div>'
+    + '<div><label>State / Region</label><input type="text" id="ih-wiz-co-custom-state-text" class="form-control" placeholder="e.g. British Columbia, Madrid"></div>'
+    + '</div></div>'
+    + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px"><div><label>EIN / Tax ID <span style="font-weight:400;color:#9ca3af">(optional)</span></label><input type="text" id="ih-wiz-co-ein" class="form-control" placeholder="XX-XXXXXXX"></div>'
+    + '<div><label>License / Reg # <span style="font-weight:400;color:#9ca3af">(optional)</span></label><input type="text" id="ih-wiz-co-license" class="form-control" placeholder="State reg or CCB #"></div></div>'
+    + '<div><label>Notes <span style="font-weight:400;color:#9ca3af">(optional)</span></label><textarea id="ih-wiz-co-notes" class="form-control" rows="2" placeholder="Internal notes..."></textarea></div>'
+    + '</div>'
+    + '</div>'
+    + '<div class="ih-modal-actions"><button class="btn btn-secondary" onclick="ihWizCancel()">Cancel</button>'
+    + '<button class="btn btn-primary" onclick="ihWizNext1()">Continue →</button></div>'
+    + '</div>'
+
+    + '<div id="ih-wiz-panel-2" style="display:none">'
+    + '<h3 style="margin:0 0 4px;font-size:15px">Investor Terms</h3>'
+    + '<div class="ih-modal-note" style="margin-bottom:14px">Project: ' + escHtml(_currentProject ? projectDisplayName(_currentProject) : '—') + '</div>'
+    + '<div class="ih-modal-form">'
+    + '<div><label>Role in Project</label><select id="ih-wiz-role" class="form-control"><option value="equity_partner">Equity Partner</option><option value="private_lender">Private Lender</option><option value="lead_contractor">Lead Contractor</option><option value="silent_partner">Silent Partner</option><option value="other">Other</option></select></div>'
+    + '<div><label>Investment Amount ($)</label><input type="number" id="ih-wiz-capital" class="form-control" placeholder="0" min="0" step="0.01" value="0"></div>'
+    + '<div><label>Expected Project Profit Share (%)</label><input type="number" id="ih-wiz-profit" class="form-control" placeholder="0" min="0" max="100" step="0.1" value="0"></div>'
+    + '<div><label>Agreement Notes <span style="font-weight:400;color:#9ca3af">(optional)</span></label><textarea id="ih-wiz-agreement" class="form-control" rows="2" placeholder="Key terms, conditions..."></textarea></div>'
+    + '</div>'
+    + '<div class="ih-modal-actions"><button class="btn btn-secondary" onclick="ihWizStep(1)">← Back</button>'
+    + '<button class="btn btn-primary" onclick="ihWizNext2()">Review →</button></div>'
+    + '</div>'
+
+    + '<div id="ih-wiz-panel-3" style="display:none">'
+    + '<h3 style="margin:0 0 14px;font-size:15px">Review & Save</h3>'
+    + '<div id="ih-wiz-review-body"></div>'
+    + '<div style="margin-top:12px;padding:10px 12px;background:#f9fafb;border-radius:6px;font-size:12px;color:#6b7280;border:1px solid #e5e7eb">Save Investor Only will be available after Global Investor Directory is activated.</div>'
+    + '<div class="ih-modal-actions"><button class="btn btn-secondary" onclick="ihWizStep(2)">← Back</button>'
+    + '<button class="btn btn-primary" onclick="ihWizSave()">Save & Attach to Project</button></div>'
+    + '</div>';
+
+  if (editMode) {
+    var selWrap = document.getElementById('ih-wiz-sel');
+    if (selWrap && selWrap.parentNode) selWrap.parentNode.style.display = 'none';
+    var newDivider = document.getElementById('ih-wiz-new-divider');
+    if (newDivider) newDivider.style.display = 'none';
+    ihWizPreFillFields();
+  }
+}
+
+async function saveAddInvestor() { return ihWizSave(); }
+
+// ---- ISSUE-013 Phase 2C: Edit / Void investor ----
+
+function ihInvestorCardActions(piId, invId, status) {
+  var pId = escHtml(piId);
+  var iId = escHtml(invId);
+  var html = '<div class="ih-row-actions" onclick="event.stopPropagation()">';
+  html += '<button class="btn btn-sm btn-secondary" title="Edit investor" onclick="openEditInvestorModal(\'' + pId + '\',\'' + iId + '\')"><i data-lucide="pencil"></i></button>';
+  if (status === 'pending') {
+    html += '<button class="btn btn-sm ih-confirm-btn" title="Confirm investor" onclick="ihConfirmPI(\'' + pId + '\')"><i data-lucide="check"></i></button>';
+  }
+  if (status !== 'cancelled') {
+    html += '<button class="btn btn-sm btn-secondary" title="Void investor" onclick="ihCancelPI(\'' + pId + '\')"><i data-lucide="ban"></i></button>';
+  }
+  html += '</div>';
+  return html;
+}
+
+async function openEditInvestorModal(piId, invId) {
+  if (!ihCanUseLive()) { ihOpenRealDataRequiredModal('Edit Investor'); return; }
+  var inv = await DB.investors.getById(invId);
+  if (!inv) { alert('Could not load investor.'); return; }
+  var pis = await DB.projectInvestors.getByProject(_currentProject.id);
+  var pi = (pis || []).find(function(p) { return p.id === piId; });
+  if (!pi) { alert('Could not load project investor record.'); return; }
+
+  _ihWizEditPiId  = piId;
+  _ihWizEditInvId = invId;
+  _ihWizEditCoId  = null;
+
+  _ihWizData = { type: inv.type || 'person' };
+  if (inv.type === 'company') {
+    _ihWizData.coName  = inv.name  || '';
+    _ihWizData.coEmail = inv.email || '';
+    _ihWizData.coPhone = inv.phone || '';
+    if (inv.company_id) {
+      var co = await DB.investorCompanies.getById(inv.company_id);
+      if (co) {
+        _ihWizEditCoId         = co.id;
+        _ihWizData.coName        = co.company_name  || inv.name || '';
+        _ihWizData.coContact     = co.contact_person || '';
+        _ihWizData.coContactRole = co.contact_role   || '';
+        _ihWizData.coEmail       = co.email          || '';
+        _ihWizData.coPhone       = co.phone          || '';
+        _ihWizData.coWebsite     = co.website        || '';
+        _ihWizData.coAddress     = co.address        || '';
+        _ihWizData.coAddress2    = co.address2       || '';
+        _ihWizData.coCity        = co.city           || '';
+        _ihWizData.coState       = co.state          || '';
+        _ihWizData.coZip         = co.zip            || '';
+        _ihWizData.coEin         = co.ein_tax_id     || '';
+        _ihWizData.coLicense     = co.license_number || '';
+        _ihWizData.coNotes       = co.notes          || '';
+      }
+    }
+  } else {
+    var _nameParts = (inv.name || '').trim().split(/\s+/);
+    _ihWizData.firstName = inv.first_name || _nameParts[0] || '';
+    _ihWizData.lastName  = inv.last_name  || (_nameParts.length > 1 ? _nameParts.slice(1).join(' ') : '') || '';
+    _ihWizData.email     = inv.email      || '';
+    _ihWizData.phone     = inv.phone      || '';
+    _ihWizData.address   = inv.address    || '';
+    _ihWizData.city      = inv.city       || '';
+    _ihWizData.state     = inv.state_addr || '';
+    _ihWizData.zip       = inv.zip        || '';
+    _ihWizData.notes     = inv.notes      || '';
+  }
+  _ihWizData.role      = pi.role              || 'equity_partner';
+  _ihWizData.capital   = String(pi.capital_commitment      || 0);
+  _ihWizData.profit    = String(pi.profit_split_percentage || 0);
+  _ihWizData.agreement = pi.agreement_notes   || '';
+  _ihWizData.ownership = '0';
+
+  await openAddInvestorModal();
+}
+
+function ihCloseDetailModal() {
+  var el = document.getElementById('ih-detail-overlay');
+  if (el) el.remove();
+}
+
+async function openInvestorDetailModal(piId, invId) {
+  if (!ihCanUseLive()) { ihOpenRealDataRequiredModal('View Investor'); return; }
+  var inv = await DB.investors.getById(invId);
+  if (!inv) { alert('Could not load investor details.'); return; }
+  var pis = await DB.projectInvestors.getByProject(_currentProject.id);
+  var pi = (pis || []).find(function(p) { return p.id === piId; });
+  if (!pi) { alert('Could not load project investor record.'); return; }
+
+  var co = null;
+  if (inv.type === 'company' && inv.company_id) {
+    co = await DB.investorCompanies.getById(inv.company_id);
+  }
+
+  function row(label, val, cls) {
+    return '<div><div class="ih-detail-label">' + escHtml(label) + '</div>'
+      + '<div class="ih-detail-value' + (cls ? ' ' + cls : '') + '">' + (val || '<span style="color:#d1d5db">—</span>') + '</div></div>';
+  }
+
+  var typeLbl = inv.type === 'company' ? 'Company' : 'Person';
+  var roleLbl = escHtml(IH_ROLES[pi.role] || pi.role || 'Investor');
+  var capVal  = pi.capital_commitment ? fmtMoney(pi.capital_commitment) : '<span style="color:#d1d5db">—</span>';
+  var profVal = pi.profit_split_percentage ? escHtml(String(pi.profit_split_percentage)) + '%' : '<span style="color:#d1d5db">—</span>';
+
+  // Identity section
+  var identityRows = '';
+  if (inv.type === 'company' && co) {
+    identityRows += row('Company', escHtml(co.company_name || inv.name || ''));
+    if (co.contact_person) identityRows += row('Contact', escHtml(co.contact_person) + (co.contact_role ? ' <span style="color:#9ca3af;font-size:12px">(' + escHtml(co.contact_role) + ')</span>' : ''));
+    if (co.website)        identityRows += row('Website', escHtml(co.website));
+    if (co.ein_tax_id)     identityRows += row('EIN', escHtml(co.ein_tax_id));
+    if (co.license_number) identityRows += row('License', escHtml(co.license_number));
+  } else {
+    identityRows += row('Name', escHtml(inv.name || ''));
+    if (inv.notes)         identityRows += row('Notes', escHtml(inv.notes), 'muted');
+  }
+
+  // Contact section
+  var contactRows = '';
+  contactRows += row('Email', inv.email ? '<a href="mailto:' + escHtml(inv.email) + '" style="color:var(--accent)" onclick="event.stopPropagation()">' + escHtml(inv.email) + '</a>' : '');
+  contactRows += row('Phone', inv.phone ? escHtml(inv.phone) : '');
+  var addrSrc = (inv.type === 'company' && co) ? co : inv;
+  var addrCity  = addrSrc.city  || '';
+  var addrState = (inv.type === 'company' ? addrSrc.state : inv.state_addr) || '';
+  var addrZip   = addrSrc.zip   || '';
+  if (addrSrc.address)  contactRows += row('Address', escHtml(addrSrc.address) + (addrSrc.address2 ? ', ' + escHtml(addrSrc.address2) : ''));
+  if (addrCity || addrState || addrZip) {
+    contactRows += row('City / State / ZIP', [addrCity, addrState, addrZip].filter(Boolean).map(escHtml).join(', '));
+  }
+
+  // Terms section
+  var termsRows = '';
+  termsRows += row('Role', roleLbl);
+  termsRows += row('Investment Amount', capVal);
+  termsRows += row('Profit Share', profVal);
+  termsRows += row('Status', ihStatusChip(pi.status));
+  var agreementHtml = '';
+  if (pi.agreement_notes) {
+    agreementHtml = '<div style="margin-top:14px"><div class="ih-detail-label">Agreement Notes</div>'
+      + '<div class="ih-detail-value muted" style="white-space:pre-wrap;font-size:13px">' + escHtml(pi.agreement_notes) + '</div></div>';
+  }
+
+  var companyNotesHtml = '';
+  if (inv.type === 'company' && co && co.notes) {
+    companyNotesHtml = '<div style="margin-top:14px"><div class="ih-detail-label">Notes</div>'
+      + '<div class="ih-detail-value muted" style="white-space:pre-wrap;font-size:13px">' + escHtml(co.notes) + '</div></div>';
+  }
+
+  var existingOverlay = document.getElementById('ih-detail-overlay');
+  if (existingOverlay) existingOverlay.remove();
+
+  var overlay = document.createElement('div');
+  overlay.id = 'ih-detail-overlay';
+  overlay.className = 'ih-detail-overlay';
+  overlay.addEventListener('click', function(e) { if (e.target === overlay) ihCloseDetailModal(); });
+
+  var pIdEsc = piId.replace(/'/g, "\\'");
+  var iIdEsc = invId.replace(/'/g, "\\'");
+
+  overlay.innerHTML =
+    '<div class="ih-detail-box">'
+    + '<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:22px">'
+    +   '<div>'
+    +     '<div style="font-size:20px;font-weight:700;color:#111827;margin-bottom:6px">' + escHtml(inv.name || 'Unnamed') + '</div>'
+    +     '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">'
+    +       '<span class="ih-type-badge">' + escHtml(typeLbl) + '</span>'
+    +       ihStatusChip(pi.status)
+    +     '</div>'
+    +   '</div>'
+    +   '<button onclick="ihCloseDetailModal()" style="background:none;border:none;cursor:pointer;color:#9ca3af;font-size:22px;line-height:1;padding:4px;margin-top:-2px">&#x2715;</button>'
+    + '</div>'
+
+    + '<div class="ih-detail-section">'
+    +   '<div class="ih-detail-section-title">Investment Terms</div>'
+    +   '<div class="ih-detail-grid">' + termsRows + '</div>'
+    +   agreementHtml
+    + '</div>'
+
+    + '<div class="ih-detail-section">'
+    +   '<div class="ih-detail-section-title">Identity &amp; Contact</div>'
+    +   '<div class="ih-detail-grid">' + identityRows + contactRows + '</div>'
+    +   companyNotesHtml
+    + '</div>'
+
+    + '<div class="ih-detail-actions">'
+    +   '<button class="btn btn-secondary" onclick="ihCloseDetailModal()">Close</button>'
+    +   '<button class="btn btn-primary" onclick="ihCloseDetailModal();openEditInvestorModal(\'' + pIdEsc + '\',\'' + iIdEsc + '\')"><i data-lucide="pencil"></i> Edit</button>'
+    + '</div>'
+    + '</div>';
+
+  document.body.appendChild(overlay);
+  if (typeof lucide !== 'undefined') lucide.createIcons();
 }
 
 async function openAddContribModal() {
