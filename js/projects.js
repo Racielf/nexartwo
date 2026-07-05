@@ -228,8 +228,7 @@ function projectsModuleShellHtml() {
       '<div class="projects-list-header">' +
         '<div class="projects-list-title-block">' +
           '<div class="proj-page-kicker">Project Control</div>' +
-          '<h3>Projects</h3>' +
-          '<div class="projects-list-subtitle">Financial workspace, project records, and linked work orders.</div>' +
+          '<div class="projects-list-subtitle">Project records, financial snapshots, and linked work orders.</div>' +
         '</div>' +
         '<button id="btn-new-project" class="btn btn-primary btn-sm" onclick="openProjectTypeSelector()" style="gap:6px">' +
           '<i data-lucide="plus" style="width:14px;height:14px"></i> New Project' +
