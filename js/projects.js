@@ -207,6 +207,12 @@ function syncPropertyHubTabVisibility() {
   }
 }
 
+function syncPropertyHubNavigationContext(activeTab) {
+  var investorTab = document.querySelector('.proj-detail-tab[data-tab="investorhub"]');
+  if (!investorTab) return;
+  investorTab.style.display = activeTab === 'propertyhub' ? 'none' : '';
+}
+
 function projectsModuleShellHtml() {
   return '' +
     '<div id="proj-list-view" class="content-area">' +
@@ -948,6 +954,7 @@ function switchProjTab(tab) {
   }
   syncProjectRouteChrome(tab === 'investorhub' ? 'investorhub' : 'projects', { updateTitle: false });
   syncPropertyHubTabVisibility();
+  syncPropertyHubNavigationContext(tab);
   updateProjectWorkspaceChrome(tab);
   document.querySelectorAll('.proj-detail-tab').forEach(function(t) { t.classList.remove('active'); });
   document.querySelectorAll('.proj-tab-content').forEach(function(c) { c.style.display = 'none'; });
@@ -997,7 +1004,7 @@ function propertyHubModuleButton(section) {
   var color = active ? '#fff' : (locked ? 'var(--text-muted)' : 'var(--text-primary)');
   var border = active ? 'var(--accent)' : 'var(--border)';
   var opacity = locked && !active ? '0.72' : '1';
-  return '<button type="button" class="btn btn-sm" onclick="switchPropertyHubSection(\'' + section.id + '\')" style="justify-content:flex-start;gap:7px;background:' + bg + ';color:' + color + ';border:1px solid ' + border + ';opacity:' + opacity + ';min-height:34px">' +
+  return '<button type="button" class="btn btn-sm" onclick="switchPropertyHubSection(\'' + section.id + '\')" style="justify-content:flex-start;gap:8px;background:' + bg + ';color:' + color + ';border:1px solid ' + border + ';opacity:' + opacity + ';min-height:38px;border-radius:8px;width:100%">' +
     '<i data-lucide="' + section.icon + '" style="width:13px;height:13px"></i>' +
     '<span>' + escHtml(section.label) + '</span>' +
     (locked ? '<i data-lucide="lock-keyhole" style="width:12px;height:12px;margin-left:auto"></i>' : '') +
@@ -1005,7 +1012,7 @@ function propertyHubModuleButton(section) {
 }
 
 function propertyHubReadinessNotice(label) {
-  return '<div style="border:1px dashed var(--border);border-radius:8px;background:var(--bg-secondary);padding:18px;color:var(--text-secondary);display:flex;gap:12px;align-items:flex-start">' +
+  return '<div style="border:1px dashed var(--border);border-radius:8px;background:var(--bg-secondary);padding:16px;color:var(--text-secondary);display:flex;gap:12px;align-items:flex-start">' +
     '<i data-lucide="lock-keyhole" style="width:18px;height:18px;color:var(--text-muted);margin-top:2px"></i>' +
     '<div><div style="font-size:13px;font-weight:800;color:var(--text-primary);margin-bottom:4px">' + escHtml(label) + ' is read-only</div>' +
     '<div style="font-size:12px;line-height:1.5">Requires FlipEngine database migration before editing.</div></div>' +
@@ -1100,13 +1107,12 @@ function renderPropertyHubShell() {
   var buttons = PROPERTY_HUB_SECTIONS.map(propertyHubModuleButton).join('');
 
   tab.innerHTML =
-    '<div style="display:flex;flex-direction:column;gap:16px">' +
-      '<section class="card" style="border-radius:8px"><div class="card-body" style="padding:18px">' +
-        '<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:wrap">' +
+    '<div style="display:flex;flex-direction:column;gap:14px">' +
+      '<section class="card" style="border-radius:8px"><div class="card-body" style="padding:14px 16px">' +
+        '<div style="display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap">' +
           '<div>' +
-            '<div class="proj-page-kicker" style="margin-bottom:6px">FlipEngine</div>' +
-            '<h4 style="margin:0;font-size:18px;color:var(--text-primary)">Property Hub</h4>' +
-            '<div style="margin-top:8px;color:var(--text-secondary);font-size:13px;display:flex;gap:8px;align-items:center;flex-wrap:wrap">' +
+            '<div class="proj-page-kicker" style="margin-bottom:5px">FlipEngine shell</div>' +
+            '<div style="color:var(--text-secondary);font-size:13px;display:flex;gap:8px;align-items:center;flex-wrap:wrap">' +
               '<strong style="color:var(--text-primary)">' + escHtml(projectDisplayName(p)) + '</strong>' +
               projectStatusPill(st) +
               projectTypePill(getProjTypeCfg(p.project_type || null)) +
@@ -1115,14 +1121,17 @@ function renderPropertyHubShell() {
           '<div style="font-size:11px;font-weight:800;color:var(--text-muted);background:var(--bg-secondary);border:1px solid var(--border);border-radius:999px;padding:6px 10px;text-transform:uppercase;letter-spacing:0.4px">Read-only shell</div>' +
         '</div>' +
       '</div></section>' +
-      '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:16px;align-items:start">' +
-        '<aside style="display:grid;gap:8px">' + buttons + '</aside>' +
-        '<section>' +
-          '<div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;color:var(--text-muted);font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:0.5px">' +
+      '<div style="display:grid;grid-template-columns:minmax(240px,300px) minmax(0,1fr);gap:16px;align-items:start">' +
+        '<aside class="card" style="border-radius:8px"><div class="card-body" style="padding:12px;display:grid;gap:8px">' + buttons + '</div></aside>' +
+        '<section class="card" style="border-radius:8px"><div class="card-body" style="padding:18px">' +
+          '<div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px;flex-wrap:wrap">' +
+            '<div style="display:flex;align-items:center;gap:8px;color:var(--text-muted);font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:0.5px">' +
             '<i data-lucide="' + section.icon + '" style="width:14px;height:14px"></i>' + escHtml(section.label) +
+            '</div>' +
+            (section.locked ? '<div style="font-size:10px;font-weight:800;color:var(--text-muted);background:var(--bg-secondary);border:1px solid var(--border);border-radius:999px;padding:5px 8px;text-transform:uppercase;letter-spacing:0.35px">Locked</div>' : '<div style="font-size:10px;font-weight:800;color:var(--accent);background:var(--bg-secondary);border:1px solid var(--border);border-radius:999px;padding:5px 8px;text-transform:uppercase;letter-spacing:0.35px">Existing data</div>') +
           '</div>' +
           renderPropertyHubSection(section.id) +
-        '</section>' +
+        '</div></section>' +
       '</div>' +
     '</div>';
 
@@ -1137,7 +1146,9 @@ function renderProjectDetail(options) {
   var activeTab = document.querySelector('.proj-detail-tab.active');
   syncPropertyHubTabVisibility();
   activeTab = document.querySelector('.proj-detail-tab.active');
-  updateProjectWorkspaceChrome(options.preserveTab && activeTab ? activeTab.dataset.tab : 'overview');
+  var displayTab = options.preserveTab && activeTab ? activeTab.dataset.tab : 'overview';
+  syncPropertyHubNavigationContext(displayTab);
+  updateProjectWorkspaceChrome(displayTab);
 
   // Overview tab - responsive 2-col grid (1-col on mobile via CSS)
   document.getElementById('proj-tab-overview').innerHTML =
