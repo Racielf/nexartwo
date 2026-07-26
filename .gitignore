@@ -19,3 +19,12 @@ node_modules/
 # Local dev
 .env
 .env.local
+.vercel/
+dist/
+js/env.js
+.claude/settings.local.json
+
+# Local history and recovery material
+Otros/
+
+.vercel

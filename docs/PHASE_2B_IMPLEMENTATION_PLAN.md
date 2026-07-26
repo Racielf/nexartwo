@@ -1,6 +1,6 @@
 # PHASE 2B — IMPLEMENTATION PLAN
-**NexArtWO — Investor Hub Integration**  
-**Fecha:** Mayo 2026  
+**NexArtWO — Investor Hub Integration**
+**Fecha:** Mayo 2026
 **Status:** READY FOR EXECUTION
 
 ---
@@ -54,7 +54,7 @@ En el repo NexArtWO:
     import InvestorManager from './modules/investor-manager.js';
 
 [ ] Instanciar en supabase.js:
-    
+
     window.investorMgr = new InvestorManager(supabaseClient);
 
 [ ] Verificar que está disponible globalmente
@@ -71,7 +71,7 @@ En el repo NexArtWO:
 
 <div id="investor-hub-tab" class="tab-pane">
   <div class="investor-hub-container">
-    
+
     <!-- SECTION A: Investor Assignment -->
     <div class="section">
       <h3>Project Investors</h3>
@@ -95,12 +95,12 @@ En el repo NexArtWO:
     <div class="section">
       <h3>Flip Analysis & ROI</h3>
       <button id="btn-new-analysis">+ Create New Analysis</button>
-      
+
       <!-- Mostrar última versión -->
       <div id="current-analysis" class="analysis-card">
         <!-- Version, date, key metrics: ARV, Total Cost, Profit, ROI -->
       </div>
-      
+
       <!-- Historial de versiones -->
       <div id="analysis-history">
         <!-- v1, v2, v3... con compare option -->
@@ -116,10 +116,10 @@ En el repo NexArtWO:
 ```html
 <div id="modal-new-analysis" class="modal">
   <h3>Create Flip Analysis</h3>
-  
+
   <!-- INPUTS -->
   <form id="form-flip-analysis">
-    
+
     <!-- ACQUISITION -->
     <fieldset>
       <legend>Acquisition Phase</legend>
@@ -168,7 +168,7 @@ En el repo NexArtWO:
   <!-- RESULTS PREVIEW -->
   <div id="analysis-results" style="display:none">
     <h4>Analysis Results</h4>
-    
+
     <!-- Key Metrics -->
     <div class="metric-row">
       <span class="label">Total All-In Cost:</span>
@@ -205,25 +205,25 @@ En el repo NexArtWO:
 ```html
 <div id="modal-record-capital" class="modal">
   <h3>Record Capital Contribution</h3>
-  
+
   <form id="form-capital-contribution">
     <select id="select-investor" required>
       <option>Select Investor...</option>
       <!-- Populated from database -->
     </select>
-    
+
     <input type="number" id="input-amount" placeholder="Amount" required />
     <input type="date" id="input-date" required />
-    
+
     <select id="select-contribution-type" required>
       <option value="initial">Initial</option>
       <option value="mid-project">Mid-Project</option>
       <option value="closing">Closing</option>
     </select>
-    
+
     <input type="text" id="input-reference" placeholder="Reference (Check #, Wire ID)" />
     <textarea id="input-notes" placeholder="Notes"></textarea>
-    
+
     <button type="submit">Record Contribution</button>
   </form>
 </div>
@@ -243,26 +243,26 @@ async function loadInvestorHub(projectId) {
     // 1. Obtener inversores del proyecto
     const investors = await investorMgr.getProjectInvestors(projectId);
     displayInvestors(investors); // Mostrar en tabla
-    
+
     // 2. Obtener aportes de capital
     const contributions = await investorMgr.getCapitalContributions(projectId);
     displayContributions(contributions); // Mostrar en tabla
-    
+
     // 3. Calcular total capital
     const totalCapital = await investorMgr.getTotalCapitalContributed(projectId);
-    document.getElementById('capital-summary').innerText = 
+    document.getElementById('capital-summary').innerText =
       `Total Contributed: $${totalCapital.toFixed(2)}`;
-    
+
     // 4. Obtener último análisis
     const analysis = await investorMgr.getLatestFlipAnalysis(projectId);
     if (analysis) {
       displayCurrentAnalysis(analysis);
     }
-    
+
     // 5. Obtener historial
     const history = await investorMgr.getFlipAnalysisHistory(projectId);
     displayAnalysisHistory(history);
-    
+
   } catch (error) {
     console.error('Error loading investor hub:', error);
   }
@@ -277,37 +277,37 @@ async function loadInvestorHub(projectId) {
 document.getElementById('btn-calculate').addEventListener('click', async () => {
   // Validar inputs
   const inputs = collectFlipInputs(); // Recopilar del formulario
-  
+
   const validation = investorMgr.validateFlipInputs(inputs);
   if (!validation.isValid) {
     alert('Errors:\n' + validation.errors.join('\n'));
     return;
   }
-  
+
   // Calcular
   try {
     const calcs = await investorMgr.calculateFlipAnalysis(inputs);
-    
+
     // Mostrar resultados
-    document.getElementById('result-total-cost').innerText = 
+    document.getElementById('result-total-cost').innerText =
       '$' + calcs.total_all_in_cost.toFixed(2);
-    document.getElementById('result-net-proceeds').innerText = 
+    document.getElementById('result-net-proceeds').innerText =
       '$' + calcs.net_proceeds.toFixed(2);
-    document.getElementById('result-gross-profit').innerText = 
+    document.getElementById('result-gross-profit').innerText =
       '$' + calcs.gross_profit.toFixed(2);
-    document.getElementById('result-net-profit').innerText = 
+    document.getElementById('result-net-profit').innerText =
       '$' + calcs.net_profit.toFixed(2);
-    document.getElementById('result-roi').innerText = 
+    document.getElementById('result-roi').innerText =
       calcs.roi_percent.toFixed(2) + '%';
-    document.getElementById('result-margin').innerText = 
+    document.getElementById('result-margin').innerText =
       calcs.profit_margin.toFixed(2) + '%';
-    
+
     // Guardar cálculos globalmente para luego guardar
     window.currentFlipCalculations = calcs;
-    
+
     // Mostrar resultados
     document.getElementById('analysis-results').style.display = 'block';
-    
+
   } catch (error) {
     console.error('Calculation error:', error);
     alert('Error: ' + error.message);
@@ -318,27 +318,27 @@ document.getElementById('btn-calculate').addEventListener('click', async () => {
 document.getElementById('btn-save-analysis').addEventListener('click', async () => {
   const inputs = collectFlipInputs();
   const calculations = window.currentFlipCalculations;
-  
+
   if (!calculations) {
     alert('Please calculate first');
     return;
   }
-  
+
   try {
     const analysis = await investorMgr.createFlipAnalysis(
       window.currentProjectId,
       inputs,
       calculations
     );
-    
+
     alert(`Analysis saved as v${analysis.version}`);
-    
+
     // Recargar Investor Hub
     await loadInvestorHub(window.currentProjectId);
-    
+
     // Cerrar modal
     closeModal('modal-new-analysis');
-    
+
   } catch (error) {
     console.error('Save error:', error);
     alert('Error: ' + error.message);
@@ -353,19 +353,19 @@ document.getElementById('btn-save-analysis').addEventListener('click', async () 
 
 document.getElementById('form-capital-contribution').addEventListener('submit', async (e) => {
   e.preventDefault();
-  
+
   const investorId = document.getElementById('select-investor').value;
   const amount = parseFloat(document.getElementById('input-amount').value);
   const date = document.getElementById('input-date').value;
   const type = document.getElementById('select-contribution-type').value;
-  
+
   try {
     // Obtener project_investor_id
     const projectInvestor = await getProjectInvestor(
       window.currentProjectId,
       investorId
     );
-    
+
     // Registrar
     await investorMgr.recordCapitalContribution({
       project_id: window.currentProjectId,
@@ -376,13 +376,13 @@ document.getElementById('form-capital-contribution').addEventListener('submit', 
       reference: document.getElementById('input-reference').value,
       notes: document.getElementById('input-notes').value
     });
-    
+
     alert('Contribution recorded');
-    
+
     // Recargar
     await loadInvestorHub(window.currentProjectId);
     closeModal('modal-record-capital');
-    
+
   } catch (error) {
     console.error('Error:', error);
     alert('Error: ' + error.message);
@@ -628,9 +628,9 @@ Día 8: Final Polish + Deployment
 
 ---
 
-**PHASE 2B READY FOR EXECUTION**  
-**Start Date: Mayo 2026**  
-**Owner: Rodolfo Fernandez**  
+**PHASE 2B READY FOR EXECUTION**
+**Start Date: Mayo 2026**
+**Owner: Rodolfo Fernandez**
 **Developer: Claude + Agente IA**
 
 Todos los archivos están listos. Proceder paso a paso.

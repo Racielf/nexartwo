@@ -1,5 +1,7 @@
 # Agent Operating Guide
 
+> Status note (2026-07-12): This is a historical governance baseline. `AGENTS.md` is the universal authority, `memory/CURRENT_TASK.md` defines current scope, and `docs/FEATURE_FLAGS.md` records the branch-specific Investor Hub state. Environment and feature-state statements below must be reverified before use.
+
 ## Purpose
 This document serves as the official operating manual for AI agents developing the NexArtWO application. It establishes the rules, workflows, and standards required to maintain a stable, reviewable, and secure development environment, breaking the cycle of trial-and-error by enforcing strict procedural discipline.
 

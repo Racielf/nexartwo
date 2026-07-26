@@ -1,0 +1,12 @@
+---
+description: NexArtWO controlled development rules
+globs:
+  - "**/*"
+alwaysApply: true
+---
+
+# NexArtWO Rules
+
+Follow `AGENTS.md`. Read its five core context files at a new task/context reset, then load only the task-specific row.
+
+Re-read context after scope, branch, or phase changes and before protected work. Never use `Otros/` as current authority. Keep changes small and do not touch protected areas unless the active task and exact owner gate allow them.

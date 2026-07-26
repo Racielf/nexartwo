@@ -256,8 +256,8 @@ class InvestorManager {
       .order('version', { ascending: false })
       .limit(1);
 
-    const nextVersion = existingAnalyses && existingAnalyses.length > 0 
-      ? existingAnalyses[0].version + 1 
+    const nextVersion = existingAnalyses && existingAnalyses.length > 0
+      ? existingAnalyses[0].version + 1
       : 1;
 
     // Crear nuevo análisis
@@ -267,7 +267,7 @@ class InvestorManager {
         project_id: projectId,
         version: nextVersion,
         analysis_date: new Date().toISOString().split('T')[0], // YYYY-MM-DD
-        
+
         // Inputs (lo que el usuario ingresó)
         purchase_price: inputs.purchase_price,
         earnest_deposit: inputs.earnest_deposit,
@@ -282,7 +282,7 @@ class InvestorManager {
         arv: inputs.arv,
         realtor_commission_percent: inputs.realtor_commission_percent,
         title_escrow_exit: inputs.title_escrow_exit,
-        
+
         // Calculated results
         total_all_in_cost: calculations.total_all_in_cost,
         calculated_interest: calculations.calculated_interest,
@@ -293,7 +293,7 @@ class InvestorManager {
         net_profit: calculations.net_profit,
         roi_percent: calculations.roi_percent,
         profit_margin: calculations.profit_margin,
-        
+
         status: 'draft',
         notes: null
       }])
@@ -404,10 +404,10 @@ class InvestorManager {
       total_capital: inv.total_capital,
       ownership_percent: inv.ownership_percent,
       profit_split_percent: inv.profit_split_percent,
-      
+
       // Su parte de ganancias
       profit_share: (totalProfit * inv.profit_split_percent) / 100,
-      
+
       // Su retorno total (capital + profit)
       total_return: inv.total_capital + ((totalProfit * inv.profit_split_percent) / 100)
     }));

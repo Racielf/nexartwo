@@ -13,7 +13,7 @@ function openAddInvestorModal() {
     showToast('No project selected', 'error');
     return;
   }
-  
+
   const modalHTML = `
     <div class="modal-overlay" id="investor-modal-overlay" onclick="closeAddInvestorModal(event)">
       <div class="modal-box" onclick="event.stopPropagation()">
@@ -21,14 +21,14 @@ function openAddInvestorModal() {
           <h3 style="margin:0;font-size:15px">Add Investor to Project</h3>
           <button class="btn btn-ghost" onclick="closeAddInvestorModal()" style="padding:4px 8px">✕</button>
         </div>
-        
+
         <form id="form-add-investor" style="display:flex;flex-direction:column;gap:12px">
-          
+
           <div>
             <label style="font-size:12px;color:var(--text-secondary);display:block;margin-bottom:4px">Investor Name *</label>
             <input type="text" id="input-inv-name" class="form-control" placeholder="Full name or company name" required style="width:100%">
           </div>
-          
+
           <div>
             <label style="font-size:12px;color:var(--text-secondary);display:block;margin-bottom:4px">Type *</label>
             <select id="input-inv-type" class="form-control" required style="width:100%">
@@ -36,17 +36,17 @@ function openAddInvestorModal() {
               <option value="company">Company Entity</option>
             </select>
           </div>
-          
+
           <div>
             <label style="font-size:12px;color:var(--text-secondary);display:block;margin-bottom:4px">Email</label>
             <input type="email" id="input-inv-email" class="form-control" placeholder="Optional" style="width:100%">
           </div>
-          
+
           <div>
             <label style="font-size:12px;color:var(--text-secondary);display:block;margin-bottom:4px">Phone</label>
             <input type="tel" id="input-inv-phone" class="form-control" placeholder="Optional" style="width:100%">
           </div>
-          
+
           <div>
             <label style="font-size:12px;color:var(--text-secondary);display:block;margin-bottom:4px">Role in Project *</label>
             <select id="input-inv-role" class="form-control" required style="width:100%">
@@ -55,7 +55,7 @@ function openAddInvestorModal() {
               <option value="manager">Manager</option>
             </select>
           </div>
-          
+
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
             <div>
               <label style="font-size:12px;color:var(--text-secondary);display:block;margin-bottom:4px">Ownership %</label>
@@ -66,7 +66,7 @@ function openAddInvestorModal() {
               <input type="number" id="input-inv-profit-split" class="form-control" min="0" max="100" step="0.01" value="0" style="width:100%">
             </div>
           </div>
-          
+
           <div style="display:flex;gap:8px;margin-top:16px">
             <button type="button" class="btn btn-secondary" onclick="closeAddInvestorModal()" style="flex:1">Cancel</button>
             <button type="submit" class="btn btn-primary" style="flex:1">Add Investor</button>
@@ -75,7 +75,7 @@ function openAddInvestorModal() {
       </div>
     </div>
   `;
-  
+
   // Insert modal into DOM
   let modalContainer = document.getElementById('investor-modals-container');
   if (!modalContainer) {
@@ -84,7 +84,7 @@ function openAddInvestorModal() {
     document.body.appendChild(modalContainer);
   }
   modalContainer.innerHTML = modalHTML;
-  
+
   // Add event listener
   const form = document.getElementById('form-add-investor');
   if (form) {
@@ -102,7 +102,7 @@ function closeAddInvestorModal(event) {
 
 async function handleAddInvestorSubmit(e) {
   e.preventDefault();
-  
+
   const name = (document.getElementById('input-inv-name').value || '').trim();
   const type = document.getElementById('input-inv-type').value;
   const email = (document.getElementById('input-inv-email').value || '').trim();
@@ -110,25 +110,25 @@ async function handleAddInvestorSubmit(e) {
   const role = document.getElementById('input-inv-role').value;
   const ownership = parseFloat(document.getElementById('input-inv-ownership').value) || 0;
   const profitSplit = parseFloat(document.getElementById('input-inv-profit-split').value) || 0;
-  
+
   // Validation
   if (!name) {
     showToast('Investor name is required', 'error');
     return;
   }
-  
+
   if (ownership < 0 || ownership > 100 || profitSplit < 0 || profitSplit > 100) {
     showToast('Percentages must be between 0 and 100', 'error');
     return;
   }
-  
+
   try {
     const mgr = getInvestorManager();
     if (!mgr) {
       showToast('Manager not ready', 'error');
       return;
     }
-    
+
     // Create investor
     const investor = await mgr.createInvestor({
       name,
@@ -136,12 +136,12 @@ async function handleAddInvestorSubmit(e) {
       email: email || null,
       phone: phone || null
     });
-    
+
     if (!investor || !investor.id) {
       showToast('Failed to create investor', 'error');
       return;
     }
-    
+
     // Assign investor to project
     const projectId = InvestorHubState.currentProjectId;
     const projectInvestor = await mgr.assignInvestorToProject({
@@ -151,19 +151,19 @@ async function handleAddInvestorSubmit(e) {
       ownership_percentage: ownership,
       profit_split_percentage: profitSplit
     });
-    
+
     if (!projectInvestor) {
       showToast('Failed to assign investor to project', 'error');
       return;
     }
-    
+
     showToast('Investor added successfully', 'success');
     closeAddInvestorModal();
-    
+
     // Reload investor hub
     await loadInvestorHubData(projectId);
     renderInvestorHubTab();
-    
+
   } catch (error) {
     console.error('Error adding investor:', error);
     showToast('Error: ' + error.message, 'error');
@@ -180,17 +180,17 @@ function openRecordCapitalModal() {
     showToast('No project selected', 'error');
     return;
   }
-  
+
   if (!InvestorHubState.investors.length) {
     showToast('No investors in this project yet', 'error');
     return;
   }
-  
+
   // Build investor options
   const investorOptions = InvestorHubState.investors
     .map(inv => `<option value="${inv.investor_id}">${escapeHtml(inv.investor_name)}</option>`)
     .join('');
-  
+
   const modalHTML = `
     <div class="modal-overlay" id="capital-modal-overlay" onclick="closeRecordCapitalModal(event)">
       <div class="modal-box" onclick="event.stopPropagation()">
@@ -198,9 +198,9 @@ function openRecordCapitalModal() {
           <h3 style="margin:0;font-size:15px">Record Capital Contribution</h3>
           <button class="btn btn-ghost" onclick="closeRecordCapitalModal()" style="padding:4px 8px">✕</button>
         </div>
-        
+
         <form id="form-record-capital" style="display:flex;flex-direction:column;gap:12px">
-          
+
           <div>
             <label style="font-size:12px;color:var(--text-secondary);display:block;margin-bottom:4px">Investor *</label>
             <select id="input-cap-investor" class="form-control" required style="width:100%">
@@ -208,17 +208,17 @@ function openRecordCapitalModal() {
               ${investorOptions}
             </select>
           </div>
-          
+
           <div>
             <label style="font-size:12px;color:var(--text-secondary);display:block;margin-bottom:4px">Amount ($) *</label>
             <input type="number" id="input-cap-amount" class="form-control" min="0.01" step="0.01" placeholder="e.g. 50000" required style="width:100%">
           </div>
-          
+
           <div>
             <label style="font-size:12px;color:var(--text-secondary);display:block;margin-bottom:4px">Contribution Date *</label>
             <input type="date" id="input-cap-date" class="form-control" required style="width:100%">
           </div>
-          
+
           <div>
             <label style="font-size:12px;color:var(--text-secondary);display:block;margin-bottom:4px">Contribution Type *</label>
             <select id="input-cap-type" class="form-control" required style="width:100%">
@@ -227,17 +227,17 @@ function openRecordCapitalModal() {
               <option value="closing">Closing</option>
             </select>
           </div>
-          
+
           <div>
             <label style="font-size:12px;color:var(--text-secondary);display:block;margin-bottom:4px">Reference (Check #, Wire ID, etc)</label>
             <input type="text" id="input-cap-reference" class="form-control" placeholder="Optional" style="width:100%">
           </div>
-          
+
           <div>
             <label style="font-size:12px;color:var(--text-secondary);display:block;margin-bottom:4px">Notes</label>
             <textarea id="input-cap-notes" class="form-control" placeholder="Optional notes about this contribution" style="width:100%;min-height:60px"></textarea>
           </div>
-          
+
           <div style="display:flex;gap:8px;margin-top:16px">
             <button type="button" class="btn btn-secondary" onclick="closeRecordCapitalModal()" style="flex:1">Cancel</button>
             <button type="submit" class="btn btn-primary" style="flex:1">Record Contribution</button>
@@ -246,7 +246,7 @@ function openRecordCapitalModal() {
       </div>
     </div>
   `;
-  
+
   let modalContainer = document.getElementById('investor-modals-container');
   if (!modalContainer) {
     modalContainer = document.createElement('div');
@@ -254,14 +254,14 @@ function openRecordCapitalModal() {
     document.body.appendChild(modalContainer);
   }
   modalContainer.innerHTML = modalHTML;
-  
+
   // Set today's date as default
   const today = new Date().toISOString().split('T')[0];
   const dateInput = document.getElementById('input-cap-date');
   if (dateInput) {
     dateInput.value = today;
   }
-  
+
   const form = document.getElementById('form-record-capital');
   if (form) {
     form.addEventListener('submit', handleRecordCapitalSubmit);
@@ -278,46 +278,46 @@ function closeRecordCapitalModal(event) {
 
 async function handleRecordCapitalSubmit(e) {
   e.preventDefault();
-  
+
   const investorId = document.getElementById('input-cap-investor').value;
   const amount = parseFloat(document.getElementById('input-cap-amount').value);
   const date = document.getElementById('input-cap-date').value;
   const type = document.getElementById('input-cap-type').value;
   const reference = (document.getElementById('input-cap-reference').value || '').trim();
   const notes = (document.getElementById('input-cap-notes').value || '').trim();
-  
+
   // Validation
   if (!investorId) {
     showToast('Select an investor', 'error');
     return;
   }
-  
+
   if (!amount || amount <= 0) {
     showToast('Amount must be greater than 0', 'error');
     return;
   }
-  
+
   if (!date) {
     showToast('Contribution date is required', 'error');
     return;
   }
-  
+
   try {
     const mgr = getInvestorManager();
     if (!mgr) {
       showToast('Manager not ready', 'error');
       return;
     }
-    
+
     const projectId = InvestorHubState.currentProjectId;
-    
+
     // Find project_investor record
     const projectInvestor = InvestorHubState.investors.find(inv => inv.investor_id === investorId);
     if (!projectInvestor) {
       showToast('Investor not found in project', 'error');
       return;
     }
-    
+
     // Record contribution
     const contribution = await mgr.recordCapitalContribution({
       project_id: projectId,
@@ -328,19 +328,19 @@ async function handleRecordCapitalSubmit(e) {
       reference: reference || null,
       notes: notes || null
     });
-    
+
     if (!contribution) {
       showToast('Failed to record contribution', 'error');
       return;
     }
-    
+
     showToast('Capital contribution recorded', 'success');
     closeRecordCapitalModal();
-    
+
     // Reload investor hub
     await loadInvestorHubData(projectId);
     renderInvestorHubTab();
-    
+
   } catch (error) {
     console.error('Error recording capital:', error);
     showToast('Error: ' + error.message, 'error');
@@ -357,7 +357,7 @@ function openCreateAnalysisModal() {
     showToast('No project selected', 'error');
     return;
   }
-  
+
   const modalHTML = `
     <div class="modal-overlay" id="analysis-modal-overlay" onclick="closeCreateAnalysisModal(event)">
       <div class="modal-box" style="max-width:600px" onclick="event.stopPropagation()">
@@ -365,9 +365,9 @@ function openCreateAnalysisModal() {
           <h3 style="margin:0;font-size:15px">Create Flip Analysis</h3>
           <button class="btn btn-ghost" onclick="closeCreateAnalysisModal()" style="padding:4px 8px">✕</button>
         </div>
-        
+
         <form id="form-create-analysis" style="display:flex;flex-direction:column;gap:12px">
-          
+
           <fieldset style="border:1px solid var(--border);border-radius:6px;padding:12px;margin-bottom:8px">
             <legend style="font-size:11px;font-weight:700;color:var(--text-secondary);text-transform:uppercase">ACQUISITION</legend>
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
@@ -385,7 +385,7 @@ function openCreateAnalysisModal() {
               </div>
             </div>
           </fieldset>
-          
+
           <fieldset style="border:1px solid var(--border);border-radius:6px;padding:12px;margin-bottom:8px">
             <legend style="font-size:11px;font-weight:700;color:var(--text-secondary);text-transform:uppercase">LOAN</legend>
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
@@ -403,7 +403,7 @@ function openCreateAnalysisModal() {
               </div>
             </div>
           </fieldset>
-          
+
           <fieldset style="border:1px solid var(--border);border-radius:6px;padding:12px;margin-bottom:8px">
             <legend style="font-size:11px;font-weight:700;color:var(--text-secondary);text-transform:uppercase">HOLDING (6 MONTHS)</legend>
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
@@ -417,7 +417,7 @@ function openCreateAnalysisModal() {
               </div>
             </div>
           </fieldset>
-          
+
           <fieldset style="border:1px solid var(--border);border-radius:6px;padding:12px;margin-bottom:8px">
             <legend style="font-size:11px;font-weight:700;color:var(--text-secondary);text-transform:uppercase">REHAB</legend>
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
@@ -431,7 +431,7 @@ function openCreateAnalysisModal() {
               </div>
             </div>
           </fieldset>
-          
+
           <fieldset style="border:1px solid var(--border);border-radius:6px;padding:12px;margin-bottom:8px">
             <legend style="font-size:11px;font-weight:700;color:var(--text-secondary);text-transform:uppercase">SALE</legend>
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
@@ -449,7 +449,7 @@ function openCreateAnalysisModal() {
               </div>
             </div>
           </fieldset>
-          
+
           <div style="display:flex;gap:8px;margin-top:16px">
             <button type="button" class="btn btn-secondary" onclick="closeCreateAnalysisModal()" style="flex:1">Cancel</button>
             <button type="submit" class="btn btn-primary" style="flex:1">Calculate & Save</button>
@@ -458,7 +458,7 @@ function openCreateAnalysisModal() {
       </div>
     </div>
   `;
-  
+
   let modalContainer = document.getElementById('investor-modals-container');
   if (!modalContainer) {
     modalContainer = document.createElement('div');
@@ -466,7 +466,7 @@ function openCreateAnalysisModal() {
     document.body.appendChild(modalContainer);
   }
   modalContainer.innerHTML = modalHTML;
-  
+
   const form = document.getElementById('form-create-analysis');
   if (form) {
     form.addEventListener('submit', handleCreateAnalysisSubmit);
@@ -483,7 +483,7 @@ function closeCreateAnalysisModal(event) {
 
 async function handleCreateAnalysisSubmit(e) {
   e.preventDefault();
-  
+
   const inputs = {
     purchase_price: parseFloat(document.getElementById('input-ana-purchase').value),
     earnest_deposit: parseFloat(document.getElementById('input-ana-earnest').value),
@@ -499,13 +499,13 @@ async function handleCreateAnalysisSubmit(e) {
     realtor_commission_percent: parseFloat(document.getElementById('input-ana-realtor-pct').value) || 5.5,
     title_escrow_exit: parseFloat(document.getElementById('input-ana-title-escrow').value) || 0
   };
-  
+
   // Validation
   const validation = {
     isValid: true,
     errors: []
   };
-  
+
   if (!inputs.purchase_price || inputs.purchase_price <= 0) {
     validation.errors.push('Purchase price must be > 0');
   }
@@ -521,42 +521,42 @@ async function handleCreateAnalysisSubmit(e) {
   if (inputs.loan_months <= 0) {
     validation.errors.push('Loan months must be > 0');
   }
-  
+
   if (validation.errors.length > 0) {
     showToast(validation.errors.join('; '), 'error');
     return;
   }
-  
+
   try {
     const mgr = getInvestorManager();
     if (!mgr) {
       showToast('Manager not ready', 'error');
       return;
     }
-    
+
     // Calculate analysis
     const calculations = await mgr.calculateFlipAnalysis(inputs);
     if (!calculations) {
       showToast('Failed to calculate analysis', 'error');
       return;
     }
-    
+
     // Save analysis
     const projectId = InvestorHubState.currentProjectId;
     const analysis = await mgr.createFlipAnalysis(projectId, inputs, calculations);
-    
+
     if (!analysis) {
       showToast('Failed to save analysis', 'error');
       return;
     }
-    
+
     showToast(`Flip analysis v${analysis.version} created successfully`, 'success');
     closeCreateAnalysisModal();
-    
+
     // Reload investor hub
     await loadInvestorHubData(projectId);
     renderInvestorHubTab();
-    
+
   } catch (error) {
     console.error('Error creating analysis:', error);
     showToast('Error: ' + error.message, 'error');
@@ -570,19 +570,19 @@ async function handleCreateAnalysisSubmit(e) {
 function showToast(message, type = 'info') {
   const toast = document.getElementById('toast');
   if (!toast) return;
-  
+
   const colors = {
     'success': { bg: '#10b981', text: '#fff' },
     'error': { bg: '#ef4444', text: '#fff' },
     'info': { bg: '#6366f1', text: '#fff' }
   };
-  
+
   const color = colors[type] || colors['info'];
   toast.textContent = message;
   toast.style.background = color.bg;
   toast.style.color = color.text;
   toast.style.display = 'block';
-  
+
   setTimeout(() => {
     toast.style.display = 'none';
   }, 3000);

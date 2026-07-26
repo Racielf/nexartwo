@@ -1,126 +1,61 @@
-# NexArtWO — Construction & Investor Management Platform
+# NexArtWO - Documentation Index
 
-**Complete construction project management + investor capital tracking system** built for **R.C Art Construction LLC** (Oregon CCB #247277).
+Status: Active entry point. Updated 2026-07-12.
 
-NexArtWO manages the complete Fix & Flip workflow from project inception through investor capital deployment, rehab execution, property sale, and final investor settlement.
+## Product Identity
 
----
+NexArtWO is the main operations and project-control application.
 
-## 📊 Core Modules
+FlipEngine is an internal NexArtWO layer for selected real-estate investment projects. It extends Projects, Work Orders, financial records, documents, and controlled investor workflows. It is not a separate app and does not convert every project into an investment.
 
-### Phase 1: Project & Financial Control ✅
-- **Work Orders** — Create, track, and manage construction work orders with status workflow
-- **Service Library** — 36+ pre-built construction services (Electrical, Plumbing, HVAC, Roofing, etc.)
-- **Financial System** — Expenses, refunds, disbursements, and P&L tracking
-- **Dashboard** — Real-time overview of work orders, revenue pipeline, and cash position
+## Read Before Work
 
-### Phase 2: Investor Hub (In Development)
-- **Investor Management** — Register investors and investment companies
-- **Capital Tracking** — Track investor contributions, capital calls, distributions
-- **Flip Analysis** — Interactive investment proposal with ROI projections
-- **Lender Management** — Hard money loans, interest, points, fees, payoff
-- **Acquisition Tracking** — Purchase price, closing costs, title company records
-- **Rehab Budget vs Actual** — Budget variance, change orders, actual vs projected
-- **Sale & Closing** — Listing, negotiation, closing statement, net proceeds
-- **Investor Settlement** — Final P&L, profit distribution, investor ROI
-- **Final Reports** — Professional investor reports with closing statement summary
+Read in this order:
 
----
+1. `AGENTS.md` - universal rules and protected operations.
+2. `memory/PROJECT_STATE.md` - current product and environment state.
+3. `memory/CURRENT_TASK.md` - exact active scope and current gates.
+4. `memory/DECISION_LOG.md` - approved owner decisions.
+5. `docs/00-governance/DOCUMENTATION_MAP.md` - document hierarchy and topic map.
 
-## 🎯 Central Logic: Flip Analysis Calculation
+Then use the context router in `AGENTS.md` to load only the documents required for the current kind of work. Re-read the core when scope, branch, phase, or protected operations change.
 
-The **Flip Analysis** is the financial engine that powers investment decisions.
+Tool-specific files such as `CLAUDE.md`, `.codex/instructions.md`, `.cursor/`, and `.github/instructions/` adapt these rules for each tool. They do not override `AGENTS.md`.
 
-### Core Formula
+## Current Development State
 
-```
-ALL-IN COST = Purchase Price + Acquisition Costs + Rehab Net Cost + Lender Costs + Holding Costs + Selling Costs
+The active task is the FlipEngine Property Hub read-only closeout before data-backed integration.
 
-NET PROFIT = Sale Price - All-In Cost
+Current local work includes read-only Acquisition, Budget, Loans / Draws, Sale / Exit, and Reports panels in `js/projects.js`. The FlipEngine MVP migration has been drafted and tested in a disposable local database, but it has not been applied to a real staging/restored environment or production through the current task.
 
-INVESTOR ROI = Net Profit / Investor Capital Contributed
-```
+Use these current-state files:
 
-### Live Example: 2906 SE 182nd Ave, Gresham, OR
+- `memory/PROJECT_STATE.md`
+- `memory/CURRENT_TASK.md`
+- `memory/NEXT_ACTIONS.md`
+- `memory/AGENT_HANDOFF.md`
+- `docs/04-development/ACTIVE_PHASE.md`
 
-| Item | Value | Notes |
-|------|-------|-------|
-| **ACQUISITION** | | |
-| Purchase Price | $330,000 | Negotiated contract price |
-| Earnest Deposit | $6,600 | Investor cash down |
-| Closing Costs | $6,500 | Entry closing (~2%) |
-| **HARD MONEY LOAN** | | |
-| Loan Amount | $323,400 | Amount lender finances |
-| Rate | 10% annual | Calculated on $323,400 |
-| **6-Month Interest** | $16,170 | Core holding cost |
-| **HOLDING** | | |
-| Taxes (6m) | $1,250 | Property taxes |
-| Insurance (6m) | $1,200 | Builder policy |
-| **REHAB** | | |
-| Estimated Repairs | $30,350 | Contractor estimate |
-| Contingency (10%) | $3,035 | Overages buffer |
-| **SALE** | | |
-| Title & Escrow | $9,000 | Exit closing (~2%) |
-| **TOTAL PROJECT COST** | **$397,505** | All-in cost |
-| | | |
-| **SALE PRICE (ARV)** | **$450,000** | Conservative market rate |
-| **Realtor Commission** | **$24,750** | At 5.5% |
-| **Net Proceeds** | **$425,250** | After realtor |
-| | | |
-| **Gross Profit** | **$27,745** | Before investor cut |
-| **Investor Initial Capital** | **-$6,600** | Earnest money invested |
-| **NET PROFIT TO INVESTOR** | **$21,145** | Final take-home |
-| | | |
-| **ROI (6 months)** | **320%** | $21,145 / $6,600 |
-| **Annualized ROI** | **640%** | At 6-month timeframe |
-| **Profit Margin** | **4.70%** | Of sale price |
+## Main Documentation Areas
 
-### Key Logic Points
+- `docs/00-governance/` - operating rules, stop conditions, recovery, and the document map.
+- `docs/01-product/` - product boundaries, requirements, and module priority.
+- `docs/02-architecture/` - repo map, state contracts, function index, Supabase, and financial boundaries.
+- `docs/03-modules/` - module specifications, including Investor Hub.
+- `docs/04-development/` - active phase, backlog, roadmap, and delivery workflow.
+- `docs/05-qa/` - smoke, regression, financial, mobile, data, and release checks.
+- `docs/flipengine/` - chronological FlipEngine plans, implementation records, and QA evidence.
+- `memory/` - current task, decisions, known issues, handoff, and session history.
+- `skills/` - repository-specific agent playbooks; see `skills/README.md`.
+- `qa/` - read-only, transactional, and mutating SQL artifacts; see `qa/README.md` before execution.
+- `.github/workflows/` - automated and manual QA/migration workflows with different risk levels.
+- `design/` - static UX references, not production application code.
+- `scripts/`, `sql/`, and `supabase/` - build, bootstrap, schema, migration, function, and security artifacts; protected by the current task gates.
 
-1. **Hard Money Rate Calculation**
-   - Rate applies to **loan amount only** ($323,400), not purchase price
-   - Interest = $323,400 × 10% ÷ 2 (for 6 months) = $16,170
-   - Every month over 6 months costs ~$3,000 in additional interest
+## Historical Material
 
-2. **Investor Capital Separation**
-   - $6,600 earnest deposit = investor's actual cash at risk
-   - $323,400 loan = lender's money (must be repaid)
-   - Final profit is calculated AFTER subtracting investor's initial capital
+`Otros/` is a local, ignored recovery archive. Duplicate extracted packs were removed; original pack ZIPs, unique business documents, media, and dated snapshots remain. Agents must not read this archive by default or copy an old plan into active work without reconciling it with `AGENTS.md`, `memory/CURRENT_TASK.md`, and current code.
 
-3. **All-in Cost Coverage**
-   - Includes every dollar that leaves the deal (closing, rehab, holding, sale)
-   - Does NOT include loan repayment (that's covered by sale proceeds)
-   - Profit = Sale Proceeds - All-in Cost
+## Core Rule
 
-4. **Timeline Sensitivity**
-   - 6 months is the sweet spot (profit = $21,145)
-   - 2 months = higher profit ($30,555) but unrealistic timeline
-   - 12 months = profit drops to $5,575 (each month costs ~$3k)
-
-### Sensitivity Analysis
-
-| Timeline | Interest Cost | Total Cost | Profit | Viability |
-|----------|---------------|-----------|--------|-----------|
-| 2 months | $5,390 | $388,695 | $30,555 | 10% (Aggressive) |
-| **6 months** | **$16,170** | **$397,505** | **$21,145** | **✅ Recommended** |
-| 12 months | $32,340 | $413,675 | $5,575 | ❌ Too long |
-
----
-
-## 🚀 Tech Stack
-
-- **Frontend**: Vanilla HTML/CSS/JS (no framework dependencies)
-- **Database**: Supabase (PostgreSQL)
-- **Hosting**: GitHub Pages
-- **Icons**: Lucide Icons
-- **Maps**: OpenStreetMap Nominatim
-
-## 📱 Access
-
-Live at: `https://racielf.github.io/nexartwo/`
-
-Interactive Flip Analysis: `https://bit.ly/flip-rcart`
-
-## 📄 License
-
-Private — R.C Art Construction LLC
+Use the smallest evidence-based change that completes the approved task. Protected operations still require exact owner approval even when general development is authorized.

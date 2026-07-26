@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Investor Profile — Dora Montes | NexArtWO</title>
+  <meta name="description" content="Investor profile for Dora Montes — NexArtWO Work Order System">
+  <link rel="stylesheet" href="investor-common.css">
+  <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body>
+  <div class="app-container">
+
+    <!-- SIDEBAR -->
+    <aside class="sidebar">
+      <div class="sidebar-logo">
+        <div class="logo-icon">RC</div>
+        <div class="logo-text">
+          <h1>R.C Art Construction</h1>
+          <span>Work Order System</span>
+        </div>
+      </div>
+      <nav class="sidebar-nav">
+        <div class="nav-section-title">Main</div>
+        <a class="nav-item" href="#"><i data-lucide="layout-dashboard" class="icon"></i> Dashboard</a>
+        <a class="nav-item" href="#"><i data-lucide="clipboard-list" class="icon"></i> Work Orders</a>
+        <a class="nav-item" href="#"><i data-lucide="wrench" class="icon"></i> Price Book</a>
+        <div class="nav-section-title">Management</div>
+        <a class="nav-item" href="#"><i data-lucide="users" class="icon"></i> Clients</a>
+        <a class="nav-item disabled" href="#"><i data-lucide="hard-hat" class="icon"></i> Subcontractors <span class="nav-tag" style="color:var(--text-muted)">Soon</span></a>
+        <a class="nav-item" href="#"><i data-lucide="file-text" class="icon"></i> Documents</a>
+        <a class="nav-item" href="#"><i data-lucide="building-2" class="icon"></i> Projects</a>
+        <a class="nav-item active" href="01-investor-directory.html"><i data-lucide="landmark" class="icon"></i> Investor Hub <span class="nav-tag" style="color:var(--accent)">LIVE</span></a>
+        <div class="nav-section-title">Oregon Compliance</div>
+        <a class="nav-item disabled" href="#"><i data-lucide="shield-check" class="icon"></i> CCB Compliance <span class="nav-tag" style="color:var(--text-muted)">Soon</span></a>
+        <div class="nav-section-title">System</div>
+        <a class="nav-item" href="#"><i data-lucide="settings" class="icon"></i> Settings</a>
+      </nav>
+      <div class="sidebar-footer">
+        <div class="ccb-badge">
+          <i data-lucide="check-circle-2" style="width:14px;height:14px"></i> Oregon CCB #247277 — Active
+        </div>
+      </div>
+    </aside>
+
+    <!-- MAIN CONTENT -->
+    <main class="main-content">
+
+      <!-- TOP BAR -->
+      <div class="top-bar">
+        <div class="top-bar-left">
+          <a href="01-investor-directory.html" class="btn btn-ghost btn-sm" style="gap:4px">
+            <i data-lucide="arrow-left" style="width:16px;height:16px"></i> Back to Directory
+          </a>
+          <div>
+            <h2>Investor Profile</h2>
+            <div class="subtitle">Dora Montes</div>
+          </div>
+        </div>
+        <div class="top-bar-right">
+          <button class="btn btn-secondary btn-sm" style="gap:4px">
+            <i data-lucide="edit-3" style="width:14px;height:14px"></i> Edit Investor
+          </button>
+          <button class="btn btn-warning btn-sm" style="gap:4px">
+            <i data-lucide="ban" style="width:14px;height:14px"></i> Void Investor
+          </button>
+        </div>
+      </div>
+
+      <!-- PAGE CONTENT -->
+      <div class="page animate-in">
+
+        <!-- PROFILE HEADER CARD -->
+        <div class="profile-header">
+          <div class="avatar avatar-lg avatar-blue">DM</div>
+          <div class="profile-info">
+            <div class="profile-name">Dora Montes</div>
+            <div class="profile-badges">
+              <span class="badge badge-person"><i data-lucide="user" style="width:11px;height:11px"></i> Person</span>
+              <span class="badge badge-active">Active</span>
+            </div>
+            <div class="profile-contact-grid">
+              <div class="profile-contact-item">
+                <i data-lucide="mail" style="width:14px;height:14px;color:var(--accent)"></i>
+                doramontes@live.com
+              </div>
+              <div class="profile-contact-item">
+                <i data-lucide="phone" style="width:14px;height:14px;color:var(--accent)"></i>
+                (503) 555-0202
+              </div>
+              <div class="profile-contact-item">
+                <i data-lucide="map-pin" style="width:14px;height:14px;color:var(--accent)"></i>
+                1234 SE Hawthorne Blvd, Portland, OR 97214
+              </div>
+              <div class="profile-contact-item">
+                <i data-lucide="calendar" style="width:14px;height:14px;color:var(--accent)"></i>
+                Registered: Jun 1, 2026
+              </div>
+            </div>
+          </div>
+          <div class="profile-actions">
+            <button class="btn btn-primary btn-sm" style="gap:4px">
+              <i data-lucide="folder-plus" style="width:14px;height:14px"></i> Attach to Project
+            </button>
+          </div>
+        </div>
+
+        <!-- NOTES -->
+        <div class="note-box" style="margin-bottom:24px">
+          <div class="note-box-label">
+            <i data-lucide="lock" style="width:13px;height:13px"></i> Owner Notes — Private
+          </div>
+          <div class="note-box-text">
+            First contact on Jun 1, 2026. Interested in 20% equity in 665 Home Ave project. Pending formal agreement. Source: personal savings. Previously invested in a duplex renovation in Beaverton with another contractor.
+          </div>
+        </div>
+
+        <!-- KPI STRIP -->
+        <div class="stats-grid" style="grid-template-columns: repeat(3, 1fr);">
+          <div class="stat-card accent">
+            <div class="stat-icon"><i data-lucide="banknote" style="width:22px;height:22px"></i></div>
+            <div class="stat-value">$75,000</div>
+            <div class="stat-label">Total Confirmed Capital</div>
+            <div class="stat-sub">Across all projects</div>
+          </div>
+          <div class="stat-card info">
+            <div class="stat-icon"><i data-lucide="clock" style="width:22px;height:22px"></i></div>
+            <div class="stat-value">$25,000</div>
+            <div class="stat-label">Pending Capital</div>
+            <div class="stat-sub">Awaiting confirmation</div>
+          </div>
+          <div class="stat-card purple">
+            <div class="stat-icon"><i data-lucide="phone-call" style="width:22px;height:22px"></i></div>
+            <div class="stat-value">1</div>
+            <div class="stat-label">Open Capital Calls</div>
+            <div class="stat-sub">Requires response</div>
+          </div>
+        </div>
+
+        <!-- LINKED PROJECTS -->
+        <div class="card" style="margin-bottom:24px">
+          <div class="card-header">
+            <h3>
+              <i data-lucide="building-2" style="width:16px;height:16px"></i> Linked Projects
+            </h3>
+            <button class="btn btn-sm btn-primary" style="gap:4px">
+              <i data-lucide="plus" style="width:13px;height:13px"></i> Attach to Project
+            </button>
+          </div>
+          <div class="card-body" style="padding:0">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Project</th>
+                  <th>Role in Project</th>
+                  <th>Ownership %</th>
+                  <th>Profit Split %</th>
+                  <th>Status</th>
+                  <th>Confirmed Capital</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>
+                    <div style="display:flex;align-items:center;gap:8px">
+                      <i data-lucide="building-2" style="width:14px;height:14px;color:var(--accent)"></i>
+                      <div>
+                        <div style="font-weight:600;color:var(--text-primary)">665 Home Ave</div>
+                        <div style="font-size:11px;color:var(--text-muted)">Portland, OR</div>
+                      </div>
+                    </div>
+                  </td>
+                  <td><span style="font-weight:500">Equity Partner</span></td>
+                  <td><strong>20%</strong></td>
+                  <td><strong>25%</strong></td>
+                  <td><span class="badge badge-active">Active</span></td>
+                  <td><strong style="color:var(--text-primary)">$75,000</strong></td>
+                  <td>
+                    <a href="04-project-capital-workspace.html" class="btn btn-sm btn-secondary" style="gap:4px">
+                      <i data-lucide="landmark" style="width:13px;height:13px"></i> Capital
+                    </a>
+                  </td>
+                </tr>
+                <tr>
+                  <td>
+                    <div style="display:flex;align-items:center;gap:8px">
+                      <i data-lucide="building-2" style="width:14px;height:14px;color:var(--accent)"></i>
+                      <div>
+                        <div style="font-weight:600;color:var(--text-primary)">Milwaukie Flip</div>
+                        <div style="font-size:11px;color:var(--text-muted)">Milwaukie, OR</div>
+                      </div>
+                    </div>
+                  </td>
+                  <td><span style="font-weight:500">Passive Investor</span></td>
+                  <td><strong>10%</strong></td>
+                  <td><strong>12%</strong></td>
+                  <td><span class="badge badge-pending">Pending</span></td>
+                  <td><span style="font-size:12px;color:var(--text-muted)">$0</span></td>
+                  <td>
+                    <a href="04-project-capital-workspace.html" class="btn btn-sm btn-secondary" style="gap:4px">
+                      <i data-lucide="landmark" style="width:13px;height:13px"></i> Capital
+                    </a>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- ACTIVITY / HISTORY TIMELINE -->
+        <div class="card">
+          <div class="card-header">
+            <h3>
+              <i data-lucide="activity" style="width:16px;height:16px"></i> Activity History
+            </h3>
+          </div>
+          <div class="card-body">
+            <div class="timeline">
+              <div class="timeline-item">
+                <div class="timeline-dot accent"></div>
+                <div class="timeline-content">
+                  <div class="timeline-text"><strong>Capital call #CC-003</strong> created for $25,000 — 665 Home Ave</div>
+                  <div class="timeline-time">Jun 5, 2026 — 2:30 PM</div>
+                </div>
+              </div>
+              <div class="timeline-item">
+                <div class="timeline-dot success"></div>
+                <div class="timeline-content">
+                  <div class="timeline-text"><strong>Contribution confirmed</strong> — $50,000 wire transfer received — 665 Home Ave</div>
+                  <div class="timeline-time">Jun 3, 2026 — 10:15 AM</div>
+                </div>
+              </div>
+              <div class="timeline-item">
+                <div class="timeline-dot info"></div>
+                <div class="timeline-content">
+                  <div class="timeline-text"><strong>Attached to project</strong> Milwaukie Flip — Role: Passive Investor, 10% ownership</div>
+                  <div class="timeline-time">Jun 2, 2026 — 4:45 PM</div>
+                </div>
+              </div>
+              <div class="timeline-item">
+                <div class="timeline-dot success"></div>
+                <div class="timeline-content">
+                  <div class="timeline-text"><strong>Contribution confirmed</strong> — $25,000 check deposit — 665 Home Ave</div>
+                  <div class="timeline-time">Jun 2, 2026 — 9:00 AM</div>
+                </div>
+              </div>
+              <div class="timeline-item">
+                <div class="timeline-dot info"></div>
+                <div class="timeline-content">
+                  <div class="timeline-text"><strong>Attached to project</strong> 665 Home Ave — Role: Equity Partner, 20% ownership</div>
+                  <div class="timeline-time">Jun 1, 2026 — 3:20 PM</div>
+                </div>
+              </div>
+              <div class="timeline-item">
+                <div class="timeline-dot muted"></div>
+                <div class="timeline-content">
+                  <div class="timeline-text"><strong>Investor registered</strong> — Added by Rodolfo F.</div>
+                  <div class="timeline-time">Jun 1, 2026 — 2:00 PM</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </main>
+  </div>
+
+  <script>
+    lucide.createIcons();
+  </script>
+</body>
+</html>

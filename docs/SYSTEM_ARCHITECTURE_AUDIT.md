@@ -1,5 +1,7 @@
 # System Architecture Audit
 
+> Status note (2026-07-12): This audit is historical evidence from an earlier repository state. Use `docs/02-architecture/CURRENT_REPO_MAP.md`, `memory/PROJECT_STATE.md`, and current source inspection for present behavior. Investor Hub and deployment statements below are not current authorization.
+
 ## 1. Executive Summary
 NexArtWO is a vanilla JavaScript/HTML application utilizing Supabase for backend storage and authentication. The system is divided into operational work order management and Phase 1 financial tracking, with an inactive Phase 2B (Investor Hub) dark-launched in the codebase. The application prioritizes client-side rendering with direct Supabase SDK interaction.
 
@@ -44,7 +46,7 @@ NexArtWO is a vanilla JavaScript/HTML application utilizing Supabase for backend
 
 ## 11. QA Files Map
 - `qa/investor_hub_smoke_test.sql`: Validates Phase 2B without touching Phase 1.
-- `qa/investor_hub_ui_preview.html`: Isolated UI preview.
+- qa/investor_hub_ui_preview.html: Historical isolated UI preview; this artifact is not present in the current tree.
 
 ## 12. Docs Map
 - `docs/`: Holds spec documents, checklists, styling guides, and this audit.
