@@ -29,6 +29,8 @@ Decision and reasoning: See `memory/DECISION_LOG.md` 2026-07-26 entry in full. S
 Not done: push, PR, preview/production deploy, migration apply, Auth/RLS changes, and the `ISSUE-015` fix itself — none of these were the two items the owner named, so none were performed.
 Next step: Owner decides push/PR timing and, separately, when to schedule the `ISSUE-015` CSS-only task.
 
+Update same day: owner was asked to pick the next specific action from an explicit list and chose "push the local commit to origin." Ran `git push origin feat/activate-investor-hub-local` — result `fdafbe1..6842529`, branch now even with `origin/feat/activate-investor-hub-local` (confirmed via `git status -sb`). No PR opened, no merge into `main`, no workflow triggered (push-only branch update). Deploy, migration apply, and Auth/RLS remain untouched and separately gated.
+
 ---
 
 ## 2026-07-25 - Claude Code (Property Hub Responsive QA)
