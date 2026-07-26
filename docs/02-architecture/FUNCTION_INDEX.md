@@ -5,6 +5,8 @@
 Populated during Phase A — 2026-05-29.
 Source: grep scan of all JS files. Purpose-level descriptions only.
 
+This is a historical function scan. Line numbers and completeness are not current authority; search the source and call sites before every edit.
+
 ---
 
 ## js/app.js (~266 KB — HIGH RISK)

@@ -1,24 +1,30 @@
-# PRODUCT_MASTER_SPEC — NexArtWO
+# Product Master Spec - NexArtWO
+
+Status: Active product summary. Updated 2026-07-12.
 
 ## Identity
 
-NexArtWO is an operations and investment project management system.
+NexArtWO is an operations, construction, and investment-project management system.
 
-## Primary jobs
+FlipEngine is an internal NexArtWO layer for selected fix-and-flip projects. It is not a separate product or a replacement for the core app.
 
-- Manage work orders.
-- Manage projects.
-- Track expenses, refunds and disbursements.
-- Track clients.
+## Primary Jobs
+
+- Manage Work Orders, scopes, clients, and field execution.
+- Manage Projects and their existing financial records.
+- Track expenses, refunds, disbursements, and operational summaries.
 - Produce documents and reports.
 - Support mobile field work.
-- Later: track cash-in, investors, loans, closing, distributions.
-- Later: add Deal Analyzer for fast property analysis.
+- For eligible investment projects, organize acquisition, renovation budget, financing, receipts, documents, people, payments, sale/exit, and reporting through Property Hub.
 
-## Main product question
+## Core Product Question
 
-What is the operational and financial status of this project?
+What is the operational and financial status of this project, and what evidence supports it?
 
-## Future investment question
+## Investment Project Question
 
-How much capital came in, where did it go, what was the sale outcome, and how should profit be distributed?
+For an eligible FlipEngine project: how was the property acquired, funded, renovated, documented, sold, and reported without mixing capital flows into operating expenses or inventing unapproved formulas?
+
+## Boundary
+
+Data-backed FlipEngine modules, Investor Hub integration, Auth/RLS, and financial calculations advance only through their documented approval gates.

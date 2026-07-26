@@ -375,6 +375,29 @@ Status: OPEN — documented. Awaiting owner approval before implementation plan.
 
 ---
 
+### ISSUE-014 - Legacy Supabase Financial QA can push to a generic remote target
+
+Severity: P1
+Area: `.github/workflows/supabase-financial-qa.yml`
+Status: OPEN - restricted pending owner review.
+
+#### Finding
+
+The manually triggered workflow links Supabase using generic repository secrets and then runs `supabase db push`. The file does not declare a protected GitHub `staging` environment, so the target cannot be proven non-production from the workflow alone.
+
+#### Safety rule
+
+- DO NOT RUN this workflow until the owner verifies the exact project behind its secrets and approves the remote mutation.
+- Prefer `.github/workflows/investor-hub-pr-qa.yml` for isolated database validation because it uses ephemeral Postgres and no remote Supabase target by design.
+- Treat `.github/workflows/staging-db-qa.yml` as mutating staging infrastructure; it also requires exact approval even though it declares the staging environment.
+- No workflow was changed or executed during the 2026-07-12 documentation audit.
+
+#### Resolution needed
+
+Review whether this legacy workflow should be retired, renamed and staging-scoped, or changed to require a protected GitHub environment and staging-specific secrets. That decision belongs in a separate, owner-approved task.
+
+---
+
 ### ISSUE-010 — Projects have no safe delete/archive/cancel action visible
 
 Severity: P2
@@ -385,3 +408,19 @@ Action needed: Design and implement a safe Archive/Cancel UI. Requires owner spe
 Do not implement hard delete under any circumstances.
 Do not fix in current task.
 Status: OPEN — requires owner spec and separate task.
+
+---
+
+## Responsive QA session findings — 2026-07-25
+
+### ISSUE-015 — Project Workspace horizontal overflow at phone width (390px)
+
+Severity: P2
+Area: projects.js — renderPropertyHubShell() inline grid; also reproduces on the pre-existing Project Workspace `Overview` tab — CSS/layout only
+Observed: At a 390px phone viewport, `document.documentElement.scrollWidth` measures 751px (nearly 2x the viewport) on the `Overview` tab and on all five FlipEngine Property Hub read-only panels (Acquisition, Budget, Loans / Draws, Sale / Exit, Reports). Content is not overlapping or broken in any captured screenshot, but a real phone user must scroll horizontally to see the right edge of the page.
+Reproduced with: headless Chromium (Playwright) driving the local static app, project `Coindo` (`Fix & Flip`), viewport `390x844`. Desktop (1440px) and tablet (768px) viewports showed zero overflow on the same panels.
+Likely cause: `renderPropertyHubShell()` builds the module-sidebar + content layout with an inline style `grid-template-columns:minmax(240px,300px) minmax(0,1fr)` and no responsive breakpoint. Being an inline style, none of the existing `@media` rules in `css/*.css` can reach it. The `Overview` tab shows the same overflow through a different, unconfirmed cause in the same shared Project Workspace chrome — needs its own root-cause pass before a fix is written.
+Evidence: `docs/flipengine/43_PROPERTY_HUB_RESPONSIVE_QA_PASS.md`.
+Action needed: Separate CSS-only task to make the Property Hub sidebar/content grid and the Overview tab collapse to a single column below a defined breakpoint (recommended target: match the existing `768px`/`640px` breakpoints already used elsewhere in `css/*.css`). Must not touch JS logic, financial formulas, or FlipEngine read-only gating.
+Do not fix in current task.
+Status: OPEN — separate CSS task required.

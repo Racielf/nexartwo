@@ -1,30 +1,37 @@
 # Feature Flags
 
-This document tracks all active and planned feature flags in the application. Feature flags are the primary mechanism for dark-launching code and protecting production from unverified changes.
+Status: Active policy and branch-state record. Updated 2026-07-26.
 
-| Flag Name | Default | File | Purpose | Current State | Owner |
-|-----------|---------|------|---------|---------------|-------|
-| `INVESTOR_HUB_ENABLED` | `false` | `js/projects.js` | hide/show Investor Hub tab and UI components | hidden/dark-launched | R.C Art Construction |
+## Current Flags
 
-## Flag Details
+| Flag | Production/main policy | Current feature branch | Purpose |
+|---|---|---|---|
+| `INVESTOR_HUB_ENABLED` | `false` | `false` in `feat/activate-investor-hub-local` (resolved 2026-07-26) | Controls the global Investor Hub development surface |
+| `window.NEXARTWO_FEATURE_FLAGS.investorHubWorkspaceTab` | absent / `false` | absent / `false` | Separately controls the Investor Hub tab inside Project Workspace |
 
-### `INVESTOR_HUB_ENABLED`
-**Purpose:** Prevents unauthorized or unconfigured access to the Phase 2B Investor Hub in production.
-**Current State:** `false` (Hidden)
+## Investor Hub Branch Divergence — RESOLVED 2026-07-26
 
-**Activation Gate:**
-Do not activate without explicit approval. The following must be completed:
-1. Migration `202605070001_investor_entities.sql` confirmed applied in production or approved target environment.
-2. Investor Hub smoke test `PASS`.
-3. Manual UI check `PASS`.
-4. Owner approval.
-5. Rollback plan ready.
+`origin/main` keeps `INVESTOR_HUB_ENABLED = false`.
 
-**Deactivation Process:**
-Set `INVESTOR_HUB_ENABLED = false` in `js/projects.js` and ensure the UI tab retains `display:none` in `projects.html`.
+The feature branch previously inherited `INVESTOR_HUB_ENABLED = true` from commit `e8b24271`, whose code comment identified it as intentional Owner/Admin development. That branch-specific development state has been rolled back — see `memory/DECISION_LOG.md` 2026-07-26 entry. Re-diverging from production requires a new explicit owner decision, following the same Activation Gate below.
 
-**Critical Rule:**
-`INVESTOR_HUB_ENABLED` must remain `false` until ALL activation gates are complete. Completing an audit, receiving a documentation approval, or passing a CI/CD workflow does **not** authorize enabling this flag. Only explicit owner approval after full prerequisite completion authorizes activation.
+The Project Workspace Investor Hub tab remains hidden unless `window.NEXARTWO_FEATURE_FLAGS.investorHubWorkspaceTab === true`. No active definition enabling that second flag was found during the 2026-07-12 audit.
 
-**Cleanup Note:**
-The flag and associated conditionally hidden UI elements should only be cleaned up (removed) after the Investor Hub feature is fully stable, tested, and integrated into the primary workflow.
+## Activation Gate
+
+Do not promote or newly activate Investor Hub without all of the following:
+
+1. The target environment and schema are verified.
+2. Required migrations are confirmed for that environment.
+3. Auth/RLS and access boundaries are reviewed.
+4. Investor Hub smoke and manual UI checks pass.
+5. A rollback plan exists.
+6. The owner approves the exact merge/deploy target.
+
+## Current Decision Required
+
+None open. The branch matches production as of 2026-07-26. A future re-activation still requires an explicit owner decision naming the exact merge/deploy target, and must not be changed as a side effect of unrelated FlipEngine work.
+
+## Deactivation
+
+The narrow rollback — set `INVESTOR_HUB_ENABLED = false` in `js/projects.js` and verify that Investor Hub entries are hidden — was performed 2026-07-26 with owner approval. Verified in browser: flag reads `false`, Property Hub still renders for a `Fix & Flip` project, zero console errors.

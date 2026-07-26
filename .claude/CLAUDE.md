@@ -1,14 +1,7 @@
 @../AGENTS.md
 
-# .claude/CLAUDE.md
+# Claude Repository Adapter
 
-Claude must treat this repo as controlled production-like software.
+Follow the core and task-specific reading router in `AGENTS.md`. Re-read it after a context reset, scope/branch change, or before protected work.
 
-Use:
-- `.claude/rules/financial-rules.md`
-- `.claude/rules/supabase-rules.md`
-- `.claude/rules/javascript-vanilla-rules.md`
-- `.claude/rules/mobile-ui-rules.md`
-- `.claude/rules/regression-rules.md`
-
-Do not attempt broad autonomous refactors.
+Apply the path-specific files in `.claude/rules/` only when their paths are involved. Do not load archives or broad documentation sets by default, and do not perform broad autonomous refactors.

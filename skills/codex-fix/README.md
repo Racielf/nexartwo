@@ -1,5 +1,7 @@
 # Codex Fix
 
+> Status note (2026-07-12): The current repository copy contains `SKILL.md`, this README, `GUIA_RAPIDA_NEXARTWO.md`, and a placeholder `references/README.md`. The optional reference files and `agents/openai.yaml` described below are not installed.
+
 Codex Fix is a debugging and code-repair skill designed to analyze code errors conservatively. It should activate when the user reports bugs, syntax errors, runtime failures, logic issues, broken modules, failed builds, warnings, console errors, API issues, database issues, or frontend/backend behavior that does not match expectations.
 
 ## Main goal
@@ -16,7 +18,7 @@ The skill should:
 - avoid unnecessary refactors
 - include validation steps
 
-## Recommended structure
+## Optional packaged structure
 
 ```text
 codex-fix/
@@ -29,7 +31,7 @@ codex-fix/
     └── guia_validacion.md
 ```
 
-This download includes only the Markdown files requested by the user.
+The current repository installation is listed in the status note above. The tree below describes optional packaging, not files that should be assumed present.
 
 ## Markdown files
 
@@ -49,19 +51,19 @@ Reusable diagnostic templates and response examples.
 
 Validation checklist by stack and issue type.
 
-### GUIA_RAPIDA.md
+### GUIA_RAPIDA_NEXARTWO.md
 
 Quick usage guide with prompt examples.
 
 ## Important packaging note
 
-A complete installable skill also needs UI metadata at:
+A separately packaged skill can also provide UI metadata at:
 
 ```text
 agents/openai.yaml
 ```
 
-That file is not Markdown, so it is not included as part of the requested `.md` files.
+That optional UI metadata is not installed here. Repository use is controlled by `AGENTS.md` and the frontmatter in `SKILL.md`.
 
 ## Core rule
 
@@ -74,7 +76,7 @@ Esta version integra referencias avanzadas sin duplicar el flujo principal de `S
 Archivos base:
 
 - `SKILL.md`
-- `GUIA_RAPIDA.md`
+- `GUIA_RAPIDA_NEXARTWO.md`
 - `references/errores_comunes.md`
 - `references/plantilla_analisis.md`
 - `references/guia_validacion.md`

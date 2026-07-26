@@ -1,36 +1,16 @@
 @AGENTS.md
 
-# Claude Code Instructions — NexArtWO
+# Claude Code Instructions - NexArtWO
 
-## Claude workflow
+`AGENTS.md` is the universal authority. Use its context router instead of loading every document.
 
-1. Read root `AGENTS.md`.
-2. Read `memory/PROJECT_STATE.md`.
-3. Read `memory/CURRENT_TASK.md`.
-4. Read module spec.
-5. Provide plan.
-6. Wait for confirmation.
-7. Make minimal change.
-8. Validate.
-9. Update memory.
+At a new task, context reset, branch change, or owner scope change:
 
-## Claude memory usage
+1. Re-read the five core context files listed in `AGENTS.md`.
+2. Load only the task-type row that applies.
+3. Inspect exact source functions and contracts before proposing edits.
+4. Keep the task small, validate it, and update current memory when state changes.
 
-Use `memory/` as project memory:
+Do not preload `Otros/`, all of `docs/flipengine/`, or the full session log. Read archive/history only for a specific recovery or provenance need.
 
-- `PROJECT_STATE.md`: current project status
-- `CURRENT_TASK.md`: active task and boundaries
-- `DECISION_LOG.md`: architectural/product decisions
-- `CHANGELOG.md`: completed changes
-- `KNOWN_ISSUES.md`: unresolved bugs
-- `BUG_FIX_LOG.md`: bug fixes
-- `AGENT_HANDOFF.md`: handoff between sessions
-
-## Claude-specific rules
-
-- Do not load the entire repo unless needed.
-- Prefer architecture maps before source code.
-- Avoid editing huge JS files unless the target function is identified.
-- No autonomous SQL.
-- No autonomous merges.
-- No "while I am here" fixes.
+No autonomous SQL, remote database action, formula change, Investor Hub change, commit, merge, push, or deploy.

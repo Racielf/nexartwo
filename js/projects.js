@@ -8,10 +8,12 @@ var _currentProject = null;
 
 // ============================================================
 // INVESTOR HUB FEATURE FLAG — Phase 2B
-// Intentionally active for Owner/Admin development. Investor Hub uses real
-// Supabase records only for investor/capital actions; demo/local writes are disabled.
+// Matches origin/main and production (2026-07-26 — see memory/DECISION_LOG.md).
+// Re-enable only after an explicit owner decision to diverge from production again.
+// Investor Hub uses real Supabase records only for investor/capital actions;
+// demo/local writes are disabled.
 // ============================================================
-var INVESTOR_HUB_ENABLED = true;
+var INVESTOR_HUB_ENABLED = false;
 
 function isInvestorHubWorkspaceTabEnabled() {
   return !!(typeof window !== 'undefined' &&
@@ -1054,6 +1056,22 @@ function propertyHubInfoRow(label, value) {
   '</div>';
 }
 
+function propertyHubProjectField(project, field, legacyField) {
+  if (!project) return null;
+  var value = project[field];
+  if ((value === undefined || value === null || value === '') && legacyField) {
+    value = project[legacyField];
+  }
+  return value === undefined || value === null || value === '' ? null : value;
+}
+
+function propertyHubDisplayValue(value, formatter) {
+  if (value === undefined || value === null || value === '') {
+    return '<span style="color:var(--text-muted);font-size:13px">Not available</span>';
+  }
+  return formatter ? formatter(value) : escHtml(String(value));
+}
+
 function propertyHubPlaceholder(section) {
   return '<div class="card"><div class="card-body" style="padding:18px">' +
     '<h4 style="font-size:12px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;margin:0 0 14px;display:flex;align-items:center;gap:8px">' +
@@ -1084,6 +1102,66 @@ function renderPropertyHubSection(sectionId) {
     '</div></div>';
   }
 
+  if (section.id === 'acquisition') {
+    var purchasePrice = propertyHubProjectField(p, 'purchase_price', 'purchasePrice');
+    var downPayment = propertyHubProjectField(p, 'down_payment', 'downPayment');
+    var loanAmount = propertyHubProjectField(p, 'loan_amount', 'loanAmount');
+    var closingCosts = propertyHubProjectField(p, 'closing_costs', 'closingCosts');
+    var purchaseDate = propertyHubProjectField(p, 'purchase_date', 'purchaseDate');
+    var projectStatus = PROJECT_STATUSES[p.status] || PROJECT_STATUSES.planning;
+    var projectType = getProjTypeCfg(p.project_type || null);
+
+    return '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin-bottom:16px">' +
+      propertyHubMetric('Purchase Price', propertyHubDisplayValue(purchasePrice, fmtMoney), 'Existing project field') +
+      propertyHubMetric('Down Payment', propertyHubDisplayValue(downPayment, fmtMoney), 'Existing project field') +
+      propertyHubMetric('Loan Amount', propertyHubDisplayValue(loanAmount, fmtMoney), 'Existing project field') +
+      propertyHubMetric('Closing Costs', propertyHubDisplayValue(closingCosts, fmtMoney), 'Existing project field') +
+    '</div>' +
+    '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px">' +
+      '<section style="border:1px solid var(--border);border-radius:8px;padding:16px;background:var(--bg-card)">' +
+        '<h4 style="font-size:12px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;margin:0 0 14px;display:flex;align-items:center;gap:8px"><i data-lucide="map-pin" style="width:14px;height:14px"></i> Property Record</h4>' +
+        propertyHubInfoRow('Project ID', '<span style="font-family:monospace;font-size:11px">' + escHtml(p.id || '') + '</span>') +
+        propertyHubInfoRow('Address', propertyHubDisplayValue(p.address)) +
+        propertyHubInfoRow('Purchase Date', propertyHubDisplayValue(purchaseDate, fmtDate)) +
+        propertyHubInfoRow('Status', projectStatusPill(projectStatus)) +
+        propertyHubInfoRow('Project Type', projectTypePill(projectType)) +
+      '</section>' +
+      '<section style="border:1px solid var(--border);border-radius:8px;padding:16px;background:var(--bg-card)">' +
+        '<h4 style="font-size:12px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;margin:0 0 14px;display:flex;align-items:center;gap:8px"><i data-lucide="database" style="width:14px;height:14px"></i> Data Source</h4>' +
+        propertyHubInfoRow('Source', '<span style="color:var(--accent)">Existing NexArWO project</span>') +
+        propertyHubInfoRow('Acquisition record', '<span style="color:var(--text-muted)">Not loaded</span>') +
+        propertyHubInfoRow('Notes', propertyHubDisplayValue(p.notes)) +
+      '</section>' +
+    '</div>' +
+    '<div style="margin-top:16px">' + propertyHubReadinessNotice('Acquisition') + '</div>';
+  }
+
+  if (section.id === 'budget') {
+    return '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin-bottom:16px">' +
+      propertyHubMetric('Net Expenses', propertyHubDisplayValue(f ? f.net_expense_cost : null, fmtMoney), 'Existing summary; not budget actuals') +
+      propertyHubMetric('Disbursements', propertyHubDisplayValue(f ? f.total_disbursements : null, fmtMoney), 'Existing summary; not committed budget') +
+      propertyHubMetric('Budget Categories', '<span style="color:var(--text-muted);font-size:13px">Not loaded</span>', 'Requires approved database migration') +
+      propertyHubMetric('Budget Calculations', '<span style="color:var(--text-muted);font-size:13px">Not enabled</span>', 'No remaining or variance calculation') +
+    '</div>' +
+    '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px">' +
+      '<section style="border:1px solid var(--border);border-radius:8px;padding:16px;background:var(--bg-card)">' +
+        '<h4 style="font-size:12px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;margin:0 0 14px;display:flex;align-items:center;gap:8px"><i data-lucide="calculator" style="width:14px;height:14px"></i> Budget Readiness</h4>' +
+        propertyHubInfoRow('Data source', f ? '<span style="color:var(--accent)">Existing financial summary</span>' : '<span style="color:var(--text-muted)">Not available</span>') +
+        propertyHubInfoRow('Estimated budget', '<span style="color:var(--text-muted)">Not available</span>') +
+        propertyHubInfoRow('Remaining budget', '<span style="color:var(--text-muted)">Not calculated</span>') +
+        propertyHubInfoRow('Variance', '<span style="color:var(--text-muted)">Not calculated</span>') +
+      '</section>' +
+      '<section style="border:1px solid var(--border);border-radius:8px;padding:16px;background:var(--bg-card)">' +
+        '<h4 style="font-size:12px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;margin:0 0 14px;display:flex;align-items:center;gap:8px"><i data-lucide="shield-check" style="width:14px;height:14px"></i> Accounting Boundary</h4>' +
+        propertyHubInfoRow('Net expenses', '<span style="color:var(--text-secondary)">Financial context only</span>') +
+        propertyHubInfoRow('Disbursements', '<span style="color:var(--text-secondary)">Financial context only</span>') +
+        propertyHubInfoRow('Work Orders', '<span style="color:var(--text-secondary)">Remain independent</span>') +
+        propertyHubInfoRow('Receipts', '<span style="color:var(--text-muted)">Not counted as budget actuals</span>') +
+      '</section>' +
+    '</div>' +
+    '<div style="margin-top:16px">' + propertyHubReadinessNotice('Budget') + '</div>';
+  }
+
   if (section.id === 'workorders') {
     return '<div class="card"><div class="card-body" style="padding:18px">' +
       '<h4 style="font-size:12px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;margin:0 0 14px;display:flex;align-items:center;gap:8px"><i data-lucide="clipboard-list" style="width:14px;height:14px"></i> Work Orders</h4>' +
@@ -1101,6 +1179,100 @@ function renderPropertyHubSection(sectionId) {
     '<div class="card"><div class="card-body" style="padding:18px">' +
       propertyHubReadinessNotice('FlipEngine expense mapping') +
     '</div></div>';
+  }
+
+  if (section.id === 'loans') {
+    var projectLoanAmount = propertyHubProjectField(p, 'loan_amount', 'loanAmount');
+    var hasProjectLoan = projectLoanAmount !== null && parseFloat(projectLoanAmount) > 0;
+
+    return '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin-bottom:16px">' +
+      propertyHubMetric('Existing Loan Amount', propertyHubDisplayValue(hasProjectLoan ? projectLoanAmount : null, fmtMoney), 'Existing project summary only') +
+      propertyHubMetric('Construction Holdback', '<span style="color:var(--text-muted);font-size:13px">Not available</span>', 'No formal loan record loaded') +
+      propertyHubMetric('Draw Requested', '<span style="color:var(--text-muted);font-size:13px">Not available</span>', 'No draw records loaded') +
+      propertyHubMetric('Draw Funded', '<span style="color:var(--text-muted);font-size:13px">Not available</span>', 'No funded draw records loaded') +
+    '</div>' +
+    '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px">' +
+      '<section style="border:1px solid var(--border);border-radius:8px;padding:16px;background:var(--bg-card)">' +
+        '<h4 style="font-size:12px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;margin:0 0 14px;display:flex;align-items:center;gap:8px"><i data-lucide="landmark" style="width:14px;height:14px"></i> Financing Readiness</h4>' +
+        propertyHubInfoRow('Project loan summary', hasProjectLoan ? '<span style="color:var(--accent)">Existing project data</span>' : '<span style="color:var(--text-muted)">Not available</span>') +
+        propertyHubInfoRow('Formal lender record', '<span style="color:var(--text-muted)">Not loaded</span>') +
+        propertyHubInfoRow('Loan number', '<span style="color:var(--text-muted)">Not available</span>') +
+        propertyHubInfoRow('Loan balance', '<span style="color:var(--text-muted)">Not calculated</span>') +
+      '</section>' +
+      '<section style="border:1px solid var(--border);border-radius:8px;padding:16px;background:var(--bg-card)">' +
+        '<h4 style="font-size:12px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;margin:0 0 14px;display:flex;align-items:center;gap:8px"><i data-lucide="shield-check" style="width:14px;height:14px"></i> Funding Boundary</h4>' +
+        propertyHubInfoRow('Draw records', '<span style="color:var(--text-muted)">Not loaded</span>') +
+        propertyHubInfoRow('Available to draw', '<span style="color:var(--text-muted)">Not calculated</span>') +
+        propertyHubInfoRow('Operating expenses', '<span style="color:var(--text-secondary)">Tracked separately</span>') +
+        propertyHubInfoRow('Investor capital', '<span style="color:var(--text-secondary)">Not used by this panel</span>') +
+      '</section>' +
+    '</div>' +
+    '<div style="margin-top:16px">' + propertyHubReadinessNotice('Loans / Draws') + '</div>';
+  }
+
+  if (section.id === 'sale') {
+    var salePrice = propertyHubProjectField(p, 'sale_price', 'salePrice');
+    if ((salePrice === null || parseFloat(salePrice) <= 0) && f) {
+      salePrice = propertyHubProjectField(f, 'sale_price', 'salePrice');
+    }
+    var hasSale = salePrice !== null && parseFloat(salePrice) > 0;
+    var existingProfit = hasSale && f ? f.profit : null;
+    var netProceeds = hasSale && f ? f.net_proceeds : null;
+    var cashPosition = f ? f.project_cash_position : null;
+    var saleProjectStatus = PROJECT_STATUSES[p.status] || PROJECT_STATUSES.planning;
+
+    return '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin-bottom:16px">' +
+      propertyHubMetric('Sale Price', propertyHubDisplayValue(hasSale ? salePrice : null, fmtMoney), 'Existing project value') +
+      propertyHubMetric('Net Proceeds', propertyHubDisplayValue(netProceeds, fmtMoney), 'Existing financial summary') +
+      propertyHubMetric('Existing Profit', propertyHubDisplayValue(existingProfit, fmtMoney), 'No new FlipEngine calculation') +
+      propertyHubMetric('Project Cash Position', propertyHubDisplayValue(cashPosition, fmtMoney), 'Existing financial summary') +
+    '</div>' +
+    '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px">' +
+      '<section style="border:1px solid var(--border);border-radius:8px;padding:16px;background:var(--bg-card)">' +
+        '<h4 style="font-size:12px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;margin:0 0 14px;display:flex;align-items:center;gap:8px"><i data-lucide="badge-dollar-sign" style="width:14px;height:14px"></i> Sale Readiness</h4>' +
+        propertyHubInfoRow('Project status', projectStatusPill(saleProjectStatus)) +
+        propertyHubInfoRow('Sale summary', hasSale ? '<span style="color:var(--accent)">Existing project data</span>' : '<span style="color:var(--text-muted)">Not available</span>') +
+        propertyHubInfoRow('Listing price', '<span style="color:var(--text-muted)">Not available</span>') +
+        propertyHubInfoRow('Sale date', '<span style="color:var(--text-muted)">Not available</span>') +
+      '</section>' +
+      '<section style="border:1px solid var(--border);border-radius:8px;padding:16px;background:var(--bg-card)">' +
+        '<h4 style="font-size:12px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;margin:0 0 14px;display:flex;align-items:center;gap:8px"><i data-lucide="shield-check" style="width:14px;height:14px"></i> Financial Boundary</h4>' +
+        propertyHubInfoRow('Financial source', f ? '<span style="color:var(--accent)">Existing NexArWO summary</span>' : '<span style="color:var(--text-muted)">Not available</span>') +
+        propertyHubInfoRow('Sale / Exit record', '<span style="color:var(--text-muted)">Not loaded</span>') +
+        propertyHubInfoRow('Commission planning', '<span style="color:var(--text-muted)">Not configured</span>') +
+        propertyHubInfoRow('Final ROI', '<span style="color:var(--text-muted)">Not calculated in this panel</span>') +
+      '</section>' +
+    '</div>' +
+    '<div style="margin-top:16px">' + propertyHubReadinessNotice('Sale / Exit') + '</div>';
+  }
+
+  if (section.id === 'reports') {
+    return '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin-bottom:16px">' +
+      propertyHubMetric('Cost Basis', propertyHubDisplayValue(f ? f.cost_basis : null, fmtMoney), 'Existing financial summary') +
+      propertyHubMetric('Cash Invested', propertyHubDisplayValue(f ? f.cash_invested : null, fmtMoney), 'Existing financial summary') +
+      propertyHubMetric('Net Expenses', propertyHubDisplayValue(f ? f.net_expense_cost : null, fmtMoney), 'Existing financial summary') +
+      propertyHubMetric('Disbursements', propertyHubDisplayValue(f ? f.total_disbursements : null, fmtMoney), 'Existing financial summary') +
+      propertyHubMetric('Net Proceeds', propertyHubDisplayValue(f ? f.net_proceeds : null, fmtMoney), 'Existing financial summary') +
+      propertyHubMetric('Existing Profit', propertyHubDisplayValue(f ? f.profit : null, fmtMoney), 'Existing financial summary') +
+      propertyHubMetric('Project Cash Position', propertyHubDisplayValue(f ? f.project_cash_position : null, fmtMoney), 'Existing financial summary') +
+    '</div>' +
+    '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px">' +
+      '<section style="border:1px solid var(--border);border-radius:8px;padding:16px;background:var(--bg-card)">' +
+        '<h4 style="font-size:12px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;margin:0 0 14px;display:flex;align-items:center;gap:8px"><i data-lucide="chart-column" style="width:14px;height:14px"></i> Report Snapshot</h4>' +
+        propertyHubInfoRow('Financial summary', f ? '<span style="color:var(--accent)">Available</span>' : '<span style="color:var(--text-muted)">Not available</span>') +
+        propertyHubInfoRow('Mode', '<span style="color:var(--text-secondary)">Existing values only</span>') +
+        propertyHubInfoRow('Forecasts', '<span style="color:var(--text-muted)">Not generated</span>') +
+        propertyHubInfoRow('ROI', '<span style="color:var(--text-muted)">Not calculated in this panel</span>') +
+      '</section>' +
+      '<section style="border:1px solid var(--border);border-radius:8px;padding:16px;background:var(--bg-card)">' +
+        '<h4 style="font-size:12px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;margin:0 0 14px;display:flex;align-items:center;gap:8px"><i data-lucide="shield-check" style="width:14px;height:14px"></i> Reporting Boundary</h4>' +
+        propertyHubInfoRow('Budget actuals', '<span style="color:var(--text-muted)">Not inferred</span>') +
+        propertyHubInfoRow('Investor / funding data', '<span style="color:var(--text-secondary)">Excluded</span>') +
+        propertyHubInfoRow('Receipt totals', '<span style="color:var(--text-muted)">Not added</span>') +
+        propertyHubInfoRow('Payment totals', '<span style="color:var(--text-muted)">Not added</span>') +
+      '</section>' +
+    '</div>' +
+    '<div style="margin-top:16px">' + propertyHubReadinessNotice('Reports') + '</div>';
   }
 
   return propertyHubPlaceholder(section);

@@ -142,7 +142,9 @@ Use this exact structure when responding to a code-fix request:
 
 ## Reference files
 
-Use the additional references only when relevant. Do not load or repeat them unnecessarily.
+The core workflow in this file is self-contained. The optional references listed below are not installed in this repository as of 2026-07-12. Do not attempt to load them unless they are added and reviewed later.
+
+When present, use additional references only when relevant. Do not load or repeat them unnecessarily.
 
 - `references/errores_comunes.md`: common bug patterns and conservative fixes.
 - `references/errores_comunes_avanzados.md`: advanced cases for Supabase RLS, Next.js, React Server Components, TypeScript generics, circular dependencies, race conditions, memory leaks, security, browser compatibility, and deprecations.

@@ -22,5 +22,9 @@ node_modules/
 .vercel/
 dist/
 js/env.js
+.claude/settings.local.json
+
+# Local history and recovery material
+Otros/
 
 .vercel

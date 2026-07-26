@@ -1,23 +1,7 @@
-# GitHub Copilot Instructions — NexArtWO
+# GitHub Copilot Instructions - NexArtWO
 
-This is a controlled SaaS/product repo. Do not suggest broad rewrites.
+`AGENTS.md` is the universal authority. At a new task or context reset, read its five core files and then only the matching task-specific row.
 
-Read:
-- `AGENTS.md`
-- `memory/CURRENT_TASK.md`
+Re-read context when scope, branch, phase, or protected operations change. Keep one task, minimal diffs, existing contracts, and explicit validation. Do not use `Otros/` as current documentation.
 
-Follow:
-- one task only
-- minimal diffs
-- preserve existing behavior
-- no protected files unless explicitly allowed
-- no SQL execution
-- no financial formula changes without spec
-
-Protected:
-- `js/supabase.js`
-- `supabase/**`
-- `sql/**`
-- Auth/RLS
-- Investor Hub
-- financial formulas
+No SQL execution, `db push`, remote database changes, formula changes, Investor Hub changes, broad rewrites, commits, pushes, or deployments without the exact gate required by `AGENTS.md`.

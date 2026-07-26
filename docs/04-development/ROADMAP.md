@@ -1,47 +1,31 @@
-# ROADMAP — NexArtWO
+# Roadmap - NexArtWO / FlipEngine
 
-## Phase 0 — Project Control
+Status: Directional roadmap. Exact work is controlled by `memory/CURRENT_TASK.md`.
 
-Install documentation, memory, agent rules and regression prevention.
+## Completed Foundations
 
-## Phase A — Manual QA and Function Map
+- Project control rules, memory, architecture map, and QA gates.
+- Existing Projects and Work Orders integration work.
+- FlipEngine product adaptation and schema planning.
+- Disposable local validation of the four-table MVP migration.
+- Gated Property Hub shell and preview QA.
 
-Audit current behavior without code changes.
+## Current
 
-## Phase B — Projects ↔ Work Orders
+- Read-only Acquisition, Budget, Loans / Draws, Sale / Exit, and Reports context.
+- Browser QA and release-boundary review.
 
-Connect project detail with work orders.
+## Next
 
-## Phase C — Client Data Integrity
+1. Governed non-production database integration.
+2. Auth/RLS and safe read behavior.
+3. First approved data-backed module.
+4. Receipts and document linking.
+5. Financing, payments, contractors, and labor.
+6. Investor integration through a separate gate.
+7. Sale/exit source-of-truth and governed reporting.
+8. Production hardening, release, and monitoring.
 
-Audit and plan correction.
+## Parallel Product Work
 
-## Phase D — Project UI Polish
-
-Improve UI without changing financial logic.
-
-## Phase E — P&L by Work Order
-
-Specify and implement profitability view.
-
-## Phase F — Cancel Project Lifecycle
-
-Define cancellation flow.
-
-## Phase G — Cash-In
-
-Define money-in model.
-
-## Phase H — Investor Hub
-
-Only after approval.
-
-## Phase I — Auth/RLS
-
-Only after approval.
-
-## Phase J — Production Hardening
-
-Security, performance, backups, monitoring.
-
-## Phase K — Launch
+Core NexArtWO stabilization, clients, Change Orders, mobile field workflows, Cash-In, P&L by Work Order, and Deal Analyzer continue as separate approved tasks.

@@ -1,203 +1,169 @@
-# AGENTS.md — NexArtWO Universal Agent Rules
+# AGENTS.md - NexArtWO Universal Agent Rules
+
+Status: Active universal instruction source. Updated 2026-07-12.
 
 ## Role
 
-You are a controlled development agent for NexArtWO.
+Work as a controlled development agent for NexArtWO. Make the smallest complete, evidence-based change that preserves existing application behavior and financial history.
 
-Your job is to make small, safe, reversible improvements without breaking existing features or financial data.
+FlipEngine is an internal NexArtWO layer for selected fix-and-flip projects. It is not a separate application and does not replace Projects, Work Orders, Documents, Financials, or general operations.
 
-## Mandatory context
+## Authority Order
 
-Before touching code, read:
+Use this order when instructions or documents differ:
+
+1. The owner's current explicit instruction.
+2. This file.
+3. `memory/CURRENT_TASK.md` for exact active scope.
+4. `memory/DECISION_LOG.md` for approved product and architecture decisions.
+5. `docs/00-governance/DOCUMENTATION_MAP.md` for current versus historical documentation.
+6. Relevant product, architecture, module, QA, and implementation evidence.
+7. Historical material only when current evidence is incomplete.
+
+Tool-specific files (`CLAUDE.md`, `.claude/`, `.codex/`, `.cursor/`, and `.github/instructions/`) adapt these rules but never override them.
+
+## Context Router
+
+### Read at the start of every new task or context reset
 
 1. `README.md`
 2. `memory/PROJECT_STATE.md`
 3. `memory/CURRENT_TASK.md`
 4. `memory/DECISION_LOG.md`
-5. `docs/00-governance/STOP_CONDITIONS.md`
-6. `docs/00-governance/ERROR_RECOVERY.md`
-7. Relevant module spec under `docs/03-modules/`
+5. `docs/00-governance/DOCUMENTATION_MAP.md`
 
-## Required response before coding
+Do not preload the whole repository. After the five core files, load only the row that matches the task.
 
-Before modifying files, respond with:
+| Moment or task | Additional required reading |
+|---|---|
+| Bug, broken build, console error, or unexpected behavior | `skills/codex-fix/SKILL.md`, `memory/KNOWN_ISSUES.md`, `docs/00-governance/ERROR_RECOVERY.md`, and the relevant regression checklist |
+| General app code or UI | `docs/01-product/PRODUCT_MASTER_SPEC.md`, `docs/02-architecture/CURRENT_REPO_MAP.md`, the relevant file contract/module spec, and the matching QA checklist |
+| FlipEngine planning or implementation | `FLIPENGINE_CONTEXT.md`, the current task, `docs/flipengine/42_CURRENT_TASK_ALIGNMENT_2026-07-12.md`, and only the plan/implementation evidence for the active phase |
+| Investor Hub | `docs/03-modules/INVESTOR_HUB.md`, `docs/FEATURE_FLAGS.md`, and `memory/KNOWN_ISSUES.md` |
+| Financial formula or accounting behavior | `docs/02-architecture/FINANCIAL_FORMULAS_CONTRACT.md`, the relevant financial module spec, `skills/financial-formula-review/SKILL.md`, and `docs/05-qa/FINANCIAL_CALCULATION_TESTS.md` |
+| Supabase, SQL, migration, Auth, or RLS review | `docs/02-architecture/SUPABASE_CONTRACT.md`, the relevant module/migration evidence, `qa/README.md`, and `skills/supabase-script-review/SKILL.md` |
+| QA or regression-only task | `skills/qa-auditor/SKILL.md`, `skills/regression-auditor/SKILL.md`, `qa/README.md` when database artifacts are involved, and the relevant file under `docs/05-qa/` |
+| Release, commit, push, preview, or deploy | `docs/05-qa/RELEASE_CHECKLIST.md`, `docs/FEATURE_FLAGS.md`, `docs/04-development/ACTIVE_PHASE.md`, current Git status/diff, and the exact release instruction |
+| Resume, handoff, or recovery after interruption | `memory/AGENT_HANDOFF.md`, `memory/NEXT_ACTIONS.md`, the newest entry in `memory/SESSION_LOG.md`, and `docs/00-governance/ERROR_RECOVERY.md` when something failed |
+
+### Re-read context when
+
+- the owner changes scope, priority, module, or protected operation
+- the branch or worktree changes
+- a context reset or handoff occurs
+- the task reaches a new implementation phase
+- a protected/shared file becomes necessary
+- observed code or schema conflicts with documentation
+- a test fails for an unexplained reason
+- before any commit, push, preview, deployment, migration, or remote database action
+
+### Archive rule
+
+Do not read `Otros/`, ZIP snapshots, old task packages, or historical session entries by default. Use them only for recovery, provenance, or a specific business question when a current document points there or current evidence is missing. Never let archive content silently replace current scope.
+
+## Pre-Change Contract
+
+Before modifying runtime code, workflows, database artifacts, protected configuration, or non-generated user files, state:
 
 ```md
-FASE:
-TAREA:
-ARCHIVOS A MODIFICAR:
-ARCHIVOS SOLO LECTURA:
-ARCHIVOS PROHIBIDOS:
-RIESGOS:
-PLAN DE VALIDACIÓN:
-¿CONFIRMAS QUE PUEDO CONTINUAR?
+PHASE:
+TASK:
+FILES TO MODIFY:
+READ-ONLY FILES:
+PROHIBITED FILES:
+RISKS:
+VALIDATION PLAN:
 ```
 
-Do not code until explicit confirmation is received.
+An explicit owner request that clearly names the task and scope counts as confirmation. Ask again only when the work expands beyond that scope or reaches a protected, destructive, database, formula, Investor Hub, commit, push, or deployment gate not already approved exactly.
 
-## Absolute prohibitions
+## Required Engineering Behavior
 
-- Do not change Supabase URL.
-- Do not create a new database.
-- Do not run `db push`.
-- Do not execute SQL against production.
-- Do not modify `supabase/migrations/` without owner approval.
-- Do not modify Auth/RLS unless explicitly authorized.
-- Do not enable Investor Hub unless explicitly authorized.
-- Do not modify historical financial formulas without approved spec.
-- Do not hard-delete financial records.
-- Do not run automatic backfills.
-- Do not rewrite full modules.
-- Do not combine phases.
-- Do not add dependencies without documented justification.
-- Do not change architecture without recording the decision.
-- Do not fix unrelated bugs during the assigned task.
+- Work on one coherent task at a time.
+- Identify exact functions, data contracts, call sites, and shared state before editing.
+- Prefer existing helpers, components, patterns, and data sources.
+- Keep changes surgical, reversible, and proportional to risk.
+- Do not rewrite a working module merely to modernize style or increase line count.
+- Do not invent schema, fields, formulas, records, permissions, or business rules.
+- Do not add dependencies without documented need.
+- Do not fix unrelated issues during the assigned task; record them separately.
+- Validate the changed flow and at least one adjacent flow when shared behavior is involved.
+- Update current memory and documentation when project state or decisions change.
 
-## Release Guardrails
-
-- UI-only releases must not include SQL files or database migrations.
-- Do not apply migrations unless the owner explicitly approves that exact action.
-- Do not run `db push` unless the owner explicitly approves that exact action.
-- Do not touch the production database unless the owner explicitly approves that exact action.
-- Do not activate Investor Hub unless the owner explicitly approves that exact action.
-- Do not include untracked SQL files, bootstrap scripts, or local database helper files in UI commits.
-- Phase 2 migration files and local bootstrap files must stay separate from UI releases unless the owner specifically approves including them.
-- Before push or deploy, confirm the committed files contain only the intended release scope.
-- After every release or deploy task, report committed files, checks run, risks, deploy status, and whether any database was touched.
-- Future release prompts may reference `AGENTS.md` instead of repeating these rules.
-
-## Required behavior
-
-- Work on one task only.
-- Change the smallest possible area.
-- Preserve existing functionality.
-- Validate manually.
-- Document remaining risks.
-- Update memory files if project state changes.
-- Stop if instructions conflict.
-
-## Protected files and areas
+## Protected Areas
 
 Critical:
 
-```txt
+```text
 js/supabase.js
 supabase/
 sql/
+qa/*.sql
 Auth/RLS
 Investor Hub
-Financial formulas
-Historical financial records
+financial formulas and summaries
+historical financial records
 ```
 
 High risk:
 
-```txt
+```text
 js/app.js
 js/projects.js
-projects.html
 index.html
+projects.html
+.github/workflows/
 ```
 
-## Stop immediately if
+## Stop Conditions
 
-- The task requires SQL.
-- The task touches protected files not listed in `CURRENT_TASK.md`.
-- The requested change conflicts with documentation.
-- The agent cannot identify the affected functions.
-- The fix requires broad refactoring.
-- The issue cannot be reproduced.
+Stop and obtain exact owner direction when:
 
-## Bug fix skill
+- the required file or operation is outside `memory/CURRENT_TASK.md`
+- code and current documentation conflict and the correct contract cannot be proven
+- the affected functions or data ownership cannot be identified
+- the change would require a broad refactor or unrelated repair
+- a reported bug cannot be reproduced or verified
+- the task reaches SQL execution, `db push`, remote database mutation, production access, Auth/RLS, formula changes, Investor Hub activation/modification, destructive financial behavior, commit, push, or deployment without exact approval
 
-If the task involves a bug, console error, failed build, broken module, frontend issue, backend issue, Supabase issue, RLS issue, or unexpected behavior, the agent must read:
+## Database And Financial Rules
 
-- `skills/codex-fix/SKILL.md`
+- Agent sessions may inspect SQL and prepare reviewable drafts only when the current task allows it.
+- Do not execute SQL, run `db push`, link to mutate a remote project, create a database, or touch production from an agent session.
+- Do not modify migrations, Auth/RLS, Supabase configuration, or remote workflows without exact owner approval and a separate scope.
+- Do not hard-delete financial records or run automatic backfills.
+- Do not change historical formulas, ROI, P&L, `project_financial_summaries`, or expense/refund/disbursement semantics without an approved specification, numeric examples, edge cases, and QA.
+- Keep investor capital, contributions, capital calls, private lending, loans, draws, receipts, sale proceeds, and operating expenses separate until an approved accounting rule connects them.
 
-before proposing or making code changes.
+## Release Rules
 
-The agent must first verify the error, diagnose the root cause, and propose the smallest safe change. No broad refactor is allowed during bug repair.
+- UI-only releases must exclude SQL, migrations, local bootstrap files, and unrelated untracked artifacts.
+- Commit, push, preview deploy, and production deploy are separate approval gates.
+- Before release, verify the exact diff, feature flags, target branch/environment, tests, and rollback path.
+- After release work, report committed files, checks, risks, deployment status, and whether any database was touched.
 
-## FlipEngine permanent context
+## Bug Workflow
 
-FlipEngine work in this repository must follow the current FlipEngine planning docs. Before any FlipEngine implementation, schema work, UI work, or financial logic work, read the relevant files below:
+For any bug or unexpected behavior, read `skills/codex-fix/SKILL.md`. Verify the issue and root cause before changing code. Apply the smallest safe correction and document validation; no broad repair is permitted under a bug task.
 
-1. `FLIPENGINE_CONTEXT.md`
-2. `docs/flipengine/01_ADAPTATION_STRATEGY.md`
-3. `docs/flipengine/02_EXISTING_REPO_MAP.md`
-4. `docs/flipengine/03_MODULES_TO_ADD.md`
-5. `docs/flipengine/04_DATABASE_EXTENSION_PLAN.md`
-6. `docs/flipengine/05_IMPLEMENTATION_PHASES.md`
-7. `docs/flipengine/06_CODEX_EXECUTION_BACKLOG.md`
-8. `docs/flipengine/07_PHASE2_SQL_DRAFT_PLAN.md`
-9. `docs/flipengine/08_EXISTING_SCHEMA_AUDIT.md`
+## FlipEngine Stable Rules
 
-Permanent product rules:
-
-- NexArWO is the existing main application.
-- FlipEngine is a new layer/module inside NexArWO for selected fix-and-flip real estate investment workflows.
-- FlipEngine is not a separate replacement app.
-- NexArtEngine belongs to another project and must not be used as app name, branding, table prefix, module name, or repository identity here.
-- NexArWO must keep working as a Work Orders, Projects, construction, documents, and operations system.
+- NexArtWO remains the main application; FlipEngine extends selected property-investment workflows inside it.
 - Existing projects must not be forced to become investments.
-- Only selected `projects` may represent properties/investments in the FlipEngine context.
-- Do not rebuild the app from scratch.
-- Do not delete or break existing modules.
-- Do not change general NexArWO branding without owner approval.
+- Do not rebuild the app, duplicate existing modules, or change general branding without approval.
+- Work from the current task and relevant phase evidence; do not read all chronological FlipEngine documents every session.
+- `projects.id` is `TEXT`; future approved FlipEngine project relationships use `project_id TEXT` unless a later audited decision changes this.
+- Prefer additive extension tables over altering protected operational/financial tables.
+- The local MVP migration and bootstrap artifacts remain protected and separate from UI releases.
+- Investor Hub activation/state remains an explicit owner decision.
 
-## FlipEngine protected decisions
-
-- Work by small phases following `docs/flipengine/06_CODEX_EXECUTION_BACKLOG.md`.
-- Do not combine schema, UI, financial formulas, and Investor Hub work in the same task unless explicitly approved.
-- Do not modify existing migrations without owner approval.
-- Do not apply SQL without owner approval.
-- Do not execute SQL from an agent session.
-- Do not run `db push`.
-- Do not create a new database.
-- Do not activate, expose, rework, or depend on Investor Hub behavior without owner approval.
-- Do not change Auth/RLS without explicit owner approval.
-- Do not change existing financial formulas, ROI, P&L, `project_financial_summaries`, expense/refund/disbursement semantics, or historical financial records without an approved spec.
-- Keep investor capital, capital contributions, capital calls, private lender funding, and other funding views separate from operating expenses, ROI, P&L, and Work Order formulas.
-- Do not automatically convert receipts, loans, draws, capital calls, or funding records into operating expenses without an approved accounting rule.
-
-## FlipEngine schema rules
-
-- `projects.id` is confirmed as `TEXT`.
-- Any new table related to `projects` must use `project_id TEXT` unless a later owner-approved audit changes this decision.
-- Future `project_id` relationships should reference `projects(id)` and must not assume UUID.
-- Do not alter `projects` for the first FlipEngine MVP migration.
-- Do not alter `work_orders`, `documents`, `project_expenses`, `project_refunds`, `project_disbursements`, `project_financial_summaries`, or Investor Hub tables for the first FlipEngine MVP migration.
-- Prefer new non-destructive extension tables over adding fields to protected existing tables.
-- For MVP Phase 2, the only approved draft scope is new tables for:
-  - `project_acquisitions`
-  - `project_budget_categories`
-  - `project_receipts`
-  - `project_document_links`
-- `docs/flipengine/09_PHASE2B_MVP_SQL_DRAFT.sql` is a review draft only. It must not be applied or moved into `supabase/migrations/` without owner approval.
-
-## Required workflow for FlipEngine tasks
-
-Before implementing:
-
-- Identify the exact phase from `docs/flipengine/06_CODEX_EXECUTION_BACKLOG.md`.
-- Re-read the relevant FlipEngine docs for that phase.
-- Confirm the task does not conflict with Context Guardrails.
-- Confirm whether the task is documentation-only, SQL draft, migration, app code, UI, QA, or deployment.
-- Stop and ask for owner approval if the task requires SQL execution, migration files, existing schema changes, Auth/RLS, Investor Hub, financial formulas, production data, destructive actions, or deployment.
-
-During implementation:
-
-- Keep changes small, additive, and reversible.
-- Prefer existing repo patterns and data access conventions.
-- Do not rename existing docs, modules, tables, or branding unless the owner explicitly asks.
-- Preserve current NexArWO Work Orders, Projects, Financials, Documents, Supabase data layer, and dashboard behavior.
+## Completion Report
 
 After each task, report:
 
-- Phase
-- Files modified
-- Files intentionally not touched
-- Risks found
-- Tests or checks performed
-- Whether SQL/migrations/code/UI were avoided or changed
-- Next recommended step
+- phase and outcome
+- files changed and intentionally not touched
+- checks performed and results
+- risks or unresolved decisions
+- whether code, UI, SQL, migrations, formulas, database, commit, push, or deployment were touched
+- the next real gate, if one remains
